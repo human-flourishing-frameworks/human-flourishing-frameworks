@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  hff-node:
+    build: .
+    container_name: human-flourishing-node
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_NAME=docker-node
+      - NETWORK=human-flourishing-global
+      - CENTRAL_SERVER=https://human-flourishing-frameworks.herokuapp.com
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  data:
+  logs:
