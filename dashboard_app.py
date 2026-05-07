@@ -5,7 +5,7 @@ Complete working dashboard with all tabs, mock data, and real-time updates
 """
 
 from flask import Flask, jsonify, render_template_string, request
-import hashlib, hmac, json, time, uuid, random
+import hashlib, hmac, json, time, uuid, random, os
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -727,7 +727,8 @@ if __name__ == '__main__':
     print("✓ Remediation tracking active")
     print("✓ Board voting ledger ready")
     print("✓ Quantum verification enabled")
-    print("\n🌐 Dashboard available at: http://127.0.0.1:5000")
+    port = int(os.environ.get('PORT', 5000))
+    print(f"\n🌐 Dashboard available at: http://0.0.0.0:{port}")
     print("\nAvailable tabs:")
     print("  - 🚨 Violations (real-time monitoring)")
     print("  - 📊 Remediation (healing progress)")
@@ -737,4 +738,4 @@ if __name__ == '__main__':
     print("  - 👥 Affected Persons (remediation status)")
     print("  - 🔬 Quantum Voting (entangled proofs)")
     print("\n" + "="*80 + "\n")
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)
