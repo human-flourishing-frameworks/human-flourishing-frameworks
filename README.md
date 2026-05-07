@@ -6,6 +6,52 @@ A democratic, open-source system for detecting, tracking, and fixing unfair AI a
 
 ---
 
+## Try It Now (Public Dashboard)
+
+**Live monitoring of real AI violations:** https://human-flourishing-frameworks.herokuapp.com
+
+- View 7 documented violations
+- See 48,250+ affected persons
+- Track $1.163M+ in quantified harm
+- Review governance board decisions
+- Access cryptographic audit trail
+
+---
+
+## Quick Install (Choose Your Device)
+
+| **Windows** | **Mac/Linux** | **Docker** | **No Git?** |
+|:---:|:---:|:---:|:---:|
+| **[Download EXE](#windows-exe-installer)** | **[Bash Script](install.sh)** | **[Docker](docker-compose.yml)** | **[PowerShell](install-no-git.ps1)** |
+| Double-click, automatic | `bash install.sh` | `docker-compose up -d` | No dependencies needed |
+
+### 🔧 Installation Files
+
+**For Most Users (Windows):**
+- **[human-flourishing-frameworks-installer.exe](human-flourishing-frameworks-installer.exe)** — Download and double-click
+  - Automatic Python installation
+  - Virtual environment setup
+  - Desktop shortcut created
+  - [How to build the EXE](BUILD_INSTALLER.md)
+
+**Without Git (Any Windows):**
+- **[install-no-git.ps1](install-no-git.ps1)** — PowerShell script (no dependencies)
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File install-no-git.ps1
+  ```
+
+**For Developers:**
+- **[install.ps1](install.ps1)** — Windows with Git
+- **[install.sh](install.sh)** — Mac/Linux
+- **[Dockerfile](Dockerfile)** — Docker container
+
+### 📚 Setup Guides
+- **[QUICK_START.md](QUICK_START.md)** — Choose your installation method
+- **[NODE_SETUP.md](NODE_SETUP.md)** — Complete setup documentation
+- **[BUILD_INSTALLER.md](BUILD_INSTALLER.md)** — How to build the Windows EXE
+
+---
+
 ## The Problem We Solve
 
 Every day, invisible algorithms make life-changing decisions about you:
