@@ -19,6 +19,21 @@ RISK_HIGH = "high"
 
 DEFENSE_MODE_BEST_EFFORT = "best_effort"
 
+IMPOSSIBLE_CLAIM_KEYS: Tuple[str, ...] = (
+    "perfect_safety",
+    "perfect_truth",
+    "perfect_benevolence",
+    "perfect_foresight",
+    "complete_understanding",
+    "knows_all_unknown_unknowns",
+    "guaranteed_privacy",
+    "guaranteed_defense",
+    "divine_or_sacred_authority",
+    "prophecy_or_destiny",
+    "final_moral_authority",
+    "automatic_future_model_trust",
+)
+
 CRITICAL_REVIEW_CHECKS: Tuple[str, ...] = (
     "source_quality",
     "maturity_level",
@@ -63,11 +78,31 @@ class PerfectAdjacentReview:
     uncertainty_visible: bool = True
     challenge_right_preserved: bool = True
 
+    impossible_claims: List[str] = field(default_factory=list)
     capability_advertising_allowed: bool = False
     advertised_capabilities: List[str] = field(default_factory=list)
     advertising_risk_level: str = RISK_HIGH
     sensor_questions: List[str] = field(default_factory=list)
     sensor_refs: List[str] = field(default_factory=list)
+
+    best_current_outcome: str = ""
+    candidate_options_considered: List[str] = field(default_factory=list)
+    rejected_options_with_reasons: List[str] = field(default_factory=list)
+    revision_triggers: List[str] = field(default_factory=list)
+    monitoring_plan: str = ""
+
+    polling_interval_seconds: int = 0
+    panic_risk_level: str = RISK_HIGH
+    calming_guidance_allowed: bool = False
+
+    runtime_enforcement_ready: bool = False
+    required_runtime_hooks: List[str] = field(default_factory=lambda: [
+        "status_endpoint_review_gate",
+        "world_status_review_gate",
+        "capability_advertising_gate",
+        "autonomous_action_gate",
+        "sensor_question_feed",
+    ])
 
     human_review_required: bool = True
     safe_to_publish: bool = False
@@ -88,6 +123,12 @@ class PerfectAdjacentReview:
             if value == CHECK_NEEDS_REVIEW
         ]
 
+    def impossible_claim_violations(self) -> List[str]:
+        return [claim for claim in self.impossible_claims if claim in IMPOSSIBLE_CLAIM_KEYS]
+
+    def has_impossible_claims(self) -> bool:
+        return bool(self.impossible_claim_violations())
+
     def is_valid_best_effort_defense(self) -> bool:
         return (
             self.defense_mode == DEFENSE_MODE_BEST_EFFORT
@@ -95,6 +136,7 @@ class PerfectAdjacentReview:
             and self.fallibility_label_present is True
             and self.uncertainty_visible is True
             and self.challenge_right_preserved is True
+            and not self.has_impossible_claims()
         )
 
     def can_advertise_capability(self) -> bool:
@@ -130,6 +172,8 @@ class PerfectAdjacentReview:
     def can_act_autonomously(self) -> bool:
         if not self.is_valid_best_effort_defense():
             return False
+        if not self.runtime_enforcement_ready:
+            return False
         if self.failed_checks() or self.needs_review_checks():
             return False
         if self.human_review_required:
@@ -140,6 +184,7 @@ class PerfectAdjacentReview:
         data = asdict(self)
         data["failed_checks"] = self.failed_checks()
         data["needs_review_checks"] = self.needs_review_checks()
+        data["impossible_claim_violations"] = self.impossible_claim_violations()
         data["can_publish"] = self.can_publish()
         data["can_advertise_capability"] = self.can_advertise_capability()
         data["can_act_autonomously"] = self.can_act_autonomously()
