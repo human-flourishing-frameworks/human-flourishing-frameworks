@@ -17,6 +17,14 @@ CENTRAL_SERVER = os.environ.get('CENTRAL_SERVER', 'https://human-flourishing-fra
 SYNC_ENABLED = os.environ.get('ENABLE_ADOPTION_SYNC', '').lower() in {
     '1', 'true', 'yes', 'on'
 }
+WRITE_TOKEN = os.environ.get('HFF_WRITE_TOKEN', '')
+
+
+def _write_headers():
+    """Return central write-grant headers when a token is configured."""
+    if not WRITE_TOKEN:
+        return {}
+    return {'Authorization': f'Bearer {WRITE_TOKEN}'}
 
 def init_adoption_db():
     """Initialize adoption tracking database"""
@@ -80,6 +88,7 @@ def sync_to_central_server(
     try:
         response = requests.post(
             f'{CENTRAL_SERVER}/api/adoption/register',
+            headers=_write_headers(),
             json={
                 'node_id': node_id,
                 'node_name': node_name,
@@ -303,6 +312,7 @@ def start_heartbeat(
             try:
                 requests.post(
                     f'{CENTRAL_SERVER}/api/adoption/register',
+                    headers=_write_headers(),
                     json={
                         'node_id': node_id,
                         'node_name': node_name,
