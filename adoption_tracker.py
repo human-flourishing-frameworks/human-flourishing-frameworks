@@ -14,7 +14,9 @@ import threading
 
 DB_PATH = "./data/adoption.db"
 CENTRAL_SERVER = os.environ.get('CENTRAL_SERVER', 'https://human-flourishing-frameworks.onrender.com')
-SYNC_ENABLED = True
+SYNC_ENABLED = os.environ.get('ENABLE_ADOPTION_SYNC', '').lower() in {
+    '1', 'true', 'yes', 'on'
+}
 
 def init_adoption_db():
     """Initialize adoption tracking database"""

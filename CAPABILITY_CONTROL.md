@@ -94,3 +94,20 @@ The system must stop and request a grant before:
 - admitting a node as verified
 - rotating or replacing keys
 - retiring the repository
+
+## Production Write Surface
+
+HTTP endpoints that mutate node state, world-model state, or autonomous
+escalation state must be closed by default.
+
+Production writes require either:
+
+- a narrow bearer/API token grant for the exact service
+- a future signed node-admission or signed sensor-admission protocol
+
+`HFF_ALLOW_PUBLIC_WRITES=true` is a demo override only. It must not be enabled
+on an authoritative public service.
+
+Outbound sync is also opt-in. Adoption telemetry, mesh sync, and live sensor
+polling should require explicit runtime settings so local nodes do not contact
+public services or peers just by starting the app.
