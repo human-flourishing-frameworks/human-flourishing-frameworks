@@ -12,7 +12,7 @@ import threading
 import time
 from adoption_tracker import (
     init_adoption_db, register_node, get_adoption_stats,
-    get_nodes_list, get_active_nodes, get_total_nodes
+    get_nodes_list, get_active_nodes, get_total_nodes, start_heartbeat
 )
 from resilience import (
     init_resilience_db, discover_peers, health_check,
@@ -492,6 +492,10 @@ if __name__ == '__main__':
     try:
         register_node(NODE_ID, NODE_NAME, PLATFORM)
         print(f"\n[OK] Node registered: {NODE_NAME} ({PLATFORM})")
+
+        # Start heartbeat to central server (keeps node visible)
+        start_heartbeat(NODE_ID, NODE_NAME, PLATFORM, interval=60)
+        print(f"[OK] Heartbeat started - syncing to central server every 60 seconds")
     except Exception as e:
         print(f"\n[WARNING] Could not register node: {e}")
 

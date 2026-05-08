@@ -2,14 +2,19 @@
 """
 Node Adoption Tracker
 Tracks how many nodes are running and reporting in
+Syncs with central server for global adoption visibility
 """
 
 import json
 import sqlite3
 from datetime import datetime, timedelta
 import os
+import requests
+import threading
 
 DB_PATH = "./data/adoption.db"
+CENTRAL_SERVER = os.environ.get('CENTRAL_SERVER', 'https://human-flourishing-frameworks.onrender.com')
+SYNC_ENABLED = True
 
 def init_adoption_db():
     """Initialize adoption tracking database"""
@@ -45,11 +50,33 @@ def init_adoption_db():
     conn.commit()
     conn.close()
 
+def sync_to_central_server(node_id, node_name, platform, version="1.0.0"):
+    """Send node registration to central server"""
+    if not SYNC_ENABLED or CENTRAL_SERVER.startswith('http://localhost'):
+        return
+
+    try:
+        response = requests.post(
+            f'{CENTRAL_SERVER}/api/adoption/register',
+            json={
+                'node_id': node_id,
+                'node_name': node_name,
+                'platform': platform,
+                'version': version
+            },
+            timeout=5
+        )
+        if response.status_code == 200:
+            return True
+    except Exception as e:
+        pass
+    return False
+
 def register_node(node_id, node_name, platform, version="1.0.0"):
-    """Register a new node or update existing"""
+    """Register a new node or update existing (locally and on central server)"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    
+
     try:
         c.execute('''
             INSERT INTO nodes (node_id, node_name, platform, version, last_seen)
@@ -58,13 +85,22 @@ def register_node(node_id, node_name, platform, version="1.0.0"):
     except sqlite3.IntegrityError:
         # Node exists, update last_seen
         c.execute('''
-            UPDATE nodes 
+            UPDATE nodes
             SET last_seen = CURRENT_TIMESTAMP, status = 'active'
             WHERE node_id = ?
         ''', (node_id,))
-    
+
     conn.commit()
     conn.close()
+
+    # Sync to central server in background
+    if SYNC_ENABLED and not CENTRAL_SERVER.startswith('http://localhost'):
+        thread = threading.Thread(
+            target=sync_to_central_server,
+            args=(node_id, node_name, platform, version),
+            daemon=True
+        )
+        thread.start()
 
 def get_active_nodes(minutes=30):
     """Get count of nodes active in last N minutes"""
@@ -169,6 +205,31 @@ def get_nodes_list(limit=50):
     
     conn.close()
     return nodes
+
+def start_heartbeat(node_id, node_name, platform, interval=60):
+    """Periodically ping central server to keep node visible"""
+    def heartbeat_loop():
+        while SYNC_ENABLED:
+            try:
+                requests.post(
+                    f'{CENTRAL_SERVER}/api/adoption/register',
+                    json={
+                        'node_id': node_id,
+                        'node_name': node_name,
+                        'platform': platform,
+                        'version': '1.0.0'
+                    },
+                    timeout=3
+                )
+            except:
+                pass
+
+            import time
+            time.sleep(interval)
+
+    if SYNC_ENABLED and not CENTRAL_SERVER.startswith('http://localhost'):
+        thread = threading.Thread(target=heartbeat_loop, daemon=True)
+        thread.start()
 
 if __name__ == "__main__":
     init_adoption_db()
