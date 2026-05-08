@@ -492,6 +492,7 @@ if __name__ == '__main__':
     try:
         register_node(NODE_ID, NODE_NAME, PLATFORM)
         print(f"\n[OK] Node registered: {NODE_NAME} ({PLATFORM})")
+        print(f"[OK] Central server sync enabled - heartbeat every 60 seconds")
 
         # Start heartbeat to central server (keeps node visible)
         start_heartbeat(NODE_ID, NODE_NAME, PLATFORM, interval=60)
