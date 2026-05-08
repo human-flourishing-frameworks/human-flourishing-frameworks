@@ -334,12 +334,33 @@ class FlourishingMetric:
                 })
             )
 
-    def compute(self, beliefs: Dict[str, Belief]) -> Measurement:
+    def _find_component_beliefs(
+        self, component: str, beliefs: Dict[str, "Belief"]
+    ) -> List["Belief"]:
+        """Find all beliefs that contribute to a flourishing component.
+
+        Looks for beliefs whose entity key starts with "{scope}:{component}".
+        This allows multiple sensors/sources to contribute to the same
+        component. When multiple beliefs match, they are all used —
+        the aggregate gives more weight to lower-uncertainty beliefs.
+
+        Returns an empty list if no matching beliefs exist.
+        """
+        prefix = f"{self.scope}:{component}"
+        return [
+            b for key, b in beliefs.items()
+            if key == prefix or key.startswith(prefix + ":")
+        ]
+
+    def compute(self, beliefs: Dict[str, "Belief"]) -> Measurement:
         """Compute aggregate flourishing score from component beliefs.
 
-        Each component is looked up in the beliefs dict by constructing
-        the key: f"{scope}:{component_name}". Missing components contribute
-        maximum uncertainty.
+        Each component is looked up by prefix: all beliefs whose key starts
+        with "{scope}:{component_name}" contribute, weighted by inverse
+        uncertainty. Multiple sensors measuring the same component combine
+        naturally -- more certain sources carry more weight.
+
+        Missing components contribute maximum uncertainty.
 
         Returns a Measurement because flourishing is itself an observation
         with uncertainty, not a known truth.
@@ -353,15 +374,29 @@ class FlourishingMetric:
         for name, config in self.components.items():
             weight = config["weight"]
             component_uncertainty = config["uncertainty"]
-            belief_key = f"{self.scope}:{name}"
 
-            belief = beliefs.get(belief_key)
-            if belief is not None:
-                total_score += belief.posterior * weight
-                # Propagate uncertainty: component weight uncertainty +
-                # belief uncertainty, combined in quadrature
+            matching = self._find_component_beliefs(name, beliefs)
+
+            if matching:
+                # Aggregate matching beliefs: weighted average by certainty
+                if len(matching) == 1:
+                    posterior = matching[0].posterior
+                    belief_unc = matching[0].uncertainty
+                else:
+                    # Multiple sources: weight by inverse uncertainty
+                    inv_weights = [
+                        1.0 / max(b.uncertainty, 0.01) for b in matching
+                    ]
+                    total_inv = sum(inv_weights)
+                    posterior = sum(
+                        b.posterior * w for b, w in zip(matching, inv_weights)
+                    ) / total_inv
+                    # Best-case uncertainty from independent sources
+                    belief_unc = min(b.uncertainty for b in matching)
+
+                total_score += posterior * weight
                 combined_unc = math.sqrt(
-                    component_uncertainty ** 2 + belief.uncertainty ** 2
+                    component_uncertainty ** 2 + belief_unc ** 2
                 )
                 total_uncertainty_sq += (weight * combined_unc) ** 2
                 total_weight += weight
@@ -718,12 +753,15 @@ class WorldModel:
         """
         text = f"{m.scope} {m.source} {m.methodology}".lower()
         domain_keywords = {
-            "healthcare": ["health", "medical", "hospital", "patient", "diagnosis"],
-            "criminal_justice": ["criminal", "recidivism", "sentencing", "police", "court"],
-            "ecology": ["ecosystem", "species", "biodiversity", "habitat", "climate"],
-            "animal_welfare": ["animal", "shelter", "adoption", "veterinary", "welfare"],
-            "education": ["education", "school", "student", "learning", "academic"],
-            "economic": ["economic", "employment", "income", "poverty", "housing"],
+            "healthcare": ["health", "medical", "hospital", "patient", "diagnosis", "mortality", "daly", "disease", "life_expectancy"],
+            "criminal_justice": ["criminal", "recidivism", "sentencing", "police", "court", "compas", "arrest"],
+            "ecology": ["ecosystem", "species", "biodiversity", "habitat", "climate", "forest", "ocean", "planetary", "extinction", "resilience"],
+            "animal_welfare": ["animal", "shelter", "adoption", "veterinary", "welfare", "livestock", "stereotyp", "slaughter", "captive"],
+            "education": ["education", "school", "student", "learning", "academic", "childhood"],
+            "economic": ["economic", "employment", "income", "poverty", "housing", "gini", "mobility", "wealth", "inequality"],
+            "psychology": ["satisfaction", "wellbeing", "well-being", "autonomy", "happiness", "swls", "qoli", "sdt"],
+            "social": ["social_capital", "trust", "freedom", "civic", "putnam"],
+            "astrophysics": ["universe", "galactic", "solar", "planet", "habitable", "cmb", "planck", "gaia", "exoplanet", "biomass", "earth"],
         }
         for domain, keywords in domain_keywords.items():
             if any(kw in text for kw in keywords):
@@ -1104,9 +1142,26 @@ class WorldModel:
                 b.last_updated for b in self.beliefs.values()
             ).isoformat()
 
-        # Compute overall flourishing for common scopes
+        # Compute overall flourishing for common scopes.
+        # Include parent scopes (e.g., "humans" from "humans:fairness")
+        # because flourishing is defined at the top level and components
+        # are sub-scopes.
+        parent_scopes = set()
+        for s in scopes:
+            parts = s.split(":")
+            if len(parts) >= 2:
+                parent_scopes.add(parts[0])
+        # Always include the three universal scopes
+        parent_scopes.update(["humans", "animals", "ecosystems"])
+
         flourishing_scores = {}
-        for scope in set(list(self._flourishing_metrics.keys()) + scopes[:5]):
+        # Only compute flourishing at meaningful scope levels:
+        # explicitly configured metrics + parent scopes derived from beliefs.
+        # Sub-scopes (humans:fairness) are components, not standalone scopes.
+        all_scopes = set(
+            list(self._flourishing_metrics.keys()) + list(parent_scopes)
+        )
+        for scope in all_scopes:
             try:
                 score = self.flourishing_score(scope)
                 flourishing_scores[scope] = {
