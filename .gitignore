@@ -1,20 +1,12 @@
-<<<<<<< HEAD
 __pycache__/
 *.py[cod]
 *.pyc
-.venv/
-*.db
 *.log
+*.db
 data/*.db
 data/*.db-*
 data/*.key
 data/*.pem
-*.zip
 sandbox_out*.txt
 network_status.txt
 node_network_config.json
-=======
-
-__pycache__/
-*.pyc
->>>>>>> b80fda3 (Split adoption telemetry token from write token)
