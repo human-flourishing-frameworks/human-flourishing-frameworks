@@ -67,10 +67,7 @@ def require_write_grant(action):
     if ALLOW_PUBLIC_WRITES:
         return None
 
-    supplied = request.headers.get('X-HFF-Write-Token', '')
-    auth = request.headers.get('Authorization', '')
-    if auth.lower().startswith('bearer '):
-        supplied = auth[7:].strip()
+    supplied = _request_bearer_or_header('X-HFF-Write-Token')
 
     if WRITE_TOKEN and supplied and hmac.compare_digest(supplied, WRITE_TOKEN):
         return None
@@ -1583,4 +1580,5 @@ if __name__ == '__main__':
 
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
