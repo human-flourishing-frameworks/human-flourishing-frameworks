@@ -1,1 +1,1 @@
-web: python app_autonomous.py
+web: gunicorn app:app --log-file -

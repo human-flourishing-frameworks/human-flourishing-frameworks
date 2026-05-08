@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.db
+*.log
+data/*.db
+data/*.key
+*.zip
+sandbox_out*.txt
+network_status.txt
+node_network_config.json

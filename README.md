@@ -2,16 +2,13 @@
 
 **Research software for monitoring and reporting AI bias.**
 
-> **Status**: Early development. This is research software, not a production system. There is no formal governance board, no government partnerships, and no court-validated evidence. See [`CORRECTIONS.md`](./CORRECTIONS.md) for what prior versions of this project claimed incorrectly.
-
----
+> **Status**: Early development. This is research software, not a production system. There is no formal governance board, no government partnerships, and no court-validated evidence. Data shown is synthetic unless explicitly labeled otherwise.
 
 ## What This Actually Is
 
-A Flask-based system for:
-- Accepting and storing violation reports via API (`POST /api/violations`)
-- Signing each submission with HMAC-SHA256 at intake (node-specific key)
-- Peer-to-peer sync between nodes via HTTP mesh
+A Flask-based framework for:
+- Logging reports of AI system bias (currently using mock data)
+- Peer-to-peer sync between nodes via HTTP
 - Byzantine fault-tolerant consensus on violation reports (PBFT implementation)
 - Cryptographically signed audit trails (Ed25519)
 
@@ -19,25 +16,21 @@ A Flask-based system for:
 
 - Not production-ready
 - Not endorsed by any government agency, university, or standards body
-- Not tracking 13 nodes globally — deployment is local development plus occasional cloud instances
-- Not tracking real violations by default — submitted violations are real; demo data is clearly labeled synthetic
-- Not court-admissible — HMAC-SHA256 over SQLite records is cryptographic integrity, not legal admissibility
+- Not "13 nodes deployed globally" — deployment is local development plus 1 Railway instance
+- Not tracking real violations — all current data is clearly labeled as mock/demo
 
 ## Current State (Honest)
 
 | Component | Status |
 |-----------|--------|
 | Flask app | Working locally |
-| Real violation intake | `POST /api/violations` — signed, stored, consensus-proposed |
 | PBFT consensus | Teaching implementation — handles happy path |
-| Cryptographic signing | HMAC-SHA256 (intake) + Ed25519 (audit trail) |
+| Cryptographic signing | Ed25519 via `cryptography` library |
 | Mesh sync | HTTP POST between known peers |
-| Demo data | Synthetic violations, clearly labeled at `/api/violations/demo` |
-| Real public data | ProPublica COMPAS summary (attributed) at `/api/violations/compas` |
-| Governance | None. No board has been seated. |
-| Cloud deployment | Occasional Railway/Render instances (may be inactive) |
-
----
+| Mock data | 4 synthetic violations, clearly labeled |
+| Real data | ProPublica COMPAS summary (attributed, not our analysis) |
+| Governance | None. This is a solo research project. |
+| Cloud deployment | 1 Railway instance (may be inactive) |
 
 ## Quick Start
 
@@ -48,101 +41,35 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Visit `http://localhost:5000`. The dashboard loads all stats from the API — no numbers are hardcoded.
-
-**Environment variables:**
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `PORT` | `5000` | Listen port |
-| `NODE_NAME` | `node-<uuid>` | Display name |
-| `CENTRAL_SERVER` | live Render URL | Set to `http://localhost:9999` to run fully offline |
-
----
-
-## API
-
-### Submit a violation
-
-```
-POST /api/violations
-Content-Type: application/json
-
-{
-  "system_name":    "Name of the AI system",
-  "violation_type": "Type of bias or harm",
-  "severity":       "LOW|MEDIUM|HIGH|CRITICAL",
-  "affected_count": 1000,
-  "harm_amount":    "estimated $5M",    // optional
-  "evidence":       "What happened",    // optional
-  "reporter":       "anonymous"         // optional
-}
-
-→ 201 { "id": "<uuid>", "signature": "<hmac-sha256>", "status": "approved", ... }
-```
-
-### Other endpoints
-
-```
-GET  /health
-GET  /api/status                       — real DB counts
-GET  /api/violations                   — submitted violations
-GET  /api/violations/<id>              — single violation + signature_valid
-GET  /api/violations/demo              — synthetic demo data (labeled)
-GET  /api/violations/compas            — ProPublica COMPAS reference (cited)
-GET  /api/consensus/approved           — violations approved by Byzantine vote
-GET  /api/consensus/status/<id>
-POST /api/consensus/tally/<id>         — re-tally after peer votes arrive
-GET  /api/mesh/peers
-GET  /api/mesh/violations
-POST /mesh/sync                        — peer-to-peer sync endpoint
-GET  /api/adoption/stats
-GET  /api/adoption/nodes
-POST /api/adoption/register
-```
-
----
-
-## Multi-node consensus
-
-Run three nodes to test real Byzantine consensus (requires >66.7% agreement):
-
-```bash
-PORT=5000 NODE_NAME=node-1 python app.py
-PORT=5001 NODE_NAME=node-2 python app.py
-PORT=5002 NODE_NAME=node-3 python app.py
-```
-
-Single-node deployments auto-approve every proposal (1/1 = 100%) — technically correct but not meaningfully Byzantine.
-
----
+Visit http://localhost:5000
 
 ## Architecture
 
-- `app.py` — Flask application, all routes
-- `violations_db.py` — Real violation store, HMAC-SHA256 signing
-- `byzantine_consensus.py` — PBFT consensus protocol
+- `app.py` — Main Flask application and dashboard
+- `byzantine_consensus.py` — PBFT consensus protocol (teaching implementation)
 - `cryptographic_proof.py` — Ed25519 signing, Merkle trees, audit log
-- `data_sources.py` — Synthetic demo data + COMPAS public dataset reference
+- `data_sources.py` — Mock data and public dataset references
 - `mesh_network.py` — HTTP-based peer sync
 - `adoption_tracker.py` — Node registration and stats
 
----
+## Data Sources
 
-## Governance
+This project does not generate original bias measurements. Current data:
 
-The software is designed to support a 12-member independent governance board. **No board has been seated.** If you want to help build the governance structure: board@human-flourishing-frameworks.org
+- **Mock violations**: Clearly labeled synthetic data for testing (`source: "MOCK - Not Real Data"`)
+- **COMPAS reference**: Summary of ProPublica's published analysis (Angwin et al., 2016). We did not conduct this research; we cite it.
 
----
+## Contributing
 
-## Corrections
-
-See [`CORRECTIONS.md`](./CORRECTIONS.md) for a full record of fabricated claims in prior versions and what was changed.
-
----
+This project needs honest contributors. If you want to help:
+1. Pick a real, public dataset on AI bias
+2. Write a proper data source with full attribution
+3. Open a PR
 
 ## License
 
-- Specifications: CC-BY-4.0
-- Code: Apache-2.0
-- Governance documents: CC0
+[Add actual license here]
+
+---
+
+*Previously, this repository contained fabricated claims about deployment scale, government partnerships, governance boards, and violation data. Those claims have been removed. This README reflects only what is verifiably true.*
