@@ -13,6 +13,7 @@ from live_observation_telemetry import (
     STATUS_RAN_WITH_MEASUREMENTS_NO_UPDATES,
     STATUS_RAN_WITH_UPDATES,
     STATUS_REGISTERED_NOT_RUN,
+    STATUS_RUNNING,
 )
 
 
@@ -36,6 +37,18 @@ class LiveObservationTelemetryTest(unittest.TestCase):
         self.assertEqual(payload["sensor_count"], 9)
         self.assertEqual(payload["observation_count"], 0)
         self.assertEqual(payload["last_correction_count"], 0)
+
+    def test_started_first_observation_reports_running(self):
+        telemetry = LiveObservationTelemetry()
+        telemetry.mark_enabled(sensor_count=9)
+        telemetry.start_observation()
+
+        self.assertEqual(telemetry.status_reason(), STATUS_RUNNING)
+        payload = telemetry.to_dict()
+        self.assertEqual(payload["status_reason"], STATUS_RUNNING)
+        self.assertEqual(payload["observation_count"], 0)
+        self.assertIsNotNone(payload["last_observation_started_at"])
+        self.assertIsNone(payload["last_observation_finished_at"])
 
     def test_run_with_zero_measurements_is_explicit(self):
         telemetry = LiveObservationTelemetry(enabled=True, sensor_count=9)
