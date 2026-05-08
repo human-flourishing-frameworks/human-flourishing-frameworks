@@ -4,11 +4,27 @@ Human Flourishing Frameworks - Heroku-optimized minimal app
 Simplified version that works reliably on Heroku
 """
 
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, request
 import os
 from datetime import datetime
+import uuid
+from adoption_tracker import (
+    init_adoption_db, register_node, get_adoption_stats,
+    get_nodes_list, get_active_nodes, get_total_nodes
+)
 
 app = Flask(__name__)
+
+# Initialize adoption tracking
+try:
+    init_adoption_db()
+except:
+    pass
+
+# Generate or load node ID
+NODE_ID = str(uuid.uuid4())
+NODE_NAME = os.environ.get('NODE_NAME', f'node-{NODE_ID[:8]}')
+PLATFORM = os.environ.get('PLATFORM', 'web')
 
 # Mock data
 VIOLATIONS = [
@@ -160,9 +176,18 @@ HTML_TEMPLATE = """
                 <div class="stat-label">Quantified Harm</div>
             </div>
             <div class="stat-box">
-                <div class="stat-number">12</div>
-                <div class="stat-label">Governance Board Members</div>
+                <div class="stat-number" id="node-count">0</div>
+                <div class="stat-label">Active Nodes Online</div>
             </div>
+        </div>
+
+        <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center;">
+            <h3 style="color: #00ffff; margin-bottom: 10px;">Global Network Growth</h3>
+            <p style="color: #bbb; font-size: 14px;">
+                <strong id="total-nodes">Loading...</strong> total nodes deployed worldwide<br>
+                <strong id="active-24h">0</strong> nodes active in last 24 hours<br>
+                <strong id="new-7d">0</strong> new nodes in last 7 days
+            </p>
         </div>
 
         <h2 style="color: #00ffff; margin: 40px 0 20px 0;">Critical Violations Under Review</h2>
@@ -195,6 +220,30 @@ HTML_TEMPLATE = """
             <p style="margin-top: 10px;">Monitoring AI systems. Protecting human flourishing.</p>
         </footer>
     </div>
+
+    <script>
+        // Load adoption stats
+        fetch('/api/adoption/stats')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('node-count').textContent = data.active_last_hour;
+                document.getElementById('total-nodes').textContent = data.total_nodes;
+                document.getElementById('active-24h').textContent = data.active_last_24h;
+                document.getElementById('new-7d').textContent = data.last_7_days;
+            })
+            .catch(e => console.log('Could not load adoption stats'));
+
+        // Register this node
+        fetch('/api/adoption/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                node_id: '{{ node_id }}',
+                node_name: '{{ node_name }}',
+                platform: '{{ platform }}'
+            })
+        }).catch(e => console.log('Node registration failed'));
+    </script>
 </body>
 </html>
 """
@@ -202,7 +251,7 @@ HTML_TEMPLATE = """
 @app.route('/')
 def index():
     """Main dashboard"""
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(HTML_TEMPLATE, node_id=NODE_ID, node_name=NODE_NAME, platform=PLATFORM)
 
 @app.route('/api/status')
 def status():
@@ -226,6 +275,70 @@ def health():
     """Health check for Heroku"""
     return jsonify({"status": "ok"}), 200
 
+@app.route('/api/adoption/register', methods=['POST'])
+def adoption_register():
+    """Register a new node"""
+    try:
+        data = request.json
+        register_node(
+            data.get('node_id', str(uuid.uuid4())),
+            data.get('node_name', 'unknown'),
+            data.get('platform', 'web'),
+            data.get('version', '1.0.0')
+        )
+        return jsonify({"status": "registered"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/api/adoption/stats')
+def adoption_stats():
+    """Get adoption statistics"""
+    try:
+        stats = get_adoption_stats()
+        return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({
+            "total_nodes": 0,
+            "active_last_hour": 0,
+            "active_last_24h": 0,
+            "last_7_days": 0,
+            "by_platform": {},
+            "error": str(e)
+        }), 200
+
+@app.route('/api/adoption/nodes')
+def adoption_nodes():
+    """Get list of recent nodes"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        nodes = get_nodes_list(limit)
+        return jsonify(nodes), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/adoption/dashboard')
+def adoption_dashboard():
+    """Get adoption dashboard data"""
+    try:
+        stats = get_adoption_stats()
+        return jsonify({
+            "stats": stats,
+            "this_node": {
+                "id": NODE_ID,
+                "name": NODE_NAME,
+                "platform": PLATFORM
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
+    # Register this node on startup
+    try:
+        register_node(NODE_ID, NODE_NAME, PLATFORM)
+        print(f"\n[OK] Node registered: {NODE_NAME} ({PLATFORM})")
+    except Exception as e:
+        print(f"\n[WARNING] Could not register node: {e}")
+
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
