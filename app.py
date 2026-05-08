@@ -23,9 +23,8 @@ from mesh_network import (
 )
 from data_sources import get_mock_violations, get_compas_summary
 from byzantine_consensus import (
-    init_consensus_db, propose_violation as consensus_propose,
-    cast_vote, tally_consensus,
-    get_approved_violations, get_consensus_status
+    init_consensus_db, get_approved_violations, get_consensus_status,
+    _COMPAT_DB, _ensure_compat_db
 )
 from violations_db import (
     init_violations_db, submit_violation, get_violations,
@@ -34,6 +33,28 @@ from violations_db import (
 )
 
 app = Flask(__name__)
+
+def _consensus_propose(violation_id, system_name, violation_type, severity, n_nodes=1):
+    """Write a proposal to the PBFT compat DB.
+    On single-node deployments auto-approves (1/1 = 100%).
+    On multi-node deployments, status stays 'pending' until PBFT completes.
+    """
+    _ensure_compat_db()
+    status = 'approved' if n_nodes == 1 else 'pending'
+    score  = 100.0      if n_nodes == 1 else 0.0
+    import sqlite3 as _sql
+    conn = _sql.connect(_COMPAT_DB)
+    try:
+        conn.execute("""
+            INSERT OR IGNORE INTO proposals
+            (violation_id, system_name, violation_type, severity, consensus_status, consensus_score)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (violation_id, system_name, violation_type, severity, status, score))
+        conn.commit()
+    finally:
+        conn.close()
+    return status
+
 
 for _init in [init_adoption_db, init_mesh_db, init_consensus_db, init_violations_db]:
     try:
@@ -287,17 +308,13 @@ def api_violations_post():
         return jsonify({"error": str(e)}), 400
 
     try:
-        consensus_propose(
-            violation_id   = record['id'],
-            system_name    = record['system_name'],
-            violation_type = record['violation_type'],
-            severity       = record['severity'],
-            affected_count = record['affected_count'],
-            harm_amount    = record['harm_amount'],
+        nodes = get_nodes_list(limit=1000)
+        n = max(len(nodes), 1)
+        consensus_status = _consensus_propose(
+            record['id'], record['system_name'],
+            record['violation_type'], record['severity'], n_nodes=n,
         )
-        cast_vote(record['id'], 'YES', 'submitted by this node')
-        result = tally_consensus(record['id'], total_nodes=1)
-        if result['status'] == 'approved':
+        if consensus_status == 'approved':
             update_violation_status(record['id'], 'approved')
             record['status'] = 'approved'
     except Exception as e:
@@ -458,15 +475,14 @@ def consensus_status_route(violation_id):
 
 @app.route('/api/consensus/tally/<violation_id>', methods=['POST'])
 def consensus_tally(violation_id):
-    """Re-tally consensus after new votes arrive from peers."""
+    """Re-evaluate consensus status for a violation (e.g. after peer votes arrive)."""
     try:
-        nodes = get_nodes_list(limit=1000)
-        result = tally_consensus(violation_id, total_nodes=max(len(nodes), 1))
-        if result['status'] == 'approved':
+        status = get_consensus_status(violation_id)
+        if status.get('status') == 'approved':
             update_violation_status(violation_id, 'approved')
-        elif result['status'] == 'rejected':
+        elif status.get('status') == 'rejected':
             update_violation_status(violation_id, 'rejected')
-        return jsonify(result), 200
+        return jsonify(status), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
