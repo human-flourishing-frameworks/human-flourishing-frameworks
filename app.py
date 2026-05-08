@@ -22,6 +22,7 @@ from mesh_network import (
     init_mesh_db, get_mesh_violations, sync_with_mesh
 )
 from data_sources import get_mock_violations, get_compas_summary
+from seed_data import ALL_SEED_MEASUREMENTS
 from agent_system import (
     AutonomousAgentSystem,
     ViolationDetectionAgent,
@@ -100,6 +101,48 @@ world_model = WorldModel(
     sensors=_world_sensor_registry,
     db_path=os.path.join(os.path.dirname(__file__), "data", "world_model.db"),
 )
+
+# ---------------------------------------------------------------------------
+# Bootstrap — seed the world model with REAL data only
+# ---------------------------------------------------------------------------
+# The world model starts empty. Without initial observations it has no beliefs
+# and nothing to show. This bootstrap feeds published, cited, real-world
+# findings into the sensor→world_model pipeline so the system has something
+# true to reason about from the moment it starts.
+#
+# NO mock data enters the world model. Mock violations stay in the demo UI
+# where they are clearly labeled synthetic.
+# ---------------------------------------------------------------------------
+
+
+def _bootstrap_world_model() -> None:
+    """Seed the world model with observations from peer-reviewed research.
+
+    Draws from seed_data.py which contains measurements from 30+ published
+    sources covering humans (health, autonomy, fairness, opportunity),
+    animals (health, safety, comfort, natural_behavior), and ecosystems
+    (biodiversity, stability, resilience).
+
+    Every measurement comes from peer-reviewed or publicly audited research.
+    No mock data enters the world model. Each carries honest uncertainty.
+    See seed_data.py for full source citations and methodology notes.
+    """
+    # Skip if the model already has beliefs (persistence across restarts)
+    if world_model.beliefs:
+        return
+
+    bootstrap_measurements = ALL_SEED_MEASUREMENTS
+
+    updates = world_model.update(bootstrap_measurements)
+    print(f"[BOOTSTRAP] Seeded {len(updates)} beliefs from real published data")
+    for u in updates:
+        print(
+            f"  - {u['entity']}: posterior={u['posterior']:.3f}, "
+            f"uncertainty={u['uncertainty']:.3f}"
+        )
+
+
+_bootstrap_world_model()
 
 # ---------------------------------------------------------------------------
 # HTML template
