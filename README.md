@@ -6,17 +6,34 @@ A democratic, open-source system for detecting, tracking, and fixing unfair AI a
 
 ---
 
-## Download & Install Now
+## ⚡ Get Started in 30 Seconds
 
-**[👉 DIRECT DOWNLOADS PAGE](DOWNLOADS.md)** — All installers with direct links
+### 🚀 Deploy to Cloud (No Installation)
 
-### Quick Download Links
+| **Railway** | **Render** |
+|:---:|:---:|
+| **[Deploy Now](https://railway.app/template/hff)** | **[Deploy Now](https://render.com/deploy)** |
+| Free tier, reliable | 15-min free demo |
+| Dashboard live in seconds | Scales automatically |
 
-| **Windows** | **Mac/Linux** | **Docker** |
-|:---:|:---:|:---:|
-| **[PowerShell Installer](https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/install-no-git.ps1)** | **[Bash Script](https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/install.sh)** | **[docker-compose.yml](https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/docker-compose.yml)** |
-| No Git needed | `bash install.sh` | `docker-compose up -d` |
-| Or build [EXE](BUILD_INSTALLER.md) | Auto-installs Python | Works anywhere |
+### 💻 Install Locally (One Command)
+
+**Mac/Linux:**
+```bash
+curl -sSL https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/install-one-liner.sh | bash
+```
+
+**Windows PowerShell:**
+```powershell
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/install-no-git.ps1' -OutFile 'install.ps1'; & './install.ps1'"
+```
+
+**Docker:**
+```bash
+docker-compose up
+```
+
+👉 **[Full Setup Guide](INSTANT_SETUP.md)** — Choose your method
 
 ---
 
