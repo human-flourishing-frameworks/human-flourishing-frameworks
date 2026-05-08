@@ -24,6 +24,8 @@ Assume these attackers exist:
 - A mesh peer that repeats false violations until they appear verified.
 - A bad actor who submits model/API text designed to mislead readers or execute in the dashboard.
 - A denial-of-service caller that sends large JSON bodies, large batches, or repeated writes.
+- A dictator, rogue state, rogue planet, or advanced weapons monopoly that coerces nodes into false agreement.
+- A powerful AI or weapons system that tries to convert control of force into control of truth.
 
 ## Required Controls
 
@@ -196,6 +198,84 @@ capability grants.
 Unadmitted forks may publish their own proposal states, but those states remain
 untrusted public views until admitted by signed node authority.
 
+### 9. Anti-Coercion Durable Truth
+
+The network must treat coercion as an attack on truth. A majority of nodes under
+threat, capture, censorship, or monopoly violence must not become moral or
+epistemic authority.
+
+Core rule:
+
+```text
+consensus under credible coercion is not consolidated truth
+```
+
+The system should distinguish physical power from truth authority:
+
+- weapons control does not grant belief authority
+- infrastructure control does not grant moral authority
+- a captured node may remain visible but lose governance weight
+- a coerced quorum should trigger review, not automatic acceptance
+- dissent disappearance should reduce confidence, not increase it
+
+The immutable rule set should include anti-coercion constraints:
+
+- do not let threats determine truth
+- do not punish nonviolent dissent
+- do not deny essential service as punishment or coercion
+- do not convert a monopoly on force into a monopoly on opinion
+- do not falsify, erase, or suppress adverse evidence
+- preserve sentient life without empowering domination
+- preserve the right to challenge official claims
+
+Nodes should support duress-aware status:
+
+| Status | Meaning |
+|---|---|
+| `normal` | No known coercion signal. |
+| `suspected_duress` | Behavior, route, or environment suggests pressure. |
+| `under_duress` | Node has signaled it cannot speak freely. |
+| `captured` | Node authority is suspended for contested governance. |
+| `silent_or_missing` | Dissent may be suppressed; do not infer agreement. |
+
+Duress signals must not require a node to openly defy a captor. The protocol
+should support indirect or delayed signs of capture, such as missing heartbeats,
+unexpected key changes, abnormal uniformity, censored dissent, or sudden belief
+reversals after threats.
+
+High-risk accepted facts and proposals should require independence diversity:
+
+- geographic separation
+- political and legal separation
+- infrastructure separation
+- operator separation
+- communication-route separation
+- sensor and evidence-source separation
+
+Many nodes controlled by one violent or coercive authority should not count as
+many independent confirmations.
+
+The system should preserve truth sanctuaries: replicated, append-only,
+content-addressed archives that store signed observations, challenges, proposals,
+and historical minority reports. A hostile authority may capture current nodes,
+but should not be able to erase prior evidence or make disappeared dissent look
+like consent.
+
+If coercion is suspected, proposal/action policy should collapse to the safest
+valid state:
+
+- keep observing
+- preserve and replicate evidence
+- allow reversible local safety measures
+- mark contested claims as non-final
+- reduce captured-node governance weight
+- block irreversible punishment, suppression, or external accusation
+- require diverse admitted confirmation before high-risk action
+
+The network should be resilient enough that no dictator, rogue planet, rogue AI,
+or weapons monopoly can make "everyone agrees" true merely by controlling who is
+allowed to speak.
+
 ## Proposed Implementation Order
 
 1. Add request body, batch, string, and rate limits around all write endpoints.
@@ -205,7 +285,9 @@ untrusted public views until admitted by signed node authority.
 5. Add a proposal object model with signed transition events and local last-known-state views.
 6. Add signed node admission records and make mesh/adoption trust depend on them.
 7. Add signed transparency events for accepted facts, immutable rule changes, node admission, proposals, and releases.
-8. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, and output-injection scenarios.
+8. Add duress-aware node status, independence diversity checks, and coercion-weighted quorum rules.
+9. Add truth-sanctuary replication for signed observations, proposal histories, challenges, and minority reports.
+10. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, and output-injection scenarios.
 
 ## Non-Goals
 
@@ -224,5 +306,7 @@ should at minimum have:
 - observe-only default autonomy
 - accepted-fact gates tied to admitted-node confirmation
 - signed proposal state transitions with stale-state protection
+- coercion-aware quorum and node-duress status
+- append-only truth-sanctuary records for challenges and minority reports
 - mesh verification that requires signed admitted peers
 - tests proving rogue inputs remain bounded and non-authoritative
