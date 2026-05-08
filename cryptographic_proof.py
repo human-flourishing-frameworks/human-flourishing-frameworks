@@ -1,211 +1,384 @@
 #!/usr/bin/env python3
 """
-Cryptographic Proof System
-Makes all violations legally admissible
-Every record is signed, timestamped, immutable
+Provides cryptographic signing and audit logging.
+
+Signatures prove a record was created by the holder of a specific private key.
+The audit log is append-only in software; physical database access can still
+modify it. Courts determine admissibility; this software does not make that
+determination.
 """
 
 import hashlib
-import hmac
 import json
+import os
 import sqlite3
-from datetime import datetime
-from typing import Dict, Any
+import time
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
 
-# Use repository key (stored in git, public)
-PROOF_KEY = "human-flourishing-frameworks-v1"
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey,
+    Ed25519PublicKey,
+)
+from cryptography.exceptions import InvalidSignature
 
-def sign_violation(violation_data: Dict) -> Dict:
+# ---------------------------------------------------------------------------
+# Key management
+# ---------------------------------------------------------------------------
+
+
+def generate_keypair() -> Tuple[Ed25519PrivateKey, Ed25519PublicKey]:
+    """Generate a fresh Ed25519 private/public key pair."""
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key()
+    return private_key, public_key
+
+
+def save_keypair(
+    private_key: Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    private_path: str,
+    public_path: str,
+) -> None:
+    """Persist an Ed25519 key pair to PEM files.
+
+    The private key is written **unencrypted**.  In production you would
+    encrypt it with a passphrase; this is a teaching implementation.
     """
-    Create cryptographic signature for violation
-    Using HMAC-SHA256 (FIPS 198 compliant)
-    """
-    # Canonicalize JSON for consistent hashing
-    canonical = json.dumps(violation_data, sort_keys=True, separators=(',', ':'))
+    priv_bytes = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    pub_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
 
-    # Create HMAC signature
-    signature = hmac.new(
-        PROOF_KEY.encode(),
-        canonical.encode(),
-        hashlib.sha256
-    ).hexdigest()
+    os.makedirs(os.path.dirname(private_path) or ".", exist_ok=True)
+    os.makedirs(os.path.dirname(public_path) or ".", exist_ok=True)
 
-    # Create timestamped, signed record
-    return {
-        "violation_data": violation_data,
-        "signature": signature,
-        "proof_key_hash": hashlib.sha256(PROOF_KEY.encode()).hexdigest(),
-        "timestamp_utc": datetime.utcnow().isoformat() + "Z",
-        "algorithm": "HMAC-SHA256",
-        "canonical_json": canonical,
-        "verifiable": True,
-        "court_admissible": True
-    }
+    with open(private_path, "wb") as f:
+        f.write(priv_bytes)
+    with open(public_path, "wb") as f:
+        f.write(pub_bytes)
 
-def verify_violation(signed_record: Dict) -> bool:
+
+def load_keypair(
+    private_path: str, public_path: str
+) -> Tuple[Ed25519PrivateKey, Ed25519PublicKey]:
+    """Load an Ed25519 key pair from PEM files."""
+    with open(private_path, "rb") as f:
+        private_key = serialization.load_pem_private_key(f.read(), password=None)
+    with open(public_path, "rb") as f:
+        public_key = serialization.load_pem_public_key(f.read())
+
+    if not isinstance(private_key, Ed25519PrivateKey):
+        raise TypeError("Private key is not Ed25519")
+    if not isinstance(public_key, Ed25519PublicKey):
+        raise TypeError("Public key is not Ed25519")
+
+    return private_key, public_key
+
+
+# ---------------------------------------------------------------------------
+# Record signing
+# ---------------------------------------------------------------------------
+
+
+def _canonical(record: dict) -> bytes:
+    """Produce a canonical byte representation of a dict for signing."""
+    return json.dumps(record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+@dataclass
+class SignedRecord:
+    """A record bundled with its Ed25519 signature."""
+
+    record: dict
+    signature: bytes  # raw Ed25519 signature (64 bytes)
+    public_key_bytes: bytes  # DER-encoded public key for verification
+    timestamp_utc: str
+
+    def to_dict(self) -> dict:
+        """Serialise to a JSON-safe dict (hex-encoding binary fields)."""
+        return {
+            "record": self.record,
+            "signature_hex": self.signature.hex(),
+            "public_key_hex": self.public_key_bytes.hex(),
+            "timestamp_utc": self.timestamp_utc,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SignedRecord":
+        return cls(
+            record=d["record"],
+            signature=bytes.fromhex(d["signature_hex"]),
+            public_key_bytes=bytes.fromhex(d["public_key_hex"]),
+            timestamp_utc=d["timestamp_utc"],
+        )
+
+
+def sign_record(record: dict, private_key: Ed25519PrivateKey) -> SignedRecord:
+    """Sign *record* with the given Ed25519 private key.
+
+    Returns a ``SignedRecord`` containing the original data, the raw
+    signature, the corresponding public key (for verification), and an
+    ISO-8601 UTC timestamp.
     """
-    Verify cryptographic signature
-    Returns True if record is unmodified
+    canonical = _canonical(record)
+    signature = private_key.sign(canonical)
+
+    pub_bytes = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+    return SignedRecord(
+        record=record,
+        signature=signature,
+        public_key_bytes=pub_bytes,
+        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+def verify_record(signed_record: SignedRecord, public_key: Ed25519PublicKey) -> bool:
+    """Verify the Ed25519 signature on a ``SignedRecord``.
+
+    Returns ``True`` if the signature is valid, ``False`` otherwise.
     """
+    canonical = _canonical(signed_record.record)
     try:
-        violation_data = signed_record["violation_data"]
-        claimed_signature = signed_record["signature"]
-
-        # Reconstruct signature
-        canonical = json.dumps(violation_data, sort_keys=True, separators=(',', ':'))
-        expected_signature = hmac.new(
-            PROOF_KEY.encode(),
-            canonical.encode(),
-            hashlib.sha256
-        ).hexdigest()
-
-        # Compare (constant-time to prevent timing attacks)
-        return hmac.compare_digest(claimed_signature, expected_signature)
-    except:
+        public_key.verify(signed_record.signature, canonical)
+        return True
+    except InvalidSignature:
         return False
 
-def create_audit_trail(violation_id: str) -> Dict:
+
+# ---------------------------------------------------------------------------
+# Merkle tree
+# ---------------------------------------------------------------------------
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+class MerkleTree:
+    """A simple binary Merkle tree over a list of records (dicts).
+
+    Leaves are SHA-256 hashes of canonical JSON representations.
     """
-    Create immutable audit trail for violation
-    Shows every step: proposal → voting → consensus → approval
+
+    def __init__(self, records: List[dict]) -> None:
+        if not records:
+            raise ValueError("MerkleTree requires at least one record")
+        self.records = list(records)
+        self.leaves: List[str] = [_sha256(_canonical(r)) for r in self.records]
+        self._tree: List[List[str]] = self._build()
+
+    def _build(self) -> List[List[str]]:
+        """Build the tree bottom-up.  Returns list of levels (0 = leaves)."""
+        levels: List[List[str]] = [self.leaves[:]]
+        current = self.leaves[:]
+        while len(current) > 1:
+            if len(current) % 2 == 1:
+                current.append(current[-1])  # duplicate last
+            next_level = []
+            for i in range(0, len(current), 2):
+                combined = (current[i] + current[i + 1]).encode()
+                next_level.append(_sha256(combined))
+            levels.append(next_level)
+            current = next_level
+        return levels
+
+    @property
+    def root(self) -> str:
+        """The Merkle root hash."""
+        return self._tree[-1][0]
+
+    def get_proof(self, index: int) -> List[Tuple[str, str]]:
+        """Return an inclusion proof for the leaf at *index*.
+
+        Each element is ``(hash, side)`` where side is ``'left'`` or
+        ``'right'``, indicating which side the sibling sits on.
+        """
+        if index < 0 or index >= len(self.leaves):
+            raise IndexError(f"Index {index} out of range [0, {len(self.leaves)})")
+
+        proof: List[Tuple[str, str]] = []
+        idx = index
+        for level in self._tree[:-1]:
+            padded = level[:]
+            if len(padded) % 2 == 1:
+                padded.append(padded[-1])
+
+            if idx % 2 == 0:
+                sibling = padded[idx + 1]
+                proof.append((sibling, "right"))
+            else:
+                sibling = padded[idx - 1]
+                proof.append((sibling, "left"))
+            idx //= 2
+        return proof
+
+    @staticmethod
+    def verify_proof(record: dict, proof: List[Tuple[str, str]], root: str) -> bool:
+        """Verify a Merkle inclusion proof for *record* against *root*."""
+        current = _sha256(_canonical(record))
+        for sibling_hash, side in proof:
+            if side == "left":
+                combined = (sibling_hash + current).encode()
+            else:
+                combined = (current + sibling_hash).encode()
+            current = _sha256(combined)
+        return current == root
+
+
+# ---------------------------------------------------------------------------
+# Append-only audit log (SQLite)
+# ---------------------------------------------------------------------------
+
+_AUDIT_DB = os.environ.get("AUDIT_DB_PATH", "./data/audit.db")
+
+
+class AuditLog:
+    """Append-only, hash-chain-linked audit log backed by SQLite.
+
+    Each entry stores a SHA-256 hash of (previous_hash || canonical_record),
+    forming a tamper-evident chain.  Note: this is tamper-*evident*, not
+    tamper-*proof* — anyone with write access to the SQLite file can modify
+    it.  The chain lets you detect such modifications.
     """
-    conn = sqlite3.connect("./data/byzantine.db")
-    c = conn.cursor()
 
-    # Get proposal
-    c.execute("""
-        SELECT violation_id, system_name, violation_type, severity,
-               affected_count, harm_amount, proposal_timestamp, consensus_score
-        FROM proposals WHERE violation_id = ?
-    """, (violation_id,))
-    proposal = c.fetchone()
+    def __init__(self, db_path: str = _AUDIT_DB) -> None:
+        self.db_path = db_path
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+        self._init_db()
 
-    # Get votes
-    c.execute("""
-        SELECT voter_node_id, vote, vote_timestamp, vote_hash
-        FROM votes WHERE violation_id = ?
-        ORDER BY vote_timestamp
-    """, (violation_id,))
-    votes = c.fetchall()
-
-    conn.close()
-
-    if not proposal:
-        return {"error": "Violation not found"}
-
-    # Create signed audit trail
-    audit_data = {
-        "violation_id": violation_id,
-        "proposal": {
-            "system": proposal[1],
-            "type": proposal[2],
-            "severity": proposal[3],
-            "affected_persons": proposal[4],
-            "quantified_harm": proposal[5],
-            "proposed_at": proposal[6]
-        },
-        "consensus": {
-            "status": proposal[7],
-            "threshold": "66.67%",
-            "algorithm": "Byzantine Fault Tolerant"
-        },
-        "voting_records": [
-            {
-                "voter_node": vote[0],
-                "vote": vote[1],
-                "timestamp": vote[2],
-                "vote_hash": vote[3]
-            }
-            for vote in votes
-        ]
-    }
-
-    return sign_violation(audit_data)
-
-def create_merkle_tree_proof(violations: list) -> Dict:
-    """
-    Create Merkle tree proof of violation set
-    Allows cryptographic proof of collection integrity
-    """
-    if not violations:
-        return {"error": "No violations"}
-
-    # Sign each violation
-    signed = [sign_violation(v) for v in violations]
-
-    # Create Merkle tree
-    hashes = [v["signature"] for v in signed]
-
-    while len(hashes) > 1:
-        if len(hashes) % 2 == 1:
-            hashes.append(hashes[-1])
-
-        new_hashes = []
-        for i in range(0, len(hashes), 2):
-            combined = hashes[i] + hashes[i+1]
-            new_hashes.append(
-                hashlib.sha256(combined.encode()).hexdigest()
+    def _init_db(self) -> None:
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_entries (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                record_json     TEXT    NOT NULL,
+                record_hash     TEXT    NOT NULL,
+                previous_hash   TEXT    NOT NULL,
+                chain_hash      TEXT    NOT NULL,
+                created_at      TEXT    NOT NULL
             )
-        hashes = new_hashes
+        """
+        )
+        conn.commit()
+        conn.close()
 
-    return {
-        "merkle_root": hashes[0] if hashes else None,
-        "violation_count": len(violations),
-        "signed_violations": signed,
-        "algorithm": "SHA-256 Merkle Tree",
-        "proof_type": "collection_integrity",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
-    }
+    def _last_chain_hash(self) -> str:
+        """Return the chain_hash of the most recent entry, or a zero hash."""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            "SELECT chain_hash FROM audit_entries ORDER BY id DESC LIMIT 1"
+        )
+        row = c.fetchone()
+        conn.close()
+        return row[0] if row else ("0" * 64)
 
-def export_court_admissible_report(violations_list: list) -> Dict:
-    """
-    Create formal report suitable for court/legal proceedings
-    Includes all cryptographic proofs
-    """
-    return {
-        "report_type": "AI Fairness Violation Evidence",
-        "report_date": datetime.utcnow().isoformat() + "Z",
-        "violations": [sign_violation(v) for v in violations_list],
-        "merkle_proof": create_merkle_tree_proof(violations_list),
-        "total_violations": len(violations_list),
-        "cryptographic_verification": {
-            "algorithm": "HMAC-SHA256",
-            "standard": "FIPS 198",
-            "verification_instructions": "See README.md for verification",
-            "python_verification": "python3 verify_signatures.py report.json"
-        },
-        "legal_admissibility": {
-            "cryptographically_signed": True,
-            "timestamp_verified": True,
-            "tamper_evident": True,
-            "suitable_for": ["legal_proceedings", "regulatory_action", "court_evidence"],
-            "standards_compliant": ["FIPS 198", "SHA-256", "HMAC standards"]
-        }
-    }
+    def append(self, record: dict) -> int:
+        """Append *record* to the audit log.  Returns the new entry ID."""
+        canonical = _canonical(record)
+        record_hash = _sha256(canonical)
+        previous_hash = self._last_chain_hash()
+        chain_hash = _sha256((previous_hash + record_hash).encode())
+        now = datetime.now(timezone.utc).isoformat()
 
-def verify_report(report: Dict) -> Dict:
-    """
-    Independently verify all signatures in report
-    Returns verification status
-    """
-    results = {
-        "report_verified": True,
-        "violations_verified": 0,
-        "violations_failed": 0,
-        "errors": []
-    }
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            """INSERT INTO audit_entries
+               (record_json, record_hash, previous_hash, chain_hash, created_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (canonical.decode("utf-8"), record_hash, previous_hash, chain_hash, now),
+        )
+        entry_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return entry_id
 
-    for violation in report.get("violations", []):
-        if verify_violation(violation):
-            results["violations_verified"] += 1
-        else:
-            results["violations_failed"] += 1
-            results["report_verified"] = False
-            results["errors"].append(f"Failed to verify: {violation.get('violation_id')}")
+    def verify_chain(self) -> Tuple[bool, int]:
+        """Walk the chain and verify every link.
 
-    return results
+        Returns ``(is_valid, entries_checked)``.
+        """
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            "SELECT id, record_json, record_hash, previous_hash, chain_hash "
+            "FROM audit_entries ORDER BY id"
+        )
+        rows = c.fetchall()
+        conn.close()
+
+        prev = "0" * 64
+        for row in rows:
+            _id, record_json, record_hash, previous_hash, chain_hash = row
+            if previous_hash != prev:
+                return False, _id
+            expected_record_hash = _sha256(record_json.encode("utf-8"))
+            if record_hash != expected_record_hash:
+                return False, _id
+            expected_chain = _sha256((previous_hash + record_hash).encode())
+            if chain_hash != expected_chain:
+                return False, _id
+            prev = chain_hash
+
+        return True, len(rows)
+
+    def entries(self, limit: int = 100) -> List[dict]:
+        """Return the most recent entries (newest first)."""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            "SELECT id, record_json, chain_hash, created_at "
+            "FROM audit_entries ORDER BY id DESC LIMIT ?",
+            (limit,),
+        )
+        rows = c.fetchall()
+        conn.close()
+        return [
+            {
+                "id": r[0],
+                "record": json.loads(r[1]),
+                "chain_hash": r[2],
+                "created_at": r[3],
+            }
+            for r in rows
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Module self-test
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("[OK] Cryptographic proof system initialized")
-    print("[OK] HMAC-SHA256 signing ready")
-    print("[OK] Court-admissible evidence generation ready")
+    # Quick smoke test
+    priv, pub = generate_keypair()
+    rec = {"event": "test", "value": 42}
+    signed = sign_record(rec, priv)
+    assert verify_record(signed, pub), "Signature verification failed"
+
+    tree = MerkleTree([{"a": 1}, {"b": 2}, {"c": 3}])
+    proof = tree.get_proof(1)
+    assert MerkleTree.verify_proof({"b": 2}, proof, tree.root), "Merkle proof failed"
+
+    log = AuditLog(db_path="./data/audit_test.db")
+    log.append({"action": "test_entry"})
+    valid, count = log.verify_chain()
+    assert valid, "Audit chain verification failed"
+
+    print("[OK] Ed25519 signing works")
+    print("[OK] Merkle tree works")
+    print(f"[OK] Audit log works ({count} entries verified)")
