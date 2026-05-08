@@ -1,0 +1,19 @@
+Real Dashboard Server
+============================================================
+Connecting to actual nodes:
+  node-1: http://localhost:9999/api/status
+  node-2: http://localhost:9998/api/status
+  node-3: http://localhost:9997/api/status
+  node-4: http://localhost:9996/api/status
+  node-railway: https://web-production-46794.up.railway.app/api/status
+
+Dashboard: http://localhost:8888/
+API: http://localhost:8888/api/network
+============================================================
+ * Serving Flask app 'dashboard_real'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8888
+ * Running on http://192.168.12.105:8888
+Press CTRL+C to quit
