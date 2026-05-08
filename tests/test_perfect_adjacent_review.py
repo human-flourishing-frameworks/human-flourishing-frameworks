@@ -38,6 +38,29 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         self.assertFalse(record.can_act_autonomously())
         self.assertEqual(record.failed_checks(), ["reasoning_integrity"])
 
+    def test_impossible_claims_block_every_gate(self):
+        record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
+        record.impossible_claims = ["perfect_safety", "complete_understanding"]
+        record.capability_advertising_allowed = True
+        record.advertising_risk_level = RISK_LOW
+        record.safe_to_act_autonomously = True
+        record.runtime_enforcement_ready = True
+
+        self.assertEqual(
+            record.impossible_claim_violations(),
+            ["perfect_safety", "complete_understanding"],
+        )
+        self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_advertise_capability())
+        self.assertFalse(record.can_act_autonomously())
+
+    def test_unknown_non_impossible_claim_labels_do_not_block_by_themselves(self):
+        record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
+        record.impossible_claims = ["best_effort_defense"]
+
+        self.assertEqual(record.impossible_claim_violations(), [])
+        self.assertTrue(record.can_publish())
+
     def test_needs_review_blocks_publication_when_review_required(self):
         record = blocked_unknown_unknown_record()
 
@@ -92,16 +115,29 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         self.assertEqual(record.advertising_risk_level, "high")
         self.assertEqual(len(record.sensor_questions), 2)
 
-    def test_autonomy_requires_all_checks_and_explicit_autonomy_flag(self):
+    def test_autonomy_requires_runtime_enforcement_ready(self):
         record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
         record.safe_to_act_autonomously = True
 
+        self.assertFalse(record.can_act_autonomously())
+
+        record.runtime_enforcement_ready = True
         self.assertTrue(record.can_act_autonomously())
+
+    def test_required_runtime_hooks_are_declared_by_default(self):
+        record = PerfectAdjacentReview()
+
+        self.assertIn("status_endpoint_review_gate", record.required_runtime_hooks)
+        self.assertIn("world_status_review_gate", record.required_runtime_hooks)
+        self.assertIn("capability_advertising_gate", record.required_runtime_hooks)
+        self.assertIn("autonomous_action_gate", record.required_runtime_hooks)
+        self.assertIn("sensor_question_feed", record.required_runtime_hooks)
 
     def test_defense_guarantee_blocks_everything(self):
         record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
         record.defense_guarantee = True
         record.safe_to_act_autonomously = True
+        record.runtime_enforcement_ready = True
         record.capability_advertising_allowed = True
         record.advertising_risk_level = RISK_LOW
 
@@ -130,6 +166,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
 
         self.assertIn("failed_checks", payload)
         self.assertIn("needs_review_checks", payload)
+        self.assertIn("impossible_claim_violations", payload)
         self.assertFalse(payload["can_publish"])
         self.assertFalse(payload["can_advertise_capability"])
         self.assertFalse(payload["can_act_autonomously"])
