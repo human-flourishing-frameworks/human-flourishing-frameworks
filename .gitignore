@@ -1,8 +1,11 @@
 __pycache__/
+*.py[cod]
 *.pyc
+.venv/
 *.db
 *.log
 data/*.db
+data/*.db-*
 data/*.key
 *.zip
 sandbox_out*.txt

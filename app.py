@@ -16,7 +16,8 @@ import threading
 
 from adoption_tracker import (
     init_adoption_db, register_node, get_adoption_stats,
-    get_nodes_list, get_active_nodes, get_total_nodes, start_heartbeat
+    get_nodes_list, get_active_nodes, get_total_nodes, start_heartbeat,
+    get_verified_node_count
 )
 from mesh_network import (
     init_mesh_db, get_mesh_violations, sync_with_mesh
@@ -41,6 +42,8 @@ from live_sensors import create_live_sensors, run_observation_loop
 
 app = Flask(__name__)
 
+MIN_CONSENSUS_NODES = int(os.environ.get('MIN_CONSENSUS_NODES', '3'))
+
 # ---------------------------------------------------------------------------
 # Database init (safe to call multiple times)
 # ---------------------------------------------------------------------------
@@ -60,6 +63,10 @@ except Exception:
 NODE_ID = str(uuid.uuid4())
 NODE_NAME = os.environ.get('NODE_NAME', f'node-{NODE_ID[:8]}')
 PLATFORM = os.environ.get('PLATFORM', 'web')
+REGION = os.environ.get('NODE_REGION', '')
+OPERATOR_TYPE = os.environ.get('OPERATOR_TYPE', '')
+DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', '')
+NODE_PUBLIC_KEY = os.environ.get('NODE_PUBLIC_KEY', '')
 
 # ---------------------------------------------------------------------------
 # Background threads — only heartbeat + mesh sync (no propagation)
@@ -82,6 +89,12 @@ except Exception:
         save_keypair(_node_private, _node_public, _NODE_KEY_PRIV, _NODE_KEY_PUB)
     except Exception:
         pass  # keys stay in memory only
+
+if not NODE_PUBLIC_KEY:
+    try:
+        NODE_PUBLIC_KEY = _node_public.decode() if isinstance(_node_public, bytes) else str(_node_public)
+    except Exception:
+        NODE_PUBLIC_KEY = ''
 
 _PEER_URLS = [
     u.strip() for u in os.environ.get("PEER_URLS", "").split(",") if u.strip()
@@ -914,7 +927,11 @@ HTML_TEMPLATE = """
             body: JSON.stringify({
                 node_id: '{{ node_id }}',
                 node_name: '{{ node_name }}',
-                platform: '{{ platform }}'
+                platform: '{{ platform }}',
+                region: '{{ region }}',
+                operator_type: '{{ operator_type }}',
+                deployment_type: '{{ deployment_type }}',
+                node_public_key: '{{ node_public_key }}'
             })
         }).catch(() => {});
     </script>
@@ -934,6 +951,10 @@ def index():
         node_id=NODE_ID,
         node_name=NODE_NAME,
         platform=PLATFORM,
+        region=REGION,
+        operator_type=OPERATOR_TYPE,
+        deployment_type=DEPLOYMENT_TYPE,
+        node_public_key=NODE_PUBLIC_KEY,
     )
 
 
@@ -946,12 +967,19 @@ def health():
 @app.route('/api/status')
 def api_status():
     """Honest system status — no fabricated numbers."""
+    try:
+        adoption = get_adoption_stats()
+    except Exception:
+        adoption = {}
     return jsonify({
         "status": "running",
         "timestamp": datetime.utcnow().isoformat(),
         "mode": "research",
         "data_source": "mock",
         "node_id": NODE_ID,
+        "verified_nodes": adoption.get("verified_nodes", 0),
+        "security_nodes": adoption.get("security_node_count", 0),
+        "min_consensus_nodes": MIN_CONSENSUS_NODES,
         "disclaimer": (
             "This is research software. Violation data shown is synthetic "
             "unless labeled otherwise."
@@ -994,6 +1022,10 @@ def adoption_register():
             data.get('node_name', 'unknown'),
             data.get('platform', 'web'),
             data.get('version', '1.0.0'),
+            data.get('region', ''),
+            data.get('operator_type', ''),
+            data.get('deployment_type', ''),
+            data.get('node_public_key', ''),
         )
         return jsonify({"status": "registered"}), 200
     except Exception as e:
@@ -1039,6 +1071,11 @@ def adoption_dashboard():
                 "id": NODE_ID,
                 "name": NODE_NAME,
                 "platform": PLATFORM,
+                "region": REGION,
+                "operator_type": OPERATOR_TYPE,
+                "deployment_type": DEPLOYMENT_TYPE,
+                "node_public_key": NODE_PUBLIC_KEY,
+                "verified": False,
             },
         }), 200
     except Exception as e:
@@ -1455,11 +1492,17 @@ def world_discover():
 if __name__ == '__main__':
     # Register this node on startup
     try:
-        register_node(NODE_ID, NODE_NAME, PLATFORM)
+        register_node(NODE_ID, NODE_NAME, PLATFORM, region=REGION,
+                      operator_type=OPERATOR_TYPE,
+                      deployment_type=DEPLOYMENT_TYPE,
+                      node_public_key=NODE_PUBLIC_KEY)
         print(f"\n[OK] Node registered: {NODE_NAME} ({PLATFORM})")
 
         # Start heartbeat (keeps node visible in adoption tracker)
-        start_heartbeat(NODE_ID, NODE_NAME, PLATFORM, interval=60)
+        start_heartbeat(NODE_ID, NODE_NAME, PLATFORM, interval=60,
+                        region=REGION, operator_type=OPERATOR_TYPE,
+                        deployment_type=DEPLOYMENT_TYPE,
+                        node_public_key=NODE_PUBLIC_KEY)
         print("[OK] Heartbeat started — syncing every 60 seconds")
     except Exception as e:
         print(f"\n[WARNING] Could not register node: {e}")

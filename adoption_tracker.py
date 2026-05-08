@@ -33,9 +33,26 @@ def init_adoption_db():
             first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             version TEXT,
+            region TEXT,
+            operator_type TEXT,
+            deployment_type TEXT,
+            node_public_key TEXT,
+            verified INTEGER DEFAULT 0,
             status TEXT DEFAULT 'active'
         )
     ''')
+
+    for column, definition in {
+        "region": "TEXT",
+        "operator_type": "TEXT",
+        "deployment_type": "TEXT",
+        "node_public_key": "TEXT",
+        "verified": "INTEGER DEFAULT 0",
+    }.items():
+        try:
+            c.execute(f"ALTER TABLE nodes ADD COLUMN {column} {definition}")
+        except sqlite3.OperationalError:
+            pass
     
     # Create adoption history (daily snapshots)
     c.execute('''
@@ -50,7 +67,10 @@ def init_adoption_db():
     conn.commit()
     conn.close()
 
-def sync_to_central_server(node_id, node_name, platform, version="1.0.0"):
+def sync_to_central_server(
+    node_id, node_name, platform, version="1.0.0",
+    region="", operator_type="", deployment_type="", node_public_key=""
+):
     """Send node registration to central server"""
     if not SYNC_ENABLED or CENTRAL_SERVER.startswith('http://localhost'):
         return
@@ -62,7 +82,11 @@ def sync_to_central_server(node_id, node_name, platform, version="1.0.0"):
                 'node_id': node_id,
                 'node_name': node_name,
                 'platform': platform,
-                'version': version
+                'version': version,
+                'region': region,
+                'operator_type': operator_type,
+                'deployment_type': deployment_type,
+                'node_public_key': node_public_key
             },
             timeout=5
         )
@@ -72,23 +96,38 @@ def sync_to_central_server(node_id, node_name, platform, version="1.0.0"):
         pass
     return False
 
-def register_node(node_id, node_name, platform, version="1.0.0"):
+def register_node(
+    node_id, node_name, platform, version="1.0.0",
+    region="", operator_type="", deployment_type="", node_public_key=""
+):
     """Register a new node or update existing (locally and on central server)"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     try:
         c.execute('''
-            INSERT INTO nodes (node_id, node_name, platform, version, last_seen)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ''', (node_id, node_name, platform, version))
+            INSERT INTO nodes
+            (node_id, node_name, platform, version, region, operator_type,
+             deployment_type, node_public_key, verified, last_seen)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
+        ''', (node_id, node_name, platform, version, region, operator_type,
+              deployment_type, node_public_key))
     except sqlite3.IntegrityError:
         # Node exists, update last_seen
         c.execute('''
             UPDATE nodes
-            SET last_seen = CURRENT_TIMESTAMP, status = 'active'
+            SET last_seen = CURRENT_TIMESTAMP,
+                status = 'active',
+                node_name = ?,
+                platform = ?,
+                version = ?,
+                region = ?,
+                operator_type = ?,
+                deployment_type = ?,
+                node_public_key = ?
             WHERE node_id = ?
-        ''', (node_id,))
+        ''', (node_name, platform, version, region, operator_type,
+              deployment_type, node_public_key, node_id))
 
     conn.commit()
     conn.close()
@@ -97,7 +136,8 @@ def register_node(node_id, node_name, platform, version="1.0.0"):
     if SYNC_ENABLED and not CENTRAL_SERVER.startswith('http://localhost'):
         thread = threading.Thread(
             target=sync_to_central_server,
-            args=(node_id, node_name, platform, version),
+            args=(node_id, node_name, platform, version, region, operator_type,
+                  deployment_type, node_public_key),
             daemon=True
         )
         thread.start()
@@ -130,6 +170,23 @@ def get_total_nodes():
     
     return count
 
+def get_verified_node_count(minutes=None):
+    """Get count of admitted verified nodes, optionally active in the last N minutes."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    if minutes is None:
+        c.execute("SELECT COUNT(*) FROM nodes WHERE verified = 1")
+    else:
+        c.execute('''
+            SELECT COUNT(*) FROM nodes
+            WHERE verified = 1 AND last_seen > datetime('now', ?)
+        ''', (f'-{int(minutes)} minutes',))
+
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
 def get_adoption_stats():
     """Get comprehensive adoption statistics"""
     conn = sqlite3.connect(DB_PATH)
@@ -152,6 +209,15 @@ def get_adoption_stats():
         WHERE last_seen > datetime('now', '-24 hours')
     ''')
     active_24h = c.fetchone()[0]
+
+    c.execute("SELECT COUNT(*) FROM nodes WHERE verified = 1")
+    verified_total = c.fetchone()[0]
+
+    c.execute('''
+        SELECT COUNT(*) FROM nodes
+        WHERE verified = 1 AND last_seen > datetime('now', '-1 hour')
+    ''')
+    verified_active_1h = c.fetchone()[0]
     
     # By platform
     c.execute('''
@@ -161,6 +227,14 @@ def get_adoption_stats():
         ORDER BY count DESC
     ''')
     by_platform = {row[0]: row[1] for row in c.fetchall()}
+
+    c.execute('''
+        SELECT COALESCE(NULLIF(region, ''), 'unspecified'), COUNT(*) as count
+        FROM nodes
+        GROUP BY COALESCE(NULLIF(region, ''), 'unspecified')
+        ORDER BY count DESC
+    ''')
+    by_region = {row[0]: row[1] for row in c.fetchall()}
     
     # Recent nodes (last 7 days)
     c.execute('''
@@ -175,8 +249,13 @@ def get_adoption_stats():
         "total_nodes": total,
         "active_last_hour": active_1h,
         "active_last_24h": active_24h,
+        "verified_nodes": verified_total,
+        "verified_active_last_hour": verified_active_1h,
+        "security_node_count": verified_active_1h,
         "last_7_days": last_7d,
         "by_platform": by_platform,
+        "by_region": by_region,
+        "verification": "self_reported_visible_nodes_verified_nodes_count_for_security",
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -186,7 +265,8 @@ def get_nodes_list(limit=50):
     c = conn.cursor()
     
     c.execute('''
-        SELECT node_name, platform, first_seen, last_seen, status
+        SELECT node_name, platform, first_seen, last_seen, status, region,
+               operator_type, deployment_type, node_public_key, verified
         FROM nodes
         ORDER BY last_seen DESC
         LIMIT ?
@@ -198,7 +278,12 @@ def get_nodes_list(limit=50):
             "platform": row[1],
             "first_seen": row[2],
             "last_seen": row[3],
-            "status": row[4]
+            "status": row[4],
+            "region": row[5] or "",
+            "operator_type": row[6] or "",
+            "deployment_type": row[7] or "",
+            "node_public_key": row[8] or "",
+            "verified": bool(row[9])
         }
         for row in c.fetchall()
     ]
@@ -206,7 +291,10 @@ def get_nodes_list(limit=50):
     conn.close()
     return nodes
 
-def start_heartbeat(node_id, node_name, platform, interval=60):
+def start_heartbeat(
+    node_id, node_name, platform, interval=60,
+    region="", operator_type="", deployment_type="", node_public_key=""
+):
     """Periodically ping central server to keep node visible"""
     def heartbeat_loop():
         while SYNC_ENABLED:
@@ -217,7 +305,11 @@ def start_heartbeat(node_id, node_name, platform, interval=60):
                         'node_id': node_id,
                         'node_name': node_name,
                         'platform': platform,
-                        'version': '1.0.0'
+                        'version': '1.0.0',
+                        'region': region,
+                        'operator_type': operator_type,
+                        'deployment_type': deployment_type,
+                        'node_public_key': node_public_key
                     },
                     timeout=3
                 )

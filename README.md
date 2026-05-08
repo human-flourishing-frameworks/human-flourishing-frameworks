@@ -21,6 +21,8 @@ A framework for measuring and improving outcomes — for people, animals, ecosys
 - Not endorsed by any government, university, or standards body
 - Not tracking real violations yet — demo data is clearly labeled synthetic
 - Not omniscient — the model only knows what the sensors can see, and it says so
+- Node counts are self-reported and unverified unless explicitly labeled otherwise
+- GitHub branch updates, including `master`, are not authoritative operational changes until approved by the operator
 
 ## Current State (Honest)
 
@@ -47,6 +49,18 @@ python app.py
 ```
 
 Visit http://localhost:5000
+
+Optional node metadata can help show distribution without publishing raw IP addresses:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NODE_NAME` | `node-<uuid>` | Display name |
+| `PLATFORM` | `web` | Runtime surface, such as `web`, `docker`, or `local-dev` |
+| `NODE_REGION` | empty | Optional self-reported region or location label |
+| `OPERATOR_TYPE` | empty | Optional self-reported operator class, such as `independent`, `lab`, or `cloud` |
+| `DEPLOYMENT_TYPE` | empty | Optional self-reported deployment type, such as `render`, `railway`, `docker`, or `local` |
+| `NODE_PUBLIC_KEY` | generated node key | Node identity key advertised for future admission checks |
+| `MIN_CONSENSUS_NODES` | `3` | Minimum verified active nodes needed before consensus can be security-backed |
 
 ## Architecture
 
@@ -86,6 +100,56 @@ Observe → Believe → Predict → Act → Observe again → Correct → Repeat
 | `POST /api/world/observe` | Submit sensor measurements |
 | `GET /api/world/corrections` | Every time the model self-corrected |
 | `GET /api/world/discover` | Anomalies and discovered patterns |
+
+Node adoption data is public liveness telemetry, not proof of identity. Public counts should be described as
+self-reported unless an independent verification layer is added.
+
+Unverified nodes may be visible in public stats, but they do not count toward security. Only admitted, verified,
+recently active nodes should count toward consensus or network security claims.
+
+## Node Security Model
+
+The node network separates visibility from authority:
+
+- visible node: self-reported liveness telemetry, useful for adoption and debugging
+- verified node: admitted by operator-approved or system-approved policy, with a stable identity key
+- security node: verified and recently active; eligible to count toward quorum/security
+- forked node: allowed to run public code, but unaffiliated until admitted
+
+Near-term rule:
+
+```text
+unverified nodes can be counted publicly
+verified active nodes count for security
+forks are not authoritative unless admitted
+```
+
+Future admission should require a node key, version attestation, operator/diversity metadata, revocation support,
+and an audit event. The system should not accept its own key-management authority until that admission path and
+operator recovery have both been tested.
+
+## Authority and Releases
+
+The GitHub repository is a code proposal surface. A push, branch update, merge, or README edit is not by itself
+an authoritative operational decision.
+
+Capability-control rules are defined in [`CAPABILITY_CONTROL.md`](./CAPABILITY_CONTROL.md). The system should
+not hold broad dangerous capabilities by default; dangerous actions require narrow, temporary, audited grants.
+
+Authoritative actions require explicit operator approval, especially:
+
+- deploying or redeploying public services
+- changing public claims about node counts, governance, or verification
+- treating `master` as the live truth source
+- moving from self-reported telemetry to verified telemetry
+- announcing a node, report, or consensus result as independently validated
+
+Today, the operator manages production keys and deployment authority. The intended future path is system-managed
+keys, but only after the system can prove enough confidence through audited key rotation, rollback, recovery,
+least-privilege access, operator break-glass recovery, and verified multi-node consensus over key changes.
+
+If the running public service and GitHub disagree, say so plainly and treat the running service plus operator
+approval as the authority until a deliberate release is made.
 
 ## Flourishing Metrics
 
