@@ -62,6 +62,32 @@ def _request_bearer_or_header(header_name):
         supplied = auth[7:].strip()
     return supplied
 
+
+def require_adoption_grant(action):
+    """Return an error response unless adoption telemetry has an explicit grant."""
+    if ALLOW_PUBLIC_WRITES:
+        return None
+
+    supplied = _request_bearer_or_header('X-HFF-Adoption-Token')
+
+    if ADOPTION_ACCEPT_TOKEN and supplied and hmac.compare_digest(
+        supplied, ADOPTION_ACCEPT_TOKEN
+    ):
+        return None
+
+    if WRITE_TOKEN and supplied and hmac.compare_digest(supplied, WRITE_TOKEN):
+        return None
+
+    return jsonify({
+        "error": "adoption_grant_required",
+        "action": action,
+        "message": (
+            "This endpoint registers node liveness telemetry. Production "
+            "adoption writes require HFF_ADOPTION_ACCEPT_TOKEN, HFF_WRITE_TOKEN "
+            "operator fallback, or an explicit HFF_ALLOW_PUBLIC_WRITES=true "
+            "demo override."
+        ),
+    }), 403
 def require_write_grant(action):
     """Return an error response unless this write has an explicit grant."""
     if ALLOW_PUBLIC_WRITES:
@@ -1074,7 +1100,7 @@ def api_compas():
 @app.route('/api/adoption/register', methods=['POST'])
 def adoption_register():
     """Register a new node."""
-    grant_error = require_write_grant("adoption_register")
+    grant_error = require_adoption_grant("adoption_register")
     if grant_error:
         return grant_error
 
@@ -1580,5 +1606,6 @@ if __name__ == '__main__':
 
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
