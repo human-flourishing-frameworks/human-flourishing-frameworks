@@ -8,6 +8,7 @@ details on mock vs. real datasets.
 """
 
 from flask import Flask, jsonify, render_template_string, request
+import math
 import os
 from datetime import datetime
 import uuid
@@ -33,6 +34,8 @@ from agent_system import (
     IMMUTABLE_RULES,
 )
 from cryptographic_proof import generate_keypair, load_keypair, save_keypair
+from sensors import Measurement, SensorRegistry
+from world_model import WorldModel, Intervention
 
 app = Flask(__name__)
 
@@ -87,6 +90,15 @@ autonomous_system = AutonomousAgentSystem(
     public_key=_node_public,
     peer_urls=_PEER_URLS,
     node_id=NODE_ID,
+)
+
+# ---------------------------------------------------------------------------
+# World model — Bayesian belief tracking + sensor framework
+# ---------------------------------------------------------------------------
+_world_sensor_registry = SensorRegistry()
+world_model = WorldModel(
+    sensors=_world_sensor_registry,
+    db_path=os.path.join(os.path.dirname(__file__), "data", "world_model.db"),
 )
 
 # ---------------------------------------------------------------------------
@@ -258,6 +270,34 @@ HTML_TEMPLATE = """
             <!-- populated by JS -->
         </div>
 
+        <h2 style="color: #00ff88; margin: 40px 0 20px 0;">World Model</h2>
+        <div class="demo-banner" style="border-color: #00ff88; background: rgba(0, 255, 136, 0.1); color: #00ff88;">
+            <strong>BAYESIAN WORLD MODEL</strong> &mdash; Tracks probabilistic beliefs
+            about outcomes across all domains and scopes. The model is always wrong
+            somewhere &mdash; uncertainty is a first-class concept, not an afterthought.
+            Every number below carries error bars.
+        </div>
+        <div class="stats" id="world-model-stats">
+            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
+                <div class="stat-number" style="color: #00ff88;" id="wm-belief-count">0</div>
+                <div class="stat-label">Beliefs Tracked</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
+                <div class="stat-number" style="color: #00ff88;" id="wm-sensor-count">0</div>
+                <div class="stat-label">Sensors Active</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
+                <div class="stat-number" style="color: #00ff88;" id="wm-avg-uncertainty">--</div>
+                <div class="stat-label">Avg Uncertainty</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
+                <div class="stat-number" style="color: #00ff88;" id="wm-corrections">0</div>
+                <div class="stat-label">Self-Corrections</div>
+            </div>
+        </div>
+        <div id="world-model-flourishing" style="margin: 20px 0;"></div>
+        <div id="world-model-discoveries" style="margin: 20px 0;"></div>
+
         <footer>
             <p>Human Flourishing Frameworks &mdash; Research Software</p>
             <p style="margin-top: 10px;">
@@ -347,6 +387,69 @@ HTML_TEMPLATE = """
                             <p><strong>Status:</strong> <span style="color: ${statusColor};">${e.status}</span></p>
                             <p><strong>Lock time:</strong> ${e.lock_time}</p>
                             <p><strong>Execute time:</strong> ${e.execute_time}</p>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            })
+            .catch(() => {});
+
+        // Load world model status
+        fetch('/api/world/status')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('wm-belief-count').textContent = data.belief_count || 0;
+                document.getElementById('wm-sensor-count').textContent = data.sensor_count || 0;
+                document.getElementById('wm-avg-uncertainty').textContent =
+                    data.average_uncertainty !== undefined
+                        ? (data.average_uncertainty * 100).toFixed(0) + '%'
+                        : '--';
+                document.getElementById('wm-corrections').textContent = data.corrections_count || 0;
+
+                // Render flourishing scores
+                const scores = data.flourishing_scores || {};
+                const fContainer = document.getElementById('world-model-flourishing');
+                const scopes = Object.keys(scores);
+                if (scopes.length > 0) {
+                    let html = '<h3 style="color: #00ff88; margin-bottom: 10px;">Flourishing Scores by Scope</h3>';
+                    html += '<div class="stats">';
+                    scopes.forEach(scope => {
+                        const s = scores[scope];
+                        const pct = (s.score * 100).toFixed(0);
+                        const unc = (s.uncertainty * 100).toFixed(0);
+                        html += `
+                            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.3);">
+                                <div class="stat-number" style="font-size: 20px; color: #00ff88;">${pct}%</div>
+                                <div class="stat-label">${scope}</div>
+                                <div style="margin-top: 6px; font-size: 11px; color: #888;">
+                                    &plusmn;${unc}% uncertainty
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    fContainer.innerHTML = html;
+                }
+            })
+            .catch(() => {});
+
+        // Load world model discoveries
+        fetch('/api/world/discover')
+            .then(r => r.json())
+            .then(data => {
+                const discoveries = data.discoveries || [];
+                const container = document.getElementById('world-model-discoveries');
+                if (discoveries.length === 0) return;
+
+                let html = '<h3 style="color: #00ff88; margin-bottom: 10px;">Discovered Patterns</h3>';
+                discoveries.slice(0, 5).forEach(d => {
+                    const sevColor = d.severity === 'actionable' ? '#ffcc00'
+                                   : d.severity === 'interesting' ? '#00ffff'
+                                   : '#888';
+                    html += `
+                        <div class="violation" style="border-left-color: #00ff88; margin-bottom: 10px;">
+                            <h3 style="font-size: 14px; color: ${sevColor};">${d.type}</h3>
+                            <p>${d.description}</p>
                         </div>
                     `;
                 });
@@ -580,6 +683,317 @@ def autonomous_rules():
     """Return IMMUTABLE_RULES for full transparency."""
     try:
         return jsonify(autonomous_system.get_rules()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# World model endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.route('/api/world/status')
+def world_status():
+    """World model status: belief count, sensor count, last update, flourishing.
+
+    The model is always wrong somewhere. The 'average_uncertainty' field
+    tells you roughly how wrong -- higher means more ignorant. This is
+    honest self-assessment, not false modesty.
+    """
+    try:
+        status = world_model.status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/beliefs')
+def world_beliefs():
+    """Current beliefs, paginated and filterable by domain/scope.
+
+    Each belief includes its uncertainty -- the most important number
+    after the posterior itself. A posterior of 0.8 with uncertainty 0.6
+    is NOT a confident belief.
+
+    Query params:
+        domain: filter by domain (e.g., 'healthcare')
+        scope: filter by scope (e.g., 'humans')
+        page: page number (default 1)
+        per_page: items per page (default 50, max 200)
+    """
+    try:
+        domain = request.args.get('domain')
+        scope = request.args.get('scope')
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 50, type=int), 200)
+
+        all_beliefs = list(world_model.beliefs.values())
+
+        if domain:
+            all_beliefs = [b for b in all_beliefs if b.domain == domain]
+        if scope:
+            all_beliefs = [b for b in all_beliefs if b.scope == scope]
+
+        # Sort by last_updated descending
+        all_beliefs.sort(key=lambda b: b.last_updated, reverse=True)
+
+        total = len(all_beliefs)
+        start = (page - 1) * per_page
+        end = start + per_page
+        page_beliefs = all_beliefs[start:end]
+
+        return jsonify({
+            "beliefs": [b.to_dict() for b in page_beliefs],
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": math.ceil(total / per_page) if total > 0 else 0,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/belief/<path:entity>')
+def world_belief_detail(entity):
+    """Detailed belief for one entity, including full history.
+
+    The history shows how the model's belief has evolved over time.
+    Large swings in the posterior indicate either contradictory evidence
+    or a genuinely volatile phenomenon. Steady convergence indicates
+    the model is learning something stable.
+    """
+    try:
+        belief = world_model.query(entity)
+        if belief is None:
+            return jsonify({
+                "error": "not_found",
+                "entity": entity,
+                "message": (
+                    "no belief exists for this entity. the model has not "
+                    "observed it yet. this does not mean it does not exist "
+                    "-- only that no sensor has measured it."
+                ),
+            }), 404
+
+        history = world_model.get_history(entity)
+
+        return jsonify({
+            "belief": belief.to_dict(),
+            "history": history,
+            "evidence_count": len(belief.evidence),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/observe', methods=['POST'])
+def world_observe():
+    """Submit new sensor measurements for Bayesian update.
+
+    Accepts a list of measurements. Each measurement must include at
+    minimum: value, uncertainty, confidence_interval, source, and scope.
+
+    The model updates its beliefs based on these measurements. More
+    certain measurements (lower uncertainty) shift beliefs more.
+
+    Request body:
+    {
+        "measurements": [
+            {
+                "value": 0.73,
+                "uncertainty": 0.15,
+                "confidence_interval": [0.65, 0.81],
+                "source": "hospital_xyz_records",
+                "scope": "healthcare:hospital_xyz",
+                "methodology": "administrative_records",
+                "sample_size": 500,
+                "confounders": ["income_not_controlled"],
+                "missing": ["rural_patients_excluded"]
+            }
+        ]
+    }
+    """
+    try:
+        data = request.json
+        if not data or "measurements" not in data:
+            return jsonify({
+                "error": "request must include 'measurements' array",
+            }), 400
+
+        raw_measurements = data["measurements"]
+        if not isinstance(raw_measurements, list):
+            return jsonify({"error": "'measurements' must be an array"}), 400
+
+        measurements = []
+        errors = []
+        for i, raw in enumerate(raw_measurements):
+            try:
+                m = Measurement.from_dict(raw)
+                measurements.append(m)
+            except Exception as e:
+                errors.append({"index": i, "error": str(e)})
+
+        if not measurements:
+            return jsonify({
+                "error": "no valid measurements in request",
+                "parse_errors": errors,
+            }), 400
+
+        updates = world_model.update(measurements)
+
+        return jsonify({
+            "updates": updates,
+            "measurements_processed": len(measurements),
+            "parse_errors": errors,
+            "disclaimer": (
+                "beliefs have been updated. the model is now slightly less "
+                "wrong than before (probably). check uncertainty values."
+            ),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/predict/<path:entity>')
+def world_predict(entity):
+    """What interventions could improve this entity's flourishing?
+
+    Returns a list of hypothetical interventions with predicted effects.
+    Every prediction includes uncertainty bounds and caveats. These are
+    suggestions based on current beliefs, not prescriptions.
+
+    Query params:
+        action: specific action to evaluate (default: 'improve')
+    """
+    try:
+        action = request.args.get('action', 'improve')
+        interventions = world_model.counterfactual(entity, action)
+
+        predictions = []
+        for intervention in interventions:
+            prediction = world_model.predict(intervention)
+            predictions.append(prediction.to_dict())
+
+        return jsonify({
+            "entity": entity,
+            "predictions": predictions,
+            "disclaimer": (
+                "these are speculative predictions, not guarantees. "
+                "correlation does not imply causation. second-order "
+                "effects are especially uncertain."
+            ),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/flourishing')
+def world_flourishing():
+    """Aggregate flourishing scores by scope.
+
+    Returns flourishing scores for all scopes the model knows about.
+    Each score includes uncertainty -- a score of 70% with 40% uncertainty
+    means flourishing could plausibly be anywhere from 30% to 100%.
+
+    Query params:
+        scope: specific scope to query (returns all if not specified)
+    """
+    try:
+        specific_scope = request.args.get('scope')
+
+        if specific_scope:
+            score = world_model.flourishing_score(specific_scope)
+            metric = world_model.get_flourishing_metric(specific_scope)
+            return jsonify({
+                "scope": specific_scope,
+                "score": score.to_dict(),
+                "components": metric.to_dict()["components"],
+                "disclaimer": (
+                    "flourishing is a value-laden concept. these components "
+                    "and weights reflect choices, not objective truths."
+                ),
+            }), 200
+
+        # All scopes
+        scopes = list(set(
+            b.scope for b in world_model.beliefs.values()
+        ))
+        # Also include explicitly configured flourishing metrics
+        scopes = list(set(
+            scopes + list(world_model._flourishing_metrics.keys())
+        ))
+
+        results = {}
+        for scope in scopes:
+            try:
+                score = world_model.flourishing_score(scope)
+                results[scope] = score.to_dict()
+            except Exception:
+                pass
+
+        return jsonify({
+            "flourishing_by_scope": results,
+            "scopes_measured": len(results),
+            "disclaimer": (
+                "flourishing metrics are approximations. unmeasured dimensions "
+                "(joy, meaning, beauty) are invisible to this model."
+            ),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/corrections')
+def world_corrections():
+    """Every time the model self-corrected.
+
+    A correction happens when new evidence significantly shifts a belief
+    (more than 5% change in posterior). Frequent corrections mean the
+    model is learning. No corrections could mean the model is stagnant
+    or not receiving new data.
+
+    Query params:
+        limit: max corrections to return (default 100)
+    """
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        corrections = world_model.correction_log[:limit]
+
+        return jsonify({
+            "corrections": corrections,
+            "total": len(world_model.correction_log),
+            "returned": len(corrections),
+            "disclaimer": (
+                "corrections are a feature, not a bug. a model that never "
+                "corrects itself is not learning."
+            ),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/world/discover')
+def world_discover():
+    """Anomalies and discovered patterns in current beliefs.
+
+    The model looks for:
+    - Outlier beliefs (posteriors far from priors with low uncertainty)
+    - Measurement gaps (clusters of high-uncertainty beliefs)
+    - Stale beliefs (not updated recently)
+    - Correlated beliefs (entities moving together, suggesting shared causes)
+
+    These are hypotheses to investigate, not conclusions.
+    """
+    try:
+        discoveries = world_model.discover()
+        return jsonify({
+            "discoveries": discoveries,
+            "count": len(discoveries),
+            "disclaimer": (
+                "patterns found here are exploratory, not causal. "
+                "the model finds correlations, not causes."
+            ),
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
