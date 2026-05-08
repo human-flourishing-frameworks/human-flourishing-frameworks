@@ -67,6 +67,11 @@ Optional node metadata can help show distribution without publishing raw IP addr
 | `ENABLE_MESH_SYNC` | empty/false | Opt in to background peer mesh sync |
 | `ENABLE_LIVE_SENSORS` | empty/false | Opt in to polling external public APIs in the live sensor loop |
 
+To make a local node visible to the central adoption tracker, run it with
+`ENABLE_ADOPTION_SYNC=true`, `CENTRAL_SERVER=https://human-flourishing-frameworks.onrender.com`,
+and the same `HFF_WRITE_TOKEN` configured on the central service. Without those
+settings, the node stays local-only.
+
 ## Architecture
 
 ```
