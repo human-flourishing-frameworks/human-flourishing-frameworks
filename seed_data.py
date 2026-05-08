@@ -1447,11 +1447,369 @@ ECOSYSTEM_MEASUREMENTS = [
 
 
 # =========================================================================
+# SPATIAL — where we are in the universe
+# =========================================================================
+# The system needs to know where it exists. Everything it measures —
+# humans, animals, ecosystems — happens at a specific location in
+# physical space. These measurements establish that context.
+#
+# Astrophysical positions are among the most precisely known values
+# in all of science. Uncertainties here are genuinely low.
+#
+# Values are normalized to 0-1 where possible, representing position
+# within a parent structure (0 = center/origin, 1 = edge/maximum),
+# or fractional quantities (e.g., habitable zone position).
+
+SPATIAL_MEASUREMENTS = [
+
+    # =====================================================================
+    # OBSERVABLE UNIVERSE — the container
+    # =====================================================================
+
+    # --- Planck Collaboration (2018) — age of the universe ----------------
+    # "Planck 2018 results. VI. Cosmological parameters."
+    # Age: 13.787 +/- 0.020 billion years. One of the most precise
+    # measurements in all of science. Normalized: fraction of estimated
+    # maximum stellar era (~100 trillion years). We are very early.
+    # 13.8e9 / 1e14 = 0.000138. The universe is young.
+    Measurement(
+        value=0.000138,
+        uncertainty=0.02,
+        confidence_interval=(0.000136, 0.000140),
+        sample_size=None,  # CMB full-sky survey
+        confounders=[
+            "assumes_lambda_cdm_cosmological_model",
+            "hubble_tension_unresolved",
+        ],
+        missing=[
+            "pre_planck_epoch_inaccessible",
+            "dark_energy_evolution_unknown",
+        ],
+        source="doi:10.1051/0004-6361/201833910",
+        methodology="planck_2018_cmb_parameter_estimation",
+        temporal_range=("2009-01-01", "2018-12-31"),
+        scope="universe:age",
+    ),
+
+    # --- Planck + BAO — observable universe radius ------------------------
+    # Comoving radius of the observable universe: 46.1 billion light-years
+    # (14.1 Gpc). This is the farthest we can possibly see.
+    # As a fraction of the full universe (if finite; lower bound from
+    # CMB flatness: >250x the observable radius): ~0.004 or less.
+    # We can see very little of what exists.
+    Measurement(
+        value=0.004,
+        uncertainty=0.05,
+        confidence_interval=(0.001, 0.01),
+        sample_size=None,
+        confounders=[
+            "full_universe_size_unknown_possibly_infinite",
+            "flatness_constraint_is_lower_bound",
+        ],
+        missing=[
+            "topology_of_universe_unconstrained",
+            "beyond_horizon_fundamentally_unobservable",
+        ],
+        source="doi:10.1051/0004-6361/201833910",
+        methodology="planck_2018_cmb_curvature_constraint",
+        temporal_range=("2018-01-01", "2018-12-31"),
+        scope="universe:observable_fraction",
+    ),
+
+    # --- Riess et al. (2022) / Planck — expansion rate --------------------
+    # Hubble constant: 67.4 +/- 0.5 km/s/Mpc (Planck CMB) vs
+    # 73.0 +/- 1.0 km/s/Mpc (SH0ES distance ladder). The "Hubble
+    # tension" is real and unresolved — these measurements disagree
+    # at >5 sigma. This is one of the biggest open problems in physics.
+    # Normalized expansion rate relative to critical density: ~1.0
+    # (the universe is flat to high precision).
+    Measurement(
+        value=0.70,
+        uncertainty=0.05,
+        confidence_interval=(0.67, 0.73),
+        sample_size=None,
+        confounders=[
+            "hubble_tension_between_early_and_late_universe",
+            "systematic_errors_in_distance_ladder_debated",
+            "new_physics_may_be_required",
+        ],
+        missing=[
+            "resolution_of_hubble_tension_unknown",
+            "dark_energy_equation_of_state_uncertain",
+        ],
+        source="doi:10.3847/2041-8213/ac5c5b",
+        methodology="riess_2022_shoes_distance_ladder",
+        temporal_range=("2020-01-01", "2022-12-31"),
+        scope="universe:expansion",
+    ),
+
+    # =====================================================================
+    # MILKY WAY — our galaxy
+    # =====================================================================
+
+    # --- Gravity Collaboration / Reid et al. (2019) — galactic structure --
+    # "Trigonometric Parallaxes of High-mass Star-forming Regions:
+    # Our View of the Milky Way." ApJ.
+    # Milky Way: barred spiral, ~100,000 ly diameter, ~1,000 ly thick,
+    # ~100-400 billion stars, ~1.5 trillion solar masses (including
+    # dark matter halo). Solar system position: 26,000 +/- 1,400 ly
+    # from galactic center. Fractional radius: 26/50 = 0.52.
+    # We are roughly halfway out — not at the center, not at the edge.
+    Measurement(
+        value=0.52,
+        uncertainty=0.03,
+        confidence_interval=(0.49, 0.55),
+        sample_size=None,  # VLBI parallax measurements
+        confounders=[
+            "galactic_disk_not_perfectly_circular",
+            "spiral_arm_structure_adds_local_variation",
+        ],
+        missing=[
+            "vertical_position_above_midplane_small_but_nonzero",
+            "dark_matter_distribution_uncertain",
+        ],
+        source="doi:10.3847/1538-4357/ab4a11",
+        methodology="reid_2019_vlbi_galactic_structure",
+        temporal_range=("2004-01-01", "2019-12-31"),
+        scope="universe:galactic_position",
+    ),
+
+    # --- Gaia DR3 (2022) — local stellar neighborhood --------------------
+    # ESA Gaia mission: mapped positions and motions of ~1.8 billion stars.
+    # The Sun's neighborhood: ~400 stars within 30 light-years.
+    # Local stellar density: ~0.14 stars per cubic light-year (relatively
+    # sparse — we are between spiral arms, in the Orion Spur).
+    # Density relative to galactic core: ~0.003.
+    Measurement(
+        value=0.003,
+        uncertainty=0.02,
+        confidence_interval=(0.002, 0.005),
+        sample_size=1800000000,  # 1.8 billion stars measured
+        confounders=[
+            "completeness_varies_with_distance_and_dust",
+            "binary_stars_sometimes_unresolved",
+        ],
+        missing=[
+            "brown_dwarfs_and_rogue_planets_undercounted",
+            "faint_m_dwarfs_incomplete_beyond_100pc",
+        ],
+        source="doi:10.1051/0004-6361/202243940",
+        methodology="gaia_dr3_stellar_census_2022",
+        temporal_range=("2014-01-01", "2022-12-31"),
+        scope="universe:local_density",
+    ),
+
+    # =====================================================================
+    # SOLAR SYSTEM — our star and its planets
+    # =====================================================================
+
+    # --- IAU / NASA JPL — Earth's orbital position ------------------------
+    # Earth orbits at 1 AU (149.6 million km) from the Sun.
+    # Within the habitable zone (estimated 0.95-1.67 AU for the Sun).
+    # Fractional position within HZ: (1.0 - 0.95) / (1.67 - 0.95) = 0.07.
+    # Earth is near the inner edge of the habitable zone.
+    # Normalized as fraction of HZ width from inner edge: 0.07.
+    # More usefully: Earth IS in the habitable zone = 1.0 for habitability.
+    Measurement(
+        value=0.95,
+        uncertainty=0.05,
+        confidence_interval=(0.85, 1.0),
+        sample_size=None,
+        confounders=[
+            "habitable_zone_boundaries_model_dependent",
+            "atmospheric_composition_affects_habitability",
+            "hz_definition_assumes_liquid_water_criterion",
+        ],
+        missing=[
+            "subsurface_habitability_not_captured",
+            "tidal_heating_habitability_excluded",
+        ],
+        source="doi:10.1088/0004-637X/765/2/131",
+        methodology="kopparapu_2013_habitable_zone_limits",
+        temporal_range=("2013-01-01", "2013-12-31"),
+        scope="universe:habitability",
+    ),
+
+    # --- NASA Exoplanet Archive — planetary context -----------------------
+    # As of 2024: 5,500+ confirmed exoplanets. Estimated ~1 in 5
+    # Sun-like stars has an Earth-sized planet in the habitable zone
+    # (Petigura et al., 2013). ~200 billion stars in the Milky Way
+    # implies ~40 billion potentially habitable planets.
+    # Earth is one of ~40 billion possible — but the only one confirmed
+    # to harbor life. Value: fraction of stars with known HZ planets
+    # = 5500/200e9 ~= 0.0000000275, but estimated occurrence rate ~0.20.
+    Measurement(
+        value=0.20,
+        uncertainty=0.10,
+        confidence_interval=(0.10, 0.30),
+        sample_size=42000,  # Kepler target stars
+        confounders=[
+            "kepler_field_not_representative_of_full_galaxy",
+            "detection_bias_toward_close_in_planets",
+            "habitable_zone_definition_varies",
+        ],
+        missing=[
+            "actual_habitability_vs_hz_location",
+            "atmospheric_characterization_for_most_targets",
+            "biosignature_detection_not_yet_possible",
+        ],
+        source="doi:10.1073/pnas.1319909110",
+        methodology="petigura_2013_kepler_hz_occurrence",
+        temporal_range=("2009-01-01", "2013-12-31"),
+        scope="universe:hz_planet_frequency",
+    ),
+
+    # =====================================================================
+    # EARTH — where all measured flourishing happens
+    # =====================================================================
+
+    # --- Various / USGS — Earth's basic parameters ------------------------
+    # Earth: 4.54 +/- 0.05 billion years old. Mass 5.97e24 kg.
+    # Surface: 510 million km2 (29.2% land, 70.8% ocean).
+    # Biosphere: thin shell ~20 km thick (deep ocean to high atmosphere).
+    # As fraction of Earth's radius (6,371 km): 20/6371 = 0.003.
+    # All life exists in 0.3% of the planet's radius. It is thin and
+    # fragile. Value: land fraction (where most measured beings live).
+    Measurement(
+        value=0.292,
+        uncertainty=0.01,
+        confidence_interval=(0.290, 0.294),
+        sample_size=None,  # geodetic survey
+        confounders=[
+            "land_fraction_changes_with_ice_ages",
+            "coastal_definition_affects_precision",
+        ],
+        missing=[
+            "seafloor_ecosystems_underexplored",
+            "subterranean_biosphere_extent_uncertain",
+        ],
+        source="https://www.usgs.gov/special-topics/water-science-school",
+        methodology="usgs_earth_surface_measurement",
+        temporal_range=("2020-01-01", "2020-12-31"),
+        scope="universe:earth_land_fraction",
+    ),
+
+    # --- Patterson (1956) / Bouvier & Wadhwa (2010) — age of Earth --------
+    # "Age of meteorites and the Earth." Geochimica et Cosmochimica Acta.
+    # Earth age: 4.543 +/- 0.050 billion years (from Pb-Pb dating of
+    # meteorites, confirmed by multiple independent methods).
+    # As fraction of stellar era: 4.54/13.79 = 0.329.
+    # Earth has been here for ~1/3 of the universe's history.
+    Measurement(
+        value=0.329,
+        uncertainty=0.01,
+        confidence_interval=(0.325, 0.333),
+        sample_size=None,  # radiometric dating
+        confounders=[
+            "earth_formation_was_gradual_not_instantaneous",
+            "late_heavy_bombardment_complicates_surface_age",
+        ],
+        missing=[
+            "earliest_crust_mostly_recycled",
+        ],
+        source="doi:10.1016/j.gca.2010.06.004",
+        methodology="bouvier_wadhwa_2010_pb_pb_meteorite_dating",
+        temporal_range=("1956-01-01", "2010-12-31"),
+        scope="universe:earth_age_fraction",
+    ),
+
+    # --- NASA / NOAA — Earth's energy balance -----------------------------
+    # Earth receives 1361 W/m2 from the Sun (solar constant).
+    # Albedo ~0.30 (reflects 30% of incoming energy).
+    # Effective temperature without greenhouse: ~255K (-18C).
+    # Actual mean surface temperature: ~288K (15C).
+    # Greenhouse effect adds ~33K. Currently out of balance by
+    # +0.87 W/m2 (Loeb et al., 2021) — accumulating heat.
+    # Energy balance as fraction of equilibrium: 1 - (0.87/1361) = 0.9994.
+    # Very close to balance but the imbalance matters enormously.
+    Measurement(
+        value=0.87,
+        uncertainty=0.05,
+        confidence_interval=(0.82, 0.92),
+        sample_size=None,  # CERES satellite radiometer
+        confounders=[
+            "natural_variability_superimposed",
+            "cloud_feedback_uncertain",
+            "ocean_heat_uptake_distribution_uneven",
+        ],
+        missing=[
+            "deep_ocean_heat_content_lag",
+            "regional_energy_budget_variations",
+        ],
+        source="doi:10.1029/2020GL091585",
+        methodology="loeb_2021_ceres_earth_energy_imbalance",
+        temporal_range=("2005-01-01", "2019-12-31"),
+        scope="universe:earth_energy_imbalance",
+    ),
+
+    # --- Mora et al. (2011) — how many species on Earth -------------------
+    # "How Many Species Are There on Earth and in the Ocean?"
+    # PLoS Biology. Estimated ~8.7 million eukaryotic species
+    # (+/- 1.3 million). ~86% of land species and ~91% of marine
+    # species remain undescribed. We share this planet with millions
+    # of species we haven't even named yet. Value: fraction described.
+    Measurement(
+        value=0.14,
+        uncertainty=0.08,
+        confidence_interval=(0.09, 0.22),
+        sample_size=None,  # statistical extrapolation from taxonomic patterns
+        confounders=[
+            "extrapolation_method_assumes_consistent_patterns",
+            "prokaryotes_and_viruses_excluded",
+            "cryptic_species_inflate_true_count",
+        ],
+        missing=[
+            "microbial_diversity_orders_of_magnitude_higher",
+            "deep_sea_and_soil_species_largely_unknown",
+            "extinction_rate_may_exceed_description_rate",
+        ],
+        source="doi:10.1371/journal.pbio.1001127",
+        methodology="mora_2011_species_count_extrapolation",
+        temporal_range=("2011-01-01", "2011-12-31"),
+        scope="universe:species_known_fraction",
+    ),
+
+    # --- Kallmeyer et al. (2012) — biomass distribution -------------------
+    # "Global distribution of microbial abundance and biomass in
+    # subseafloor sediment." PNAS. Plus Bar-On et al. (2018)
+    # "The biomass distribution on Earth." PNAS.
+    # Total biomass: ~550 Gt C. Plants dominate (~450 Gt C = 82%).
+    # All animals: ~2 Gt C (0.36%). Humans: ~0.06 Gt C (0.01%).
+    # Livestock: ~0.1 Gt C. Wild mammals: ~0.007 Gt C.
+    # Livestock outweigh wild mammals ~15:1.
+    # Human + livestock fraction of animal biomass: ~83%.
+    Measurement(
+        value=0.83,
+        uncertainty=0.10,
+        confidence_interval=(0.72, 0.93),
+        sample_size=None,  # global biomass synthesis
+        confounders=[
+            "biomass_estimates_vary_by_methodology",
+            "marine_biomass_less_certain",
+            "seasonal_and_annual_variation",
+        ],
+        missing=[
+            "viral_biomass_uncertain",
+            "subterranean_biomass_poorly_constrained",
+            "turnover_rates_not_captured_by_standing_biomass",
+        ],
+        source="doi:10.1073/pnas.1711842115",
+        methodology="bar_on_2018_global_biomass_distribution",
+        temporal_range=("2018-01-01", "2018-12-31"),
+        scope="universe:human_livestock_animal_fraction",
+    ),
+]
+
+
+# =========================================================================
 # Combined — all measurements in one list
 # =========================================================================
 
 ALL_SEED_MEASUREMENTS = (
-    HUMAN_MEASUREMENTS + ANIMAL_MEASUREMENTS + ECOSYSTEM_MEASUREMENTS
+    HUMAN_MEASUREMENTS
+    + ANIMAL_MEASUREMENTS
+    + ECOSYSTEM_MEASUREMENTS
+    + SPATIAL_MEASUREMENTS
 )
 
 
@@ -1471,6 +1829,7 @@ def get_seed_summary() -> dict:
         "human_measurements": len(HUMAN_MEASUREMENTS),
         "animal_measurements": len(ANIMAL_MEASUREMENTS),
         "ecosystem_measurements": len(ECOSYSTEM_MEASUREMENTS),
+        "spatial_measurements": len(SPATIAL_MEASUREMENTS),
         "scopes": {k: len(v) for k, v in by_scope.items()},
         "sources_cited": len(set(m.source for m in ALL_SEED_MEASUREMENTS)),
     }
@@ -1482,6 +1841,7 @@ if __name__ == "__main__":
     print(f"  Human:     {summary['human_measurements']}")
     print(f"  Animal:    {summary['animal_measurements']}")
     print(f"  Ecosystem: {summary['ecosystem_measurements']}")
+    print(f"  Spatial:   {summary['spatial_measurements']}")
     print(f"Sources cited: {summary['sources_cited']}")
     print(f"\nBy scope:")
     for scope, count in sorted(summary["scopes"].items()):
