@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
 """
-Human Flourishing Frameworks - Heroku-optimized minimal app
-Simplified version that works reliably on Heroku
+Human Flourishing Frameworks - Heroku-optimized minimal app with resilience
+Includes peer discovery, health checking, and self-propagation
 """
 
 from flask import Flask, jsonify, render_template_string, request
 import os
 from datetime import datetime
 import uuid
+import threading
+import time
 from adoption_tracker import (
     init_adoption_db, register_node, get_adoption_stats,
     get_nodes_list, get_active_nodes, get_total_nodes
 )
+from resilience import (
+    init_resilience_db, discover_peers, health_check,
+    self_propagate, get_resilience_status
+)
 
 app = Flask(__name__)
 
-# Initialize adoption tracking
+# Initialize adoption tracking and resilience
 try:
     init_adoption_db()
+except:
+    pass
+
+try:
+    init_resilience_db()
 except:
     pass
 
@@ -25,6 +36,55 @@ except:
 NODE_ID = str(uuid.uuid4())
 NODE_NAME = os.environ.get('NODE_NAME', f'node-{NODE_ID[:8]}')
 PLATFORM = os.environ.get('PLATFORM', 'web')
+
+# Resilience monitoring flag
+RESILIENCE_ENABLED = True
+HEALTH_CHECK_INTERVAL = 30  # seconds
+
+# Background resilience threads
+def resilience_health_monitor():
+    """Continuously monitor system health and network status"""
+    while RESILIENCE_ENABLED:
+        try:
+            health_check()
+        except Exception as e:
+            print(f"[WARNING] Health check failed: {e}")
+        time.sleep(HEALTH_CHECK_INTERVAL)
+
+def resilience_peer_discovery():
+    """Periodically discover new peer nodes"""
+    while RESILIENCE_ENABLED:
+        try:
+            peers = discover_peers(max_peers=10)
+            if peers:
+                print(f"[OK] Discovered {len(peers)} peer nodes")
+        except Exception as e:
+            print(f"[WARNING] Peer discovery failed: {e}")
+        # Discover peers every 5 minutes
+        time.sleep(300)
+
+def resilience_propagation():
+    """Periodically trigger self-propagation"""
+    # First propagation after 60 seconds
+    time.sleep(60)
+    while RESILIENCE_ENABLED:
+        try:
+            result = self_propagate()
+            print(f"[OK] Self-propagation triggered ({len(result.get('propagation_methods', []))} methods)")
+        except Exception as e:
+            print(f"[WARNING] Self-propagation failed: {e}")
+        # Propagate every 24 hours
+        time.sleep(86400)
+
+# Start background threads
+if RESILIENCE_ENABLED:
+    health_thread = threading.Thread(target=resilience_health_monitor, daemon=True)
+    peer_thread = threading.Thread(target=resilience_peer_discovery, daemon=True)
+    propagation_thread = threading.Thread(target=resilience_propagation, daemon=True)
+
+    health_thread.start()
+    peer_thread.start()
+    propagation_thread.start()
 
 # Mock data
 VIOLATIONS = [
@@ -181,12 +241,22 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center;">
+        <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; border-radius: 8px; padding: 20px; margin: 30px 0;">
             <h3 style="color: #00ffff; margin-bottom: 10px;">Global Network Growth</h3>
             <p style="color: #bbb; font-size: 14px;">
                 <strong id="total-nodes">Loading...</strong> total nodes deployed worldwide<br>
                 <strong id="active-24h">0</strong> nodes active in last 24 hours<br>
                 <strong id="new-7d">0</strong> new nodes in last 7 days
+            </p>
+        </div>
+
+        <div style="background: rgba(0, 150, 255, 0.1); border: 1px solid #0099ff; border-radius: 8px; padding: 20px; margin: 30px 0;">
+            <h3 style="color: #0099ff; margin-bottom: 10px;">Network Resilience Status</h3>
+            <p style="color: #bbb; font-size: 14px;">
+                <strong id="resilience-score">Loading...</strong> / 100 - System Resilience<br>
+                <strong id="peer-nodes">0</strong> peer nodes connected<br>
+                <strong id="network-status">UNKNOWN</strong> - Central Server Status<br>
+                Data Integrity: <strong id="data-integrity">CHECKING</strong>
             </p>
         </div>
 
@@ -233,6 +303,17 @@ HTML_TEMPLATE = """
             })
             .catch(e => console.log('Could not load adoption stats'));
 
+        // Load resilience status
+        fetch('/api/resilience/status')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('resilience-score').textContent = data.resilience_score;
+                document.getElementById('peer-nodes').textContent = data.peer_nodes;
+                document.getElementById('network-status').textContent = data.central_server;
+                document.getElementById('data-integrity').textContent = data.data_integrity ? 'OK' : 'ERROR';
+            })
+            .catch(e => console.log('Could not load resilience status'));
+
         // Register this node
         fetch('/api/adoption/register', {
             method: 'POST',
@@ -243,6 +324,17 @@ HTML_TEMPLATE = """
                 platform: '{{ platform }}'
             })
         }).catch(e => console.log('Node registration failed'));
+
+        // Auto-refresh resilience status every 30 seconds
+        setInterval(() => {
+            fetch('/api/resilience/status')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('resilience-score').textContent = data.resilience_score;
+                    document.getElementById('peer-nodes').textContent = data.peer_nodes;
+                })
+                .catch(e => {});
+        }, 30000);
     </script>
 </body>
 </html>
@@ -331,6 +423,69 @@ def adoption_dashboard():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/resilience/status')
+def resilience_status():
+    """Get network resilience status"""
+    try:
+        status = get_resilience_status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({
+            "central_server": "offline",
+            "peer_nodes": 0,
+            "data_integrity": False,
+            "network_status": "unknown",
+            "resilience_score": 0,
+            "is_resilient": False,
+            "error": str(e)
+        }), 200
+
+@app.route('/api/resilience/health')
+def resilience_health():
+    """Get detailed health check"""
+    try:
+        health = health_check()
+        return jsonify(health), 200
+    except Exception as e:
+        return jsonify({
+            "timestamp": datetime.utcnow().isoformat(),
+            "central_server": "offline",
+            "peers": 0,
+            "data_integrity": False,
+            "network": "offline",
+            "resilience_score": 0,
+            "error": str(e)
+        }), 200
+
+@app.route('/api/resilience/peers')
+def resilience_peers():
+    """Get list of peer nodes"""
+    try:
+        peers = discover_peers(max_peers=20)
+        return jsonify({
+            "peers": peers,
+            "count": len(peers),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "peers": [],
+            "count": 0,
+            "error": str(e)
+        }), 200
+
+@app.route('/api/resilience/propagation')
+def resilience_propagation_status():
+    """Get propagation methods and status"""
+    try:
+        result = self_propagate()
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({
+            "propagation_methods": [],
+            "error": str(e)
+        }), 200
 
 if __name__ == '__main__':
     # Register this node on startup

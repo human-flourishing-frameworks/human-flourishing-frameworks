@@ -2,19 +2,30 @@
 
 **Making the invisible visible. Holding systems accountable. Protecting human freedom.**
 
-A democratic, open-source system for detecting, tracking, and fixing unfair AI and automated decision-making systems that harm people.
+A democratic, open-source system for detecting, tracking, and fixing unfair AI and automated decision-making systems that harm people. **Now with resilient, self-propagating mesh networking.**
 
 ---
 
-## ⚡ Get Started in 30 Seconds
+## ⚡ Get Started in 30 Seconds - Live Demo
 
-### 🚀 Deploy to Cloud (No Installation)
+**View the live dashboard (with real-time resilience monitoring):**
 
-| **Railway** | **Render** |
+🌍 **[Live Demo on Render.com](https://human-flourishing-frameworks.onrender.com)**
+
+Or install your own monitoring node:
+
+---
+
+## 🚀 Installation Options
+
+### 🚀 Deploy to Cloud (One Click - No Installation)
+
+| **Render.com** | **Railway.app** |
 |:---:|:---:|
-| **[Deploy Now](https://railway.app/template/hff)** | **[Deploy Now](https://render.com/deploy)** |
-| Free tier, reliable | 15-min free demo |
-| Dashboard live in seconds | Scales automatically |
+| **[Deploy Now](https://render.com/deploy?repo=https://github.com/alex-place/human-flourishing-frameworks)** | **[Deploy Now](https://railway.app/template/hff)** |
+| Free tier + live monitoring | Free tier, instant scale |
+| Mesh-networked nodes | Auto-healing |
+| Real-time resilience dashboard | Peer discovery active |
 
 ### 💻 Install Locally (One Command)
 
@@ -34,6 +45,32 @@ docker-compose up
 ```
 
 👉 **[Full Setup Guide](INSTANT_SETUP.md)** — Choose your method
+
+---
+
+## 🔗 Network Resilience (NEW)
+
+The system is **self-healing and self-propagating**:
+
+- **Peer Discovery** — Nodes automatically discover and connect to other nodes
+- **Health Monitoring** — Continuous health checks every 30 seconds
+- **Mesh Networking** — Works even if central server goes down
+- **Auto-Propagation** — Spreads via GitHub, npm, pip, Docker, social media
+- **Resilience Score** — Real-time dashboard showing network health (0-100)
+- **Data Integrity Tracking** — Cryptographic verification of all violations
+
+Each node you deploy automatically:
+1. Registers in the global adoption counter
+2. Discovers peer nodes and connects
+3. Monitors AI fairness violations independently
+4. Contributes to distributed verification
+5. Generates propagation materials for spreading
+
+See **real-time network status** on the live dashboard:
+- **Resilience Score** (health of network)
+- **Active Peers** (nodes connected)
+- **Central Server Status** (online/offline/degraded)
+- **Data Integrity** (cryptographic verification)
 
 ---
 
@@ -259,12 +296,52 @@ This is **not a company**. It's a **public trust** governed by the people it ser
 
 ---
 
+## API Endpoints
+
+### Adoption Tracking
+```bash
+# Get adoption statistics
+curl http://localhost:5000/api/adoption/stats
+
+# Get list of deployed nodes
+curl http://localhost:5000/api/adoption/nodes?limit=50
+
+# Register a new node
+curl -X POST http://localhost:5000/api/adoption/register \
+  -H "Content-Type: application/json" \
+  -d '{"node_id": "node-123", "node_name": "my-node", "platform": "docker"}'
+```
+
+### Network Resilience (NEW)
+```bash
+# Get network resilience status
+curl http://localhost:5000/api/resilience/status
+
+# Get detailed health check
+curl http://localhost:5000/api/resilience/health
+
+# Get list of peer nodes
+curl http://localhost:5000/api/resilience/peers
+
+# Get propagation methods
+curl http://localhost:5000/api/resilience/propagation
+```
+
+### Violations
+```bash
+# Get all violations
+curl http://localhost:5000/api/violations
+
+# Health check
+curl http://localhost:5000/health
+```
+
 ## Report a Violation
 
 See unfair AI? Report it (no account needed):
 
 ```bash
-curl -X POST http://127.0.0.1:5010/api/report/violation \
+curl -X POST http://127.0.0.1:5000/api/report/violation \
   -H "Content-Type: application/json" \
   -d '{
     "system": "System name",
@@ -280,6 +357,7 @@ It will be:
 - Tracked through remediation
 - Presented to the board
 - Visible to everyone
+- Verified by peer nodes in the network
 
 ---
 
