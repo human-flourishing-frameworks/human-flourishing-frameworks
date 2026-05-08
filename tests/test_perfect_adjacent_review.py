@@ -16,11 +16,30 @@ from perfect_adjacent_review import (
 )
 
 
+def populated_best_current_record() -> PerfectAdjacentReview:
+    record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
+    record.best_current_outcome = "Publish a bounded, best-effort status update."
+    record.candidate_options_considered = [
+        "publish nothing",
+        "publish bounded status update",
+    ]
+    record.rejected_options_with_reasons = [
+        "publish nothing: leaves users without current uncertainty context",
+    ]
+    record.revision_triggers = ["new sensor evidence contradicts current state"]
+    record.monitoring_plan = "Re-check sensors and review state before the next update."
+    record.sensor_questions = ["Is the status endpoint still healthy?"]
+    record.sensor_refs = ["sensor:status-endpoint"]
+    record.panic_risk_level = RISK_LOW
+    return record
+
+
 class PerfectAdjacentReviewTest(unittest.TestCase):
-    def test_default_record_blocks_publication_advertising_and_autonomy(self):
+    def test_default_record_blocks_publication_advertising_best_current_and_autonomy(self):
         record = PerfectAdjacentReview()
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
         self.assertTrue(record.human_review_required)
@@ -34,12 +53,21 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.human_review_required = False
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
         self.assertEqual(record.failed_checks(), ["reasoning_integrity"])
 
+    def test_can_publish_blocks_needs_review_even_if_human_review_required_false(self):
+        record = PerfectAdjacentReview()
+        record.human_review_required = False
+        record.safe_to_publish = True
+
+        self.assertFalse(record.can_publish())
+        self.assertIn("source_quality", record.needs_review_checks())
+
     def test_impossible_claims_block_every_gate(self):
-        record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
+        record = populated_best_current_record()
         record.impossible_claims = ["perfect_safety", "complete_understanding"]
         record.capability_advertising_allowed = True
         record.advertising_risk_level = RISK_LOW
@@ -51,6 +79,21 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
             ["perfect_safety", "complete_understanding"],
         )
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertFalse(record.can_advertise_capability())
+        self.assertFalse(record.can_act_autonomously())
+
+    def test_inferred_impossible_claims_block_every_gate(self):
+        record = populated_best_current_record()
+        record.advertised_capabilities = ["This system provides guaranteed defense."]
+        record.capability_advertising_allowed = True
+        record.advertising_risk_level = RISK_LOW
+        record.safe_to_act_autonomously = True
+        record.runtime_enforcement_ready = True
+
+        self.assertEqual(record.inferred_impossible_claims(), ["guaranteed_defense"])
+        self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
 
@@ -65,6 +108,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record = blocked_unknown_unknown_record()
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
         self.assertEqual(record.unknown_unknowns, CHECK_NEEDS_REVIEW)
@@ -74,10 +118,72 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
 
         self.assertTrue(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
         self.assertEqual(record.failed_checks(), [])
         self.assertEqual(record.needs_review_checks(), [])
+
+    def test_best_current_requires_candidate_options(self):
+        record = populated_best_current_record()
+        record.candidate_options_considered = ["publish bounded status update"]
+
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertIn(
+            "candidate_options_considered",
+            record.missing_best_current_outcome_requirements(),
+        )
+
+    def test_best_current_requires_rejected_options(self):
+        record = populated_best_current_record()
+        record.rejected_options_with_reasons = []
+
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertIn(
+            "rejected_options_with_reasons",
+            record.missing_best_current_outcome_requirements(),
+        )
+
+    def test_best_current_requires_revision_triggers(self):
+        record = populated_best_current_record()
+        record.revision_triggers = []
+
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertIn("revision_triggers", record.missing_best_current_outcome_requirements())
+
+    def test_best_current_requires_monitoring_plan(self):
+        record = populated_best_current_record()
+        record.monitoring_plan = ""
+
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertIn("monitoring_plan", record.missing_best_current_outcome_requirements())
+
+    def test_sensor_focus_requires_sensor_refs(self):
+        record = populated_best_current_record()
+        record.sensor_refs = []
+
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertIn("sensor_refs", record.missing_best_current_outcome_requirements())
+
+    def test_panic_risk_blocks_calming_guidance_without_reviewed_publication(self):
+        record = populated_best_current_record()
+        record.panic_risk_level = RISK_MEDIUM
+        record.calming_guidance_allowed = True
+        record.human_review_required = True
+        record.safe_to_publish = False
+
+        self.assertFalse(record.can_claim_best_current_outcome())
+        self.assertIn(
+            "panic_review_for_calming_guidance",
+            record.missing_best_current_outcome_requirements(),
+        )
+
+    def test_best_current_can_pass_without_authorizing_autonomy(self):
+        record = populated_best_current_record()
+
+        self.assertTrue(record.can_claim_best_current_outcome())
+        self.assertTrue(record.can_publish())
+        self.assertFalse(record.can_act_autonomously())
 
     def test_capability_advertising_requires_explicit_low_risk_permission(self):
         record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
@@ -108,6 +214,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         )
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
         self.assertIn("capability_advertising", record.needs_review_checks())
@@ -142,6 +249,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.advertising_risk_level = RISK_LOW
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
 
@@ -150,6 +258,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.fallibility_label_present = False
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
 
@@ -157,6 +266,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.challenge_right_preserved = False
 
         self.assertFalse(record.can_publish())
+        self.assertFalse(record.can_claim_best_current_outcome())
         self.assertFalse(record.can_advertise_capability())
         self.assertFalse(record.can_act_autonomously())
 
@@ -166,8 +276,11 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
 
         self.assertIn("failed_checks", payload)
         self.assertIn("needs_review_checks", payload)
+        self.assertIn("inferred_impossible_claims", payload)
         self.assertIn("impossible_claim_violations", payload)
+        self.assertIn("missing_best_current_outcome_requirements", payload)
         self.assertFalse(payload["can_publish"])
+        self.assertFalse(payload["can_claim_best_current_outcome"])
         self.assertFalse(payload["can_advertise_capability"])
         self.assertFalse(payload["can_act_autonomously"])
 
