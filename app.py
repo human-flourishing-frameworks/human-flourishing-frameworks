@@ -21,6 +21,18 @@ from mesh_network import (
     init_mesh_db, get_mesh_violations, sync_with_mesh
 )
 from data_sources import get_mock_violations, get_compas_summary
+from agent_system import (
+    AutonomousAgentSystem,
+    ViolationDetectionAgent,
+    CryptographicVerificationAgent,
+    ByzantineConsensusAgent,
+    AutonomousEscalationAgent,
+    ImmutableAuditAgent,
+    SystemHealthAgent,
+    NetworkDiscoveryAgent,
+    IMMUTABLE_RULES,
+)
+from cryptographic_proof import generate_keypair, load_keypair, save_keypair
 
 app = Flask(__name__)
 
@@ -49,6 +61,33 @@ PLATFORM = os.environ.get('PLATFORM', 'web')
 # ---------------------------------------------------------------------------
 mesh_sync_thread = threading.Thread(target=sync_with_mesh, daemon=True)
 mesh_sync_thread.start()
+
+# ---------------------------------------------------------------------------
+# Autonomous agent system — node keypair + initialization
+# ---------------------------------------------------------------------------
+_NODE_KEY_DIR = os.path.join(os.path.dirname(__file__), "data")
+_NODE_KEY_PRIV = os.path.join(_NODE_KEY_DIR, "node_key.pem")
+_NODE_KEY_PUB = os.path.join(_NODE_KEY_DIR, "node_key_pub.pem")
+
+try:
+    _node_private, _node_public = load_keypair(_NODE_KEY_PRIV, _NODE_KEY_PUB)
+except Exception:
+    _node_private, _node_public = generate_keypair()
+    try:
+        save_keypair(_node_private, _node_public, _NODE_KEY_PRIV, _NODE_KEY_PUB)
+    except Exception:
+        pass  # keys stay in memory only
+
+_PEER_URLS = [
+    u.strip() for u in os.environ.get("PEER_URLS", "").split(",") if u.strip()
+]
+
+autonomous_system = AutonomousAgentSystem(
+    private_key=_node_private,
+    public_key=_node_public,
+    peer_urls=_PEER_URLS,
+    node_id=NODE_ID,
+)
 
 # ---------------------------------------------------------------------------
 # HTML template
@@ -179,6 +218,18 @@ HTML_TEMPLATE = """
                 <div class="stat-number" id="violation-count">0</div>
                 <div class="stat-label">Demo Violations Loaded</div>
             </div>
+            <div class="stat-box" style="border-color: rgba(255, 136, 0, 0.5);">
+                <div class="stat-number" style="color: #ff8800;" id="agent-count">7</div>
+                <div class="stat-label">Autonomous Agents</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(255, 136, 0, 0.5);">
+                <div class="stat-number" style="color: #ff8800;" id="pending-escalations">0</div>
+                <div class="stat-label">Pending Escalations</div>
+            </div>
+            <div class="stat-box" style="border-color: rgba(255, 136, 0, 0.5);">
+                <div class="stat-number" style="color: #ff8800;" id="audit-entries">0</div>
+                <div class="stat-label">Audit Entries</div>
+            </div>
         </div>
 
         <div class="demo-banner">
@@ -190,6 +241,20 @@ HTML_TEMPLATE = """
 
         <h2 style="color: #00ffff; margin: 20px 0;">Synthetic Violations (Demo)</h2>
         <div class="violations" id="violations-list">
+            <!-- populated by JS -->
+        </div>
+
+        <h2 style="color: #ff8800; margin: 40px 0 20px 0;">Autonomous Governance</h2>
+        <div class="demo-banner" style="border-color: #ff8800; background: rgba(255, 136, 0, 0.1); color: #ff8800;">
+            <strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents coordinate
+            through PBFT consensus. No human board, no discretion. Escalations are
+            irreversible after a 24-hour lock period. Consensus threshold is derived from
+            PBFT quorum (2f+1), not hardcoded.
+        </div>
+        <div class="stats" id="autonomous-agents-grid">
+            <!-- populated by JS -->
+        </div>
+        <div id="autonomous-escalations" style="margin: 20px 0;">
             <!-- populated by JS -->
         </div>
 
@@ -234,6 +299,58 @@ HTML_TEMPLATE = """
                     `;
                     list.appendChild(card);
                 });
+            })
+            .catch(() => {});
+
+        // Load autonomous system status
+        fetch('/api/autonomous/status')
+            .then(r => r.json())
+            .then(data => {
+                const agents = data.agents || [];
+                document.getElementById('agent-count').textContent = agents.length;
+
+                const queue = data.escalation_queue || {};
+                document.getElementById('pending-escalations').textContent = queue.total || 0;
+
+                const audit = data.audit_chain || {};
+                document.getElementById('audit-entries').textContent = audit.entries_checked || 0;
+
+                const grid = document.getElementById('autonomous-agents-grid');
+                agents.forEach(a => {
+                    const box = document.createElement('div');
+                    box.className = 'stat-box';
+                    box.style.borderColor = 'rgba(255, 136, 0, 0.4)';
+                    box.innerHTML = `
+                        <div class="stat-number" style="font-size: 16px; color: #ff8800;">${a.agent}</div>
+                        <div class="stat-label">${a.description || ''}</div>
+                        <div style="margin-top: 8px; font-size: 11px; color: #00ff88;">${a.status || 'active'}</div>
+                    `;
+                    grid.appendChild(box);
+                });
+            })
+            .catch(() => {});
+
+        // Load escalations
+        fetch('/api/autonomous/escalations')
+            .then(r => r.json())
+            .then(data => {
+                const container = document.getElementById('autonomous-escalations');
+                const escalations = data.escalations || [];
+                if (escalations.length === 0) return;
+
+                let html = '<h3 style="color: #ff8800; margin-bottom: 10px;">Recent Escalations</h3>';
+                escalations.slice(0, 5).forEach(e => {
+                    const statusColor = e.status === 'executed' ? '#00ff88' : '#ffcc00';
+                    html += `
+                        <div class="violation" style="border-left-color: #ff8800; margin-bottom: 10px;">
+                            <h3 style="font-size: 14px;">${e.violation_id}</h3>
+                            <p><strong>Status:</strong> <span style="color: ${statusColor};">${e.status}</span></p>
+                            <p><strong>Lock time:</strong> ${e.lock_time}</p>
+                            <p><strong>Execute time:</strong> ${e.execute_time}</p>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
             })
             .catch(() => {});
 
@@ -391,6 +508,80 @@ def mesh_violations():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 200
+
+
+# ---------------------------------------------------------------------------
+# Autonomous agent system endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.route('/api/autonomous/submit', methods=['POST'])
+def autonomous_submit():
+    """Submit violation evidence for autonomous processing.
+
+    Runs the full pipeline: Detect -> Verify -> Consensus -> Lock -> Escalate.
+    Evidence must include 'accuracy_gap' (float), 'system_name' (str),
+    and 'description' (str).
+    """
+    try:
+        evidence = request.json
+        if not evidence:
+            return jsonify({"error": "JSON body required"}), 400
+        result = autonomous_system.submit_evidence(evidence)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/autonomous/status')
+def autonomous_status():
+    """Current autonomous system status: agents, rules, escalation queue."""
+    try:
+        status = autonomous_system.get_status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/autonomous/escalations')
+def autonomous_escalations():
+    """List locked, pending, and executed escalations."""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        escalations = autonomous_system.autonomous_escalation.get_all_escalations(limit)
+        pending = autonomous_system.autonomous_escalation.check_pending()
+        return jsonify({
+            "escalations": escalations,
+            "pending_execution": pending,
+            "total": len(escalations),
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/autonomous/audit')
+def autonomous_audit():
+    """Audit trail entries from the immutable log."""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        entries = autonomous_system.immutable_audit.get_entries(limit)
+        chain = autonomous_system.immutable_audit.verify_chain()
+        return jsonify({
+            "entries": entries,
+            "chain_valid": chain["chain_valid"],
+            "entries_checked": chain["entries_checked"],
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/autonomous/rules')
+def autonomous_rules():
+    """Return IMMUTABLE_RULES for full transparency."""
+    try:
+        return jsonify(autonomous_system.get_rules()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------
