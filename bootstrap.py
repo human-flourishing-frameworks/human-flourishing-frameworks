@@ -20,7 +20,7 @@ class ImpossibilityEngine:
         self.detector = ViolationDetector()
         self.escalation = EscalationEngine()
         self.node_id = os.getenv('NODE_ID', 'bootstrap-node')
-        self.is_running = False
+        self.is_running = True
         
     async def detect_violations(self):
         """Hourly violation detection"""
@@ -91,7 +91,6 @@ class ImpossibilityEngine:
     
     def run_async_loops(self):
         """Run all async loops in a background thread"""
-        self.is_running = True
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
