@@ -6,6 +6,20 @@ A democratic, open-source system for detecting, tracking, and fixing unfair AI a
 
 ---
 
+## Download & Install Now
+
+**[👉 DIRECT DOWNLOADS PAGE](DOWNLOADS.md)** — All installers with direct links
+
+### Quick Download Links
+
+| **Windows** | **Mac/Linux** | **Docker** |
+|:---:|:---:|:---:|
+| **[PowerShell Installer](https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/install-no-git.ps1)** | **[Bash Script](https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/install.sh)** | **[docker-compose.yml](https://raw.githubusercontent.com/alex-place/human-flourishing-frameworks/master/docker-compose.yml)** |
+| No Git needed | `bash install.sh` | `docker-compose up -d` |
+| Or build [EXE](BUILD_INSTALLER.md) | Auto-installs Python | Works anywhere |
+
+---
+
 ## Try It Now (Public Dashboard)
 
 **Live monitoring of real AI violations:** https://human-flourishing-frameworks.herokuapp.com
