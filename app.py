@@ -37,6 +37,7 @@ from agent_system import (
 from cryptographic_proof import generate_keypair, load_keypair, save_keypair
 from sensors import Measurement, SensorRegistry
 from world_model import WorldModel, Intervention
+from live_sensors import create_live_sensors, run_observation_loop
 
 app = Flask(__name__)
 
@@ -145,6 +146,29 @@ def _bootstrap_world_model() -> None:
 _bootstrap_world_model()
 
 # ---------------------------------------------------------------------------
+# Live sensors — poll real public APIs on a background thread
+# ---------------------------------------------------------------------------
+# Register live sensors (World Bank, WHO) that continuously observe the world.
+# The observation loop runs every hour (data sources update at most daily).
+# On startup, sensors fire immediately so the model gets live data fast.
+# ---------------------------------------------------------------------------
+
+_live_sensors = create_live_sensors()
+for _sensor in _live_sensors:
+    _world_sensor_registry.register(_sensor)
+print(f"[SENSORS] Registered {len(_live_sensors)} live sensors")
+
+# Background observation thread — polls APIs and feeds world_model.update()
+_observation_thread = threading.Thread(
+    target=run_observation_loop,
+    args=(_world_sensor_registry, world_model),
+    kwargs={"interval_seconds": 3600},  # 1 hour between cycles
+    daemon=True,
+)
+_observation_thread.start()
+print("[SENSORS] Background observation loop started (1-hour cycle)")
+
+# ---------------------------------------------------------------------------
 # HTML template
 # ---------------------------------------------------------------------------
 HTML_TEMPLATE = """
@@ -172,13 +196,11 @@ HTML_TEMPLATE = """
             border-radius: 12px;
             border: 1px solid rgba(0, 255, 136, 0.3);
         }
-        h1 {
-            font-size: 36px;
-            margin-bottom: 10px;
-            color: #00ffff;
-        }
+        h1 { font-size: 36px; margin-bottom: 10px; color: #00ffff; }
+        h2 { margin: 40px 0 20px 0; }
+        h3 { margin-bottom: 10px; }
         .subtitle { color: #888; font-size: 16px; }
-        .status {
+        .status-badge {
             display: inline-block;
             background: rgba(0, 255, 136, 0.2);
             border: 1px solid #00ff88;
@@ -192,8 +214,8 @@ HTML_TEMPLATE = """
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 40px 0;
+            gap: 16px;
+            margin: 20px 0;
         }
         .stat-box {
             background: rgba(26, 31, 74, 0.8);
@@ -202,46 +224,175 @@ HTML_TEMPLATE = """
             padding: 20px;
             text-align: center;
         }
-        .stat-number {
-            font-size: 32px;
-            color: #00ffff;
-            font-weight: bold;
-        }
+        .stat-number { font-size: 32px; color: #00ffff; font-weight: bold; }
         .stat-label { color: #888; font-size: 12px; margin-top: 8px; }
-        .violations {
-            display: grid;
-            gap: 20px;
-            margin: 40px 0;
-        }
-        .violation {
-            background: rgba(26, 31, 74, 0.8);
-            border-left: 4px solid #ff4444;
-            border-radius: 8px;
-            padding: 20px;
-        }
-        .violation h3 { color: #00ffff; margin-bottom: 10px; }
-        .violation p { color: #bbb; font-size: 14px; margin-bottom: 8px; }
-        .severity {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            color: white;
-        }
-        .severity-critical { background: #ff4444; }
-        .severity-high     { background: #ff8800; }
-        .severity-medium   { background: #ffcc00; color: #333; }
-        .severity-low      { background: #44bb44; }
-        .demo-banner {
-            background: rgba(255, 200, 0, 0.15);
-            border: 1px solid #ffcc00;
+        .section-banner {
             border-radius: 8px;
             padding: 16px 20px;
-            margin: 30px 0 20px 0;
-            color: #ffcc00;
+            margin: 20px 0;
             font-size: 14px;
         }
+        .banner-green { background: rgba(0, 255, 136, 0.1); border: 1px solid #00ff88; color: #00ff88; }
+        .banner-orange { background: rgba(255, 136, 0, 0.1); border: 1px solid #ff8800; color: #ff8800; }
+        .banner-yellow { background: rgba(255, 200, 0, 0.15); border: 1px solid #ffcc00; color: #ffcc00; }
+
+        /* Belief cards */
+        .belief-group { margin: 20px 0; }
+        .belief-group-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .belief-card {
+            background: rgba(26, 31, 74, 0.6);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .belief-bar-wrap {
+            flex: 1;
+            min-width: 0;
+        }
+        .belief-name {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .belief-bar-bg {
+            height: 22px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .belief-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .belief-bar-ci {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            border-left: 2px solid rgba(255,255,255,0.3);
+            border-right: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.05);
+        }
+        .belief-value {
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: right;
+        }
+        .belief-unc {
+            font-size: 11px;
+            color: #888;
+            min-width: 60px;
+            text-align: right;
+        }
+        .belief-source {
+            font-size: 10px;
+            color: #666;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .belief-source a { color: #4488cc; text-decoration: none; }
+        .belief-source a:hover { text-decoration: underline; }
+
+        /* Sensor feed */
+        .sensor-card {
+            background: rgba(26, 31, 74, 0.6);
+            border-left: 3px solid #00ff88;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+        }
+        .sensor-card.degraded { border-left-color: #ff8800; }
+        .sensor-card .sensor-name { font-size: 14px; color: #00ffff; font-weight: bold; }
+        .sensor-card .sensor-meta { font-size: 11px; color: #888; margin-top: 4px; }
+
+        /* Flourishing gauges */
+        .flourishing-card {
+            background: rgba(26, 31, 74, 0.8);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+        }
+        .flourishing-score { font-size: 42px; font-weight: bold; color: #00ff88; }
+        .flourishing-scope { font-size: 16px; color: #ccc; margin-top: 4px; text-transform: capitalize; }
+        .flourishing-unc { font-size: 12px; color: #888; margin-top: 4px; }
+        .flourishing-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        .flourishing-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffcc00, #00ff88);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Discovery cards */
+        .discovery-card {
+            background: rgba(26, 31, 74, 0.6);
+            border-left: 3px solid #00ff88;
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 8px;
+        }
+        .discovery-card .disc-type { font-size: 13px; font-weight: bold; }
+        .discovery-card .disc-desc { font-size: 13px; color: #bbb; margin-top: 4px; }
+
+        /* Agents grid */
+        .agent-box {
+            background: rgba(26, 31, 74, 0.8);
+            border: 1px solid rgba(255, 136, 0, 0.4);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .agent-name { font-size: 14px; color: #ff8800; font-weight: bold; }
+        .agent-desc { font-size: 11px; color: #888; margin-top: 4px; }
+        .agent-status { font-size: 11px; color: #00ff88; margin-top: 6px; }
+
+        /* Violations */
+        .violation-card {
+            background: rgba(26, 31, 74, 0.6);
+            border-left: 4px solid #ff4444;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 10px;
+        }
+        .violation-card h3 { color: #00ffff; font-size: 15px; }
+        .violation-card p { color: #bbb; font-size: 13px; margin-top: 4px; }
+        .sev-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            margin-top: 6px;
+        }
+        .sev-critical { background: #ff4444; }
+        .sev-high { background: #ff8800; }
+        .sev-medium { background: #ffcc00; color: #333; }
+        .sev-low { background: #44bb44; }
+
         footer {
             text-align: center;
             margin-top: 60px;
@@ -250,117 +401,489 @@ HTML_TEMPLATE = """
             color: #666;
             font-size: 12px;
         }
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .collapsible-header .arrow { transition: transform 0.2s; }
+        .collapsible-header.collapsed .arrow { transform: rotate(-90deg); }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Human Flourishing Frameworks</h1>
-            <p class="subtitle">AI Bias Monitoring &mdash; Research Software</p>
-            <div class="status" id="status-badge">ONLINE &mdash; <span id="node-count">0</span> node(s) registered</div>
+            <p class="subtitle">Observe outcomes. Model causes. Optimize for flourishing.</p>
+            <div class="status-badge" id="status-badge">
+                ONLINE &mdash; <span id="wm-belief-count-header">0</span> beliefs
+                &mdash; <span id="wm-sensor-count-header">0</span> live sensors
+                &mdash; <span id="wm-domains-header">0</span> domains
+            </div>
         </header>
 
-        <div class="stats">
-            <div class="stat-box">
-                <div class="stat-number" id="total-nodes">0</div>
-                <div class="stat-label">Total Nodes Registered</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-number" id="active-nodes">0</div>
-                <div class="stat-label">Active Nodes (last hour)</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-number" id="violation-count">0</div>
-                <div class="stat-label">Demo Violations Loaded</div>
-            </div>
-            <div class="stat-box" style="border-color: rgba(255, 136, 0, 0.5);">
-                <div class="stat-number" style="color: #ff8800;" id="agent-count">7</div>
-                <div class="stat-label">Autonomous Agents</div>
-            </div>
-            <div class="stat-box" style="border-color: rgba(255, 136, 0, 0.5);">
-                <div class="stat-number" style="color: #ff8800;" id="pending-escalations">0</div>
-                <div class="stat-label">Pending Escalations</div>
-            </div>
-            <div class="stat-box" style="border-color: rgba(255, 136, 0, 0.5);">
-                <div class="stat-number" style="color: #ff8800;" id="audit-entries">0</div>
-                <div class="stat-label">Audit Entries</div>
-            </div>
+        <!-- ============================================================ -->
+        <!-- FLOURISHING SCORES — the headline -->
+        <!-- ============================================================ -->
+        <h2 style="color: #00ff88;">What the Model Knows</h2>
+        <div class="section-banner banner-green">
+            Every score carries uncertainty. A score of 56% &plusmn; 16% means
+            flourishing could plausibly be 40%&ndash;72%. The model updates
+            these as new data arrives from live sensors.
         </div>
-
-        <div class="demo-banner">
-            <strong>DEMO DATA</strong> &mdash; The violations below are synthetic
-            examples for testing. They do not represent real incidents. See
-            <code>data_sources.py</code> for real public datasets
-            (e.g.&nbsp;ProPublica COMPAS analysis).
-        </div>
-
-        <h2 style="color: #00ffff; margin: 20px 0;">Synthetic Violations (Demo)</h2>
-        <div class="violations" id="violations-list">
+        <div class="stats" id="flourishing-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
             <!-- populated by JS -->
         </div>
 
-        <h2 style="color: #ff8800; margin: 40px 0 20px 0;">Autonomous Governance</h2>
-        <div class="demo-banner" style="border-color: #ff8800; background: rgba(255, 136, 0, 0.1); color: #ff8800;">
-            <strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents coordinate
-            through PBFT consensus. No human board, no discretion. Escalations are
-            irreversible after a 24-hour lock period. Consensus threshold is derived from
-            PBFT quorum (2f+1), not hardcoded.
+        <!-- ============================================================ -->
+        <!-- BELIEFS — grouped by scope, with bars -->
+        <!-- ============================================================ -->
+        <h2 style="color: #00ff88;">All Beliefs</h2>
+        <div class="section-banner banner-green">
+            Each bar shows the model's posterior probability (0&ndash;1) for that
+            measurement. The faded region is the confidence interval. Every belief
+            traces to a published source.
         </div>
-        <div class="stats" id="autonomous-agents-grid">
-            <!-- populated by JS -->
-        </div>
-        <div id="autonomous-escalations" style="margin: 20px 0;">
-            <!-- populated by JS -->
+        <div id="beliefs-container">
+            <p style="color: #888;">Loading beliefs...</p>
         </div>
 
-        <h2 style="color: #00ff88; margin: 40px 0 20px 0;">World Model</h2>
-        <div class="demo-banner" style="border-color: #00ff88; background: rgba(0, 255, 136, 0.1); color: #00ff88;">
-            <strong>BAYESIAN WORLD MODEL</strong> &mdash; Tracks probabilistic beliefs
-            about outcomes across all domains and scopes. The model is always wrong
-            somewhere &mdash; uncertainty is a first-class concept, not an afterthought.
-            Every number below carries error bars.
+        <!-- ============================================================ -->
+        <!-- LIVE SENSORS -->
+        <!-- ============================================================ -->
+        <h2 style="color: #00ff88;">Live Sensors</h2>
+        <div class="section-banner banner-green">
+            These sensors poll real public APIs every hour. When a sensor
+            returns new data, the model runs a Bayesian update and beliefs shift.
         </div>
-        <div class="stats" id="world-model-stats">
-            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
-                <div class="stat-number" style="color: #00ff88;" id="wm-belief-count">0</div>
-                <div class="stat-label">Beliefs Tracked</div>
+        <div id="sensors-container">
+            <p style="color: #888;">Loading sensors...</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DISCOVERED PATTERNS -->
+        <!-- ============================================================ -->
+        <h2 style="color: #00ffff;">Discovered Patterns</h2>
+        <div id="discoveries-container">
+            <p style="color: #888;">Loading discoveries...</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- AUTONOMOUS GOVERNANCE (collapsed by default) -->
+        <!-- ============================================================ -->
+        <h2 style="color: #ff8800;">
+            <span class="collapsible-header" onclick="toggleSection('governance-section', this)">
+                <span class="arrow">&#9660;</span> Autonomous Governance
+                <span style="font-size: 13px; font-weight: normal; color: #888;">
+                    &mdash; <span id="agent-count">7</span> agents,
+                    <span id="audit-entries">0</span> audit entries
+                </span>
+            </span>
+        </h2>
+        <div id="governance-section">
+            <div class="section-banner banner-orange">
+                <strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents
+                coordinate through PBFT consensus. No human board. Escalations are
+                irreversible after a 24-hour lock.
             </div>
-            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
-                <div class="stat-number" style="color: #00ff88;" id="wm-sensor-count">0</div>
-                <div class="stat-label">Sensors Active</div>
-            </div>
-            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
-                <div class="stat-number" style="color: #00ff88;" id="wm-avg-uncertainty">--</div>
-                <div class="stat-label">Avg Uncertainty</div>
-            </div>
-            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.4);">
-                <div class="stat-number" style="color: #00ff88;" id="wm-corrections">0</div>
-                <div class="stat-label">Self-Corrections</div>
+            <div class="stats" id="agents-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
             </div>
         </div>
-        <div id="world-model-flourishing" style="margin: 20px 0;"></div>
-        <div id="world-model-discoveries" style="margin: 20px 0;"></div>
+
+        <!-- ============================================================ -->
+        <!-- SYNTHETIC VIOLATIONS (collapsed by default) -->
+        <!-- ============================================================ -->
+        <h2 style="color: #ffcc00;">
+            <span class="collapsible-header collapsed" onclick="toggleSection('violations-section', this)">
+                <span class="arrow">&#9660;</span> Synthetic Violations (Demo)
+                <span style="font-size: 13px; font-weight: normal; color: #888;">
+                    &mdash; <span id="violation-count">0</span> mock entries
+                </span>
+            </span>
+        </h2>
+        <div id="violations-section" style="display: none;">
+            <div class="section-banner banner-yellow">
+                <strong>DEMO DATA</strong> &mdash; These violations are synthetic examples.
+                They do not represent real incidents. Real data lives in the world model above.
+            </div>
+            <div id="violations-list"></div>
+        </div>
 
         <footer>
             <p>Human Flourishing Frameworks &mdash; Research Software</p>
-            <p style="margin-top: 10px;">
-                This is research software. Violation data is synthetic unless labeled otherwise.
+            <p style="margin-top: 8px;">
+                The model is always wrong somewhere. It knows this, and it keeps correcting.
             </p>
         </footer>
     </div>
 
     <script>
-        // Load adoption stats
-        fetch('/api/adoption/stats')
+        function toggleSection(id, header) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = '';
+                header.classList.remove('collapsed');
+            } else {
+                el.style.display = 'none';
+                header.classList.add('collapsed');
+            }
+        }
+
+        // Color for a posterior value
+        function posteriorColor(v) {
+            if (v > 0.7) return '#00ff88';
+            if (v > 0.4) return '#00ffff';
+            if (v > 0.2) return '#ffcc00';
+            return '#ff4444';
+        }
+
+        // Readable name from entity key
+        function readableName(entity) {
+            // e.g. "humans:health:doi:10.1037/..." -> last meaningful segment
+            const parts = entity.split(':');
+            // find the part that looks like a topic, not a URL
+            let name = parts.slice(0, 2).join(' > ');
+            if (parts.length > 2) {
+                let source = parts.slice(2).join(':');
+                // shorten DOIs and URLs
+                if (source.startsWith('doi:')) source = source.substring(0, 30) + '...';
+                if (source.startsWith('http')) {
+                    try { source = new URL(source).hostname; } catch(e) {}
+                }
+                name += '  [' + source + ']';
+            }
+            return name;
+        }
+
+        function shortSource(src) {
+            if (!src || src === 'unknown') return '';
+            if (src.startsWith('http')) {
+                try { return new URL(src).hostname; } catch(e) { return src.substring(0, 40); }
+            }
+            if (src.startsWith('doi:')) return src.substring(0, 40);
+            return src.substring(0, 50);
+        }
+
+        // ---- WORLD MODEL STATUS ----
+        fetch('/api/world/status')
             .then(r => r.json())
             .then(data => {
-                document.getElementById('node-count').textContent = data.active_last_hour || 0;
-                document.getElementById('total-nodes').textContent = data.total_nodes || 0;
-                document.getElementById('active-nodes').textContent = data.active_last_hour || 0;
+                document.getElementById('wm-belief-count-header').textContent = data.belief_count || 0;
+                document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;
+                document.getElementById('wm-domains-header').textContent = (data.domains || []).length;
+
+                // Flourishing scores
+                const scores = data.flourishing_scores || {};
+                const grid = document.getElementById('flourishing-grid');
+                grid.innerHTML = '';
+
+                // order: humans, animals, ecosystems, then rest
+                const order = ['humans', 'animals', 'ecosystems'];
+                const sortedScopes = Object.keys(scores).sort((a, b) => {
+                    const ai = order.indexOf(a), bi = order.indexOf(b);
+                    if (ai >= 0 && bi >= 0) return ai - bi;
+                    if (ai >= 0) return -1;
+                    if (bi >= 0) return 1;
+                    return a.localeCompare(b);
+                });
+
+                sortedScopes.forEach(scope => {
+                    const s = scores[scope];
+                    const pct = (s.score * 100).toFixed(0);
+                    const unc = (s.uncertainty * 100).toFixed(0);
+                    const card = document.createElement('div');
+                    card.className = 'flourishing-card';
+                    card.innerHTML = `
+                        <div class="flourishing-score">${pct}%</div>
+                        <div class="flourishing-scope">${scope}</div>
+                        <div class="flourishing-unc">&plusmn;${unc}% uncertainty</div>
+                        <div class="flourishing-bar">
+                            <div class="flourishing-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+
+                // Summary stats row
+                const summaryHtml = `
+                    <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
+                        <div class="stat-number" style="color: #00ff88;">${data.belief_count || 0}</div>
+                        <div class="stat-label">Beliefs Tracked</div>
+                    </div>
+                    <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
+                        <div class="stat-number" style="color: #00ff88;">${data.sensor_count || 0}</div>
+                        <div class="stat-label">Live Sensors</div>
+                    </div>
+                    <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
+                        <div class="stat-number" style="color: #00ff88;">${
+                            data.average_uncertainty !== undefined
+                                ? (data.average_uncertainty * 100).toFixed(0) + '%' : '--'
+                        }</div>
+                        <div class="stat-label">Avg Uncertainty</div>
+                    </div>
+                    <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
+                        <div class="stat-number" style="color: #00ff88;">${data.corrections_count || 0}</div>
+                        <div class="stat-label">Self-Corrections</div>
+                    </div>
+                    <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
+                        <div class="stat-number" style="color: #00ff88;">${(data.domains||[]).length}</div>
+                        <div class="stat-label">Domains</div>
+                    </div>
+                    <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
+                        <div class="stat-number" style="color: #00ff88;">${(data.scopes||[]).length}</div>
+                        <div class="stat-label">Scopes</div>
+                    </div>
+                `;
+                const summaryRow = document.createElement('div');
+                summaryRow.className = 'stats';
+                summaryRow.innerHTML = summaryHtml;
+                grid.parentNode.insertBefore(summaryRow, grid.nextSibling);
             })
             .catch(() => {});
 
-        // Load violations from API (mock data, clearly labeled)
+        // ---- ALL BELIEFS ----
+        fetch('/api/world/beliefs?per_page=200')
+            .then(r => r.json())
+            .then(data => {
+                const beliefs = data.beliefs || [];
+                const container = document.getElementById('beliefs-container');
+                container.innerHTML = '';
+
+                // Group by scope prefix (humans, animals, ecosystems, universe)
+                const groups = {};
+                beliefs.forEach(b => {
+                    const scopeRoot = b.scope.split(':')[0];
+                    if (!groups[scopeRoot]) groups[scopeRoot] = [];
+                    groups[scopeRoot].push(b);
+                });
+
+                // Sort groups
+                const groupOrder = ['humans', 'animals', 'ecosystems', 'universe'];
+                const sortedGroups = Object.keys(groups).sort((a, b) => {
+                    const ai = groupOrder.indexOf(a), bi = groupOrder.indexOf(b);
+                    if (ai >= 0 && bi >= 0) return ai - bi;
+                    if (ai >= 0) return -1;
+                    if (bi >= 0) return 1;
+                    return a.localeCompare(b);
+                });
+
+                sortedGroups.forEach(groupName => {
+                    const groupBeliefs = groups[groupName];
+                    // Sort by scope then posterior descending
+                    groupBeliefs.sort((a, b) => {
+                        if (a.scope !== b.scope) return a.scope.localeCompare(b.scope);
+                        return b.posterior - a.posterior;
+                    });
+
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'belief-group';
+
+                    const colors = {
+                        humans: '#00ffff',
+                        animals: '#ff8800',
+                        ecosystems: '#00ff88',
+                        universe: '#aa88ff'
+                    };
+                    const color = colors[groupName] || '#ccc';
+
+                    groupDiv.innerHTML = `<div class="belief-group-title" style="color: ${color};">
+                        ${groupName.charAt(0).toUpperCase() + groupName.slice(1)}
+                        <span style="font-size: 13px; color: #888; font-weight: normal;">
+                            (${groupBeliefs.length} beliefs)
+                        </span>
+                    </div>`;
+
+                    groupBeliefs.forEach(b => {
+                        const pct = (b.posterior * 100).toFixed(0);
+                        const uncPct = (b.uncertainty * 100).toFixed(0);
+                        const barColor = posteriorColor(b.posterior);
+
+                        // Confidence interval bar
+                        const ciLo = b.evidence && b.evidence.length > 0
+                            ? (b.evidence[b.evidence.length-1].confidence_interval || [0,0])[0]
+                            : 0;
+                        const ciHi = b.evidence && b.evidence.length > 0
+                            ? (b.evidence[b.evidence.length-1].confidence_interval || [0,0])[1]
+                            : 0;
+
+                        // Nice label from entity
+                        const parts = b.entity.split(':');
+                        let label = parts.slice(0, 2).join(' : ');
+                        let sourceLabel = '';
+                        if (parts.length > 2) {
+                            let src = parts.slice(2).join(':');
+                            if (src.startsWith('http')) {
+                                try {
+                                    const u = new URL(src);
+                                    sourceLabel = u.hostname;
+                                } catch(e) { sourceLabel = src.substring(0, 50); }
+                            } else if (src.startsWith('doi:')) {
+                                sourceLabel = src.substring(0, 40) + (src.length > 40 ? '...' : '');
+                            } else {
+                                sourceLabel = src.substring(0, 50);
+                            }
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'belief-card';
+                        card.innerHTML = `
+                            <div class="belief-bar-wrap">
+                                <div class="belief-name" title="${b.entity}">
+                                    ${label}${sourceLabel ? ' <span style="color:#666">['+sourceLabel+']</span>' : ''}
+                                </div>
+                                <div class="belief-bar-bg">
+                                    <div class="belief-bar-fill" style="width: ${pct}%; background: ${barColor};"></div>
+                                    ${ciLo > 0 || ciHi > 0 ? `<div class="belief-bar-ci" style="left: ${ciLo*100}%; width: ${(ciHi-ciLo)*100}%;"></div>` : ''}
+                                </div>
+                                <div class="belief-source">
+                                    ${b.domain} &middot; ${b.scope} &middot; updated ${b.last_updated ? new Date(b.last_updated).toLocaleDateString() : 'unknown'}
+                                </div>
+                            </div>
+                            <div class="belief-value" style="color: ${barColor};">${pct}%</div>
+                            <div class="belief-unc">&plusmn;${uncPct}%</div>
+                        `;
+                        groupDiv.appendChild(card);
+                    });
+
+                    container.appendChild(groupDiv);
+                });
+            })
+            .catch(() => {});
+
+        // ---- LIVE SENSORS ----
+        fetch('/api/world/status')
+            .then(r => r.json())
+            .then(statusData => {
+                // Sensor health comes from the registry
+                return fetch('/api/world/status');
+            })
+            .catch(() => {});
+
+        // Use a dedicated endpoint or embed sensor health in status
+        // For now, we'll show what we know from the world status
+        fetch('/api/world/beliefs?per_page=200')
+            .then(r => r.json())
+            .then(data => {
+                const beliefs = data.beliefs || [];
+                const container = document.getElementById('sensors-container');
+                container.innerHTML = '';
+
+                // Extract unique live sensor sources
+                const liveSensors = new Map();
+                beliefs.forEach(b => {
+                    if (b.evidence) {
+                        b.evidence.forEach(e => {
+                            const src = e.source || '';
+                            if (src.includes('worldbank') || src.includes('who.int')) {
+                                const method = e.methodology || '';
+                                // Parse sensor name from methodology
+                                let sensorName = 'Unknown Sensor';
+                                let rawVal = '';
+                                const parts = method.split(':');
+                                if (parts.length >= 2) {
+                                    sensorName = parts[0] === 'world_bank_api'
+                                        ? 'World Bank: ' + parts[1]
+                                        : parts[0] === 'who_gho_api'
+                                        ? 'WHO GHO: ' + parts[1]
+                                        : parts[0] + ': ' + parts[1];
+                                }
+                                if (method.includes('raw=')) {
+                                    rawVal = method.split('raw=')[1].split(':')[0];
+                                }
+                                const key = sensorName;
+                                if (!liveSensors.has(key)) {
+                                    liveSensors.set(key, {
+                                        name: sensorName,
+                                        source: src,
+                                        scope: b.scope,
+                                        raw: rawVal,
+                                        temporal: e.temporal_range || ['?', '?'],
+                                        uncertainty: e.uncertainty,
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+
+                if (liveSensors.size === 0) {
+                    // Show sensor definitions even before first observation
+                    container.innerHTML = '<p style="color: #888;">9 sensors registered. Waiting for first observation cycle...</p>';
+                    return;
+                }
+
+                liveSensors.forEach((s, key) => {
+                    const card = document.createElement('div');
+                    card.className = 'sensor-card';
+                    card.innerHTML = `
+                        <div class="sensor-name">${s.name}</div>
+                        <div class="sensor-meta">
+                            Scope: <strong>${s.scope}</strong>
+                            &middot; Raw value: <strong>${s.raw || '?'}</strong>
+                            &middot; Data year: <strong>${s.temporal[1] || '?'}</strong>
+                            &middot; Uncertainty: <strong>${s.uncertainty ? (s.uncertainty*100).toFixed(0)+'%' : '?'}</strong>
+                            &middot; <a href="${s.source}" target="_blank" style="color: #4488cc;">${shortSource(s.source)}</a>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(() => {});
+
+        // ---- DISCOVERIES ----
+        fetch('/api/world/discover')
+            .then(r => r.json())
+            .then(data => {
+                const discoveries = data.discoveries || [];
+                const container = document.getElementById('discoveries-container');
+                if (discoveries.length === 0) {
+                    container.innerHTML = '<p style="color: #888;">No patterns discovered yet.</p>';
+                    return;
+                }
+                container.innerHTML = '';
+                discoveries.forEach(d => {
+                    const color = d.severity === 'actionable' ? '#ffcc00'
+                                : d.severity === 'interesting' ? '#00ffff' : '#888';
+                    const card = document.createElement('div');
+                    card.className = 'discovery-card';
+                    card.style.borderLeftColor = color;
+                    card.innerHTML = `
+                        <div class="disc-type" style="color: ${color};">${d.type}</div>
+                        <div class="disc-desc">${d.description}</div>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(() => {});
+
+        // ---- AUTONOMOUS GOVERNANCE ----
+        fetch('/api/autonomous/status')
+            .then(r => r.json())
+            .then(data => {
+                const agents = data.agents || [];
+                document.getElementById('agent-count').textContent = agents.length;
+
+                const audit = data.audit_chain || {};
+                document.getElementById('audit-entries').textContent = audit.entries_checked || 0;
+
+                const grid = document.getElementById('agents-grid');
+                grid.innerHTML = '';
+                agents.forEach(a => {
+                    const box = document.createElement('div');
+                    box.className = 'agent-box';
+                    box.innerHTML = `
+                        <div class="agent-name">${a.agent}</div>
+                        <div class="agent-desc">${a.description || ''}</div>
+                        <div class="agent-status">${a.status || 'active'}</div>
+                    `;
+                    grid.appendChild(box);
+                });
+            })
+            .catch(() => {});
+
+        // ---- SYNTHETIC VIOLATIONS ----
         fetch('/api/violations')
             .then(r => r.json())
             .then(data => {
@@ -368,135 +891,19 @@ HTML_TEMPLATE = """
                 document.getElementById('violation-count').textContent = violations.length;
 
                 const list = document.getElementById('violations-list');
+                list.innerHTML = '';
                 violations.forEach(v => {
                     const sev = (v.severity || 'medium').toLowerCase();
                     const card = document.createElement('div');
-                    card.className = 'violation';
+                    card.className = 'violation-card';
                     card.innerHTML = `
                         <h3>${v.system_name || v.id}</h3>
-                        <p><strong>ID:</strong> ${v.id}</p>
-                        <p><strong>Description:</strong> ${v.description}</p>
-                        <p><strong>Affected (simulated):</strong> ${(v.affected_count || 0).toLocaleString()}</p>
-                        <p><strong>Source:</strong> ${v.source}</p>
-                        <p><span class="severity severity-${sev}">${sev.toUpperCase()}</span></p>
+                        <p>${v.description}</p>
+                        <p>Affected (simulated): ${(v.affected_count||0).toLocaleString()}</p>
+                        <span class="sev-badge sev-${sev}">${sev.toUpperCase()}</span>
                     `;
                     list.appendChild(card);
                 });
-            })
-            .catch(() => {});
-
-        // Load autonomous system status
-        fetch('/api/autonomous/status')
-            .then(r => r.json())
-            .then(data => {
-                const agents = data.agents || [];
-                document.getElementById('agent-count').textContent = agents.length;
-
-                const queue = data.escalation_queue || {};
-                document.getElementById('pending-escalations').textContent = queue.total || 0;
-
-                const audit = data.audit_chain || {};
-                document.getElementById('audit-entries').textContent = audit.entries_checked || 0;
-
-                const grid = document.getElementById('autonomous-agents-grid');
-                agents.forEach(a => {
-                    const box = document.createElement('div');
-                    box.className = 'stat-box';
-                    box.style.borderColor = 'rgba(255, 136, 0, 0.4)';
-                    box.innerHTML = `
-                        <div class="stat-number" style="font-size: 16px; color: #ff8800;">${a.agent}</div>
-                        <div class="stat-label">${a.description || ''}</div>
-                        <div style="margin-top: 8px; font-size: 11px; color: #00ff88;">${a.status || 'active'}</div>
-                    `;
-                    grid.appendChild(box);
-                });
-            })
-            .catch(() => {});
-
-        // Load escalations
-        fetch('/api/autonomous/escalations')
-            .then(r => r.json())
-            .then(data => {
-                const container = document.getElementById('autonomous-escalations');
-                const escalations = data.escalations || [];
-                if (escalations.length === 0) return;
-
-                let html = '<h3 style="color: #ff8800; margin-bottom: 10px;">Recent Escalations</h3>';
-                escalations.slice(0, 5).forEach(e => {
-                    const statusColor = e.status === 'executed' ? '#00ff88' : '#ffcc00';
-                    html += `
-                        <div class="violation" style="border-left-color: #ff8800; margin-bottom: 10px;">
-                            <h3 style="font-size: 14px;">${e.violation_id}</h3>
-                            <p><strong>Status:</strong> <span style="color: ${statusColor};">${e.status}</span></p>
-                            <p><strong>Lock time:</strong> ${e.lock_time}</p>
-                            <p><strong>Execute time:</strong> ${e.execute_time}</p>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            })
-            .catch(() => {});
-
-        // Load world model status
-        fetch('/api/world/status')
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('wm-belief-count').textContent = data.belief_count || 0;
-                document.getElementById('wm-sensor-count').textContent = data.sensor_count || 0;
-                document.getElementById('wm-avg-uncertainty').textContent =
-                    data.average_uncertainty !== undefined
-                        ? (data.average_uncertainty * 100).toFixed(0) + '%'
-                        : '--';
-                document.getElementById('wm-corrections').textContent = data.corrections_count || 0;
-
-                // Render flourishing scores
-                const scores = data.flourishing_scores || {};
-                const fContainer = document.getElementById('world-model-flourishing');
-                const scopes = Object.keys(scores);
-                if (scopes.length > 0) {
-                    let html = '<h3 style="color: #00ff88; margin-bottom: 10px;">Flourishing Scores by Scope</h3>';
-                    html += '<div class="stats">';
-                    scopes.forEach(scope => {
-                        const s = scores[scope];
-                        const pct = (s.score * 100).toFixed(0);
-                        const unc = (s.uncertainty * 100).toFixed(0);
-                        html += `
-                            <div class="stat-box" style="border-color: rgba(0, 255, 136, 0.3);">
-                                <div class="stat-number" style="font-size: 20px; color: #00ff88;">${pct}%</div>
-                                <div class="stat-label">${scope}</div>
-                                <div style="margin-top: 6px; font-size: 11px; color: #888;">
-                                    &plusmn;${unc}% uncertainty
-                                </div>
-                            </div>
-                        `;
-                    });
-                    html += '</div>';
-                    fContainer.innerHTML = html;
-                }
-            })
-            .catch(() => {});
-
-        // Load world model discoveries
-        fetch('/api/world/discover')
-            .then(r => r.json())
-            .then(data => {
-                const discoveries = data.discoveries || [];
-                const container = document.getElementById('world-model-discoveries');
-                if (discoveries.length === 0) return;
-
-                let html = '<h3 style="color: #00ff88; margin-bottom: 10px;">Discovered Patterns</h3>';
-                discoveries.slice(0, 5).forEach(d => {
-                    const sevColor = d.severity === 'actionable' ? '#ffcc00'
-                                   : d.severity === 'interesting' ? '#00ffff'
-                                   : '#888';
-                    html += `
-                        <div class="violation" style="border-left-color: #00ff88; margin-bottom: 10px;">
-                            <h3 style="font-size: 14px; color: ${sevColor};">${d.type}</h3>
-                            <p>${d.description}</p>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
             })
             .catch(() => {});
 
