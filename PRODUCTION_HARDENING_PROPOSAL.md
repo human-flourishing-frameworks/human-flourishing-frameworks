@@ -8,10 +8,37 @@ This system should borrow security posture from mature open-source systems:
 - Sigstore/Rekor-style signed records and transparency logs for releases, node admission, and high-impact claims.
 - TUF-style threshold authority for node admission, immutable rule changes, and release trust.
 - Mastodon/ActivityPub-style federation boundaries: public peers can speak, but only admitted identities can affect trust.
+- NIST AI RMF-style risk management for impacts to individuals, organizations,
+  and society.
+- OECD/UNESCO-style human-centered AI principles: human rights, dignity,
+  transparency, accountability, robustness, safety, privacy, human oversight,
+  proportionality, and do-no-harm.
 
 The goal is not to make every node omnipotent or universally trusted. The goal is
 to make untrusted input visible, bounded, reviewable, and unable to become an
 authoritative fact or autonomous escalation without independent admitted support.
+
+This proposal is not evidence that speculative capabilities exist. It is a
+future-ready safety design. Current science, law, and deployment facts must stay
+separate from low-confidence future models.
+
+## Source Anchors
+
+This proposal is cross-checked against these public anchors:
+
+- NIST AI Risk Management Framework: voluntary risk management for trustworthy
+  AI design, development, use, and evaluation.
+- OECD AI Principles: trustworthy AI should respect human rights and democratic
+  values, with transparency, safety, security, and accountability.
+- UNESCO Recommendation on the Ethics of AI: human rights and dignity,
+  proportionality and do-no-harm, safety/security, privacy, auditability,
+  transparency, human oversight, sustainability, literacy, fairness, and
+  non-discrimination.
+- Uncertainty principle: used only as an analogy for complementarity and
+  measurement tradeoffs. HFF does not claim to prove quantum mechanics.
+- Quantum networking/entanglement sources: future communication capabilities
+  may be modeled as speculative routes, but ordinary quantum entanglement should
+  not be treated as proven faster-than-light messaging.
 
 ## Threat Model
 
@@ -27,6 +54,8 @@ Assume these attackers exist:
 - A dictator, rogue state, rogue planet, or advanced weapons monopoly that coerces nodes into false agreement.
 - A powerful AI or weapons system that tries to convert control of force into control of truth.
 - A leaked draft, agent output, or political claim that is mistaken for official truth and escalates conflict.
+- A speculative future capability that is mislabeled as a fact or operational
+  assumption.
 
 ## Required Controls
 
@@ -461,6 +490,84 @@ The guardian posture is:
 protect first, accuse only through legitimate process
 ```
 
+### 13. Speculative Future Models Are Not Mocks
+
+The seed bank may include possible future capabilities, but they must be modeled
+as low-confidence predictive structures. They are not mock facts and not current
+operational assumptions.
+
+Required fields:
+
+```text
+kind: speculative_future_model
+status: low_confidence_predictive
+operational_assumption: false
+confidence: explicit numeric confidence
+used_for: stress testing and safety planning
+not_used_for: current factual claims, public authority, autonomous action
+```
+
+Examples:
+
+- mixed classical/FTL communication routes
+- retrocausal or paradox-sensitive proposal ordering
+- multi-solar-system last-known state exchange
+- advanced non-LLM reasoning models
+- future weapons or coercive infrastructure monopolies
+- local guardian-prevention capabilities not present in current deployments
+
+Rules:
+
+- speculative models cannot become accepted facts without evidence and promotion
+  through the normal confidence lifecycle
+- speculative models cannot justify live action by themselves
+- speculative models must be clearly separable from scientific claims,
+  legal rules, moral principles, literary cases, and current measurements
+- future-model confidence can rise with evidence, but the system must preserve
+  event time, discovery time, interpretation time, and confidence-at-time
+- if a speculative model later becomes real, it should be superseded by a new
+  evidence-backed model rather than silently relabeled
+
+This allows HFF to prepare for possible futures without pretending those futures
+are already true.
+
+### 14. Complementarity And Tradeoff Handling
+
+Some legitimate values cannot always be maximized at the same time. The
+uncertainty principle is only an analogy here: it teaches caution around claims
+of perfect simultaneous resolution, not a proof about ethics or governance.
+
+HFF should explicitly model value pairs that can trade off:
+
+- speed and due process
+- transparency and privacy
+- safety and liberty
+- public knowledge and political de-escalation
+- confidence and openness to challenge
+- local autonomy and global coordination
+- evidence preservation and data minimization
+
+When values conflict, the system should:
+
+- identify the values in tension
+- identify the immutable constraints at risk
+- state what remains uncertain
+- choose the least harmful reversible action when action is needed
+- preserve evidence and challenge rights
+- avoid presenting the chosen tradeoff as perfect or final
+
+This should be a first-class proposal field:
+
+```text
+tradeoff_pairs
+immutable_risks
+chosen_resolution
+why_more_reversible_options_were_insufficient
+review_required
+```
+
+This section prevents the system from hiding hard choices behind a single score.
+
 ## Design Self-Critique
 
 This proposal is intentionally conservative. That is a strength for public
@@ -480,6 +587,12 @@ deployment, but it creates tradeoffs:
 - Its emergency-prevention doctrine depends on a clear boundary around
   HFF-controlled capabilities; without that boundary, "prevention" could be
   stretched into punishment.
+- Its speculative future models could be socially misunderstood as predictions
+  or claims unless the seed registry enforces low-confidence labels and prevents
+  them from driving action.
+- Its complementarity rule prevents false certainty, but it creates a burden:
+  every serious action needs a visible tradeoff record, not just a confidence
+  number.
 
 The strongest unresolved risk is social misuse of output. Even if the system is
 careful internally, people or agents can quote drafts out of context. Therefore
@@ -504,6 +617,8 @@ Validated in the current codebase:
 - belief lifecycle work exists on this branch, but proposal state, political
   containment, guardian prevention, coercion-aware quorum, and truth sanctuaries
   are proposal-only
+- speculative future model typing, complementarity tradeoff records, and
+  polymorphic seed registry enforcement are proposal-only
 
 The proposal is valid if the implementation eventually proves:
 
@@ -516,6 +631,9 @@ The proposal is valid if the implementation eventually proves:
   broad punishment
 - intervention records are explicitly marked as not guilt findings and require
   review
+- speculative future models cannot promote to facts or actions without evidence
+- serious proposals record value tradeoffs instead of collapsing them into one
+  hidden score
 - all public outputs preserve uncertainty, scope, provenance, and draft status
 
 ## Proposed Implementation Order
@@ -532,7 +650,8 @@ The proposal is valid if the implementation eventually proves:
 10. Add duress-aware node status, independence diversity checks, and coercion-weighted quorum rules.
 11. Add truth-sanctuary replication for signed observations, proposal histories, challenges, and minority reports.
 12. Add the polymorphic seed registry for laws, philosophy, literature, science, model types, and immutable constraints.
-13. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, political-leak, emergency-prevention overreach, and output-injection scenarios.
+13. Add speculative future model typing and complementarity/tradeoff records to proposals.
+14. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, political-leak, emergency-prevention overreach, speculative-model misuse, tradeoff omission, and output-injection scenarios.
 
 ## Non-Goals
 
@@ -554,6 +673,8 @@ should at minimum have:
 - political/high-conflict claims private by default with publication gates
 - guardian-prevention actions that are narrow, reversible, reviewed, and not
   guilt findings
+- speculative future models labeled low-confidence and barred from live action
+- complementarity/tradeoff records for serious proposals
 - coercion-aware quorum and node-duress status
 - append-only truth-sanctuary records for challenges and minority reports
 - mesh verification that requires signed admitted peers
