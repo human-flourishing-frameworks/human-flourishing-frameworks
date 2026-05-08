@@ -18,6 +18,15 @@ from resilience import (
     init_resilience_db, discover_peers, health_check,
     self_propagate, get_resilience_status
 )
+from mesh_network import (
+    init_mesh_db, get_mesh_violations, sync_with_mesh
+)
+from byzantine_consensus import (
+    init_consensus_db, get_approved_violations, get_consensus_status
+)
+from auto_updater import (
+    check_for_updates, get_update_status
+)
 
 app = Flask(__name__)
 
@@ -29,6 +38,16 @@ except:
 
 try:
     init_resilience_db()
+except:
+    pass
+
+try:
+    init_mesh_db()
+except:
+    pass
+
+try:
+    init_consensus_db()
 except:
     pass
 
@@ -81,10 +100,14 @@ if RESILIENCE_ENABLED:
     health_thread = threading.Thread(target=resilience_health_monitor, daemon=True)
     peer_thread = threading.Thread(target=resilience_peer_discovery, daemon=True)
     propagation_thread = threading.Thread(target=resilience_propagation, daemon=True)
+    mesh_sync_thread = threading.Thread(target=sync_with_mesh, daemon=True)
+    update_thread = threading.Thread(target=check_for_updates, daemon=True)
 
     health_thread.start()
     peer_thread.start()
     propagation_thread.start()
+    mesh_sync_thread.start()
+    update_thread.start()
 
 # Mock data
 VIOLATIONS = [
@@ -486,6 +509,50 @@ def resilience_propagation_status():
             "propagation_methods": [],
             "error": str(e)
         }), 200
+
+@app.route('/api/mesh/violations')
+def mesh_violations():
+    """Get violations synced from the mesh network"""
+    try:
+        violations = get_mesh_violations()
+        return jsonify({
+            "violations": violations,
+            "count": len(violations),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 200
+
+@app.route('/api/consensus/approved')
+def consensus_approved():
+    """Get violations with Byzantine consensus approval"""
+    try:
+        violations = get_approved_violations()
+        return jsonify({
+            "approved_violations": violations,
+            "count": len(violations),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 200
+
+@app.route('/api/consensus/status/<violation_id>')
+def consensus_status(violation_id):
+    """Get consensus status for a specific violation"""
+    try:
+        status = get_consensus_status(violation_id)
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 200
+
+@app.route('/api/updates/status')
+def update_status():
+    """Get system update status"""
+    try:
+        status = get_update_status()
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 200
 
 if __name__ == '__main__':
     # Register this node on startup
