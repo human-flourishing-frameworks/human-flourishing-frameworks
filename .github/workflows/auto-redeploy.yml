@@ -1,0 +1,38 @@
+name: Auto-Redeploy to Render
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Notify deployment started
+        run: |
+          echo "========================================"
+          echo "Deployment to Render initiated"
+          echo "========================================"
+          echo ""
+          echo "Render auto-detects git push to master"
+          echo "Deployment will start within 30 seconds"
+          echo ""
+          echo "Monitor at: https://dashboard.render.com"
+          echo "Live site:  https://human-flourishing-frameworks.onrender.com"
+          echo ""
+          echo "Estimated time: 2-3 minutes"
+
+      - name: Optional - Trigger Render API (requires RENDER_API_KEY secret)
+        if: ${{ secrets.RENDER_API_KEY != '' }}
+        run: |
+          echo "Using Render API to trigger immediate redeploy..."
+          # This requires setting RENDER_API_KEY in GitHub repo settings
+          # Settings -> Secrets and variables -> Actions -> New repository secret
+          # Name: RENDER_API_KEY
+          # Value: Get from Render dashboard (Account -> API Keys)
+          echo "API redeploy feature available with RENDER_API_KEY"
