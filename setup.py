@@ -15,12 +15,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="human-flourishing-frameworks",
     version="1.0.0",
-    author="Alex Place",
-    author_email="alex.place.7@gmail.com",
+    author="Human Flourishing Frameworks Community",
+    author_email="board@human-flourishing-frameworks.org",
     description="Open-source system for detecting and fixing unfair AI systems",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/alex-place/human-flourishing-frameworks",
+    url="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -47,8 +47,8 @@ setup(
     include_package_data=True,
     zip_safe=False,
     project_urls={
-        "Bug Tracker": "https://github.com/alex-place/human-flourishing-frameworks/issues",
-        "Documentation": "https://github.com/alex-place/human-flourishing-frameworks/tree/master/docs",
-        "Source Code": "https://github.com/alex-place/human-flourishing-frameworks",
+        "Bug Tracker": "https://github.com/human-flourishing-frameworks/human-flourishing-frameworks/issues",
+        "Documentation": "https://github.com/human-flourishing-frameworks/human-flourishing-frameworks/tree/master/docs",
+        "Source Code": "https://github.com/human-flourishing-frameworks/human-flourishing-frameworks",
     },
 )

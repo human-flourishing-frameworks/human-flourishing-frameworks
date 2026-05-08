@@ -20,16 +20,16 @@
     "open-source",
     "decentralized"
   ],
-  "author": "Alex Place <alex.place.7@gmail.com>",
+  "author": "Human Flourishing Frameworks Community",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alex-place/human-flourishing-frameworks.git"
+    "url": "https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git"
   },
   "bugs": {
-    "url": "https://github.com/alex-place/human-flourishing-frameworks/issues"
+    "url": "https://github.com/human-flourishing-frameworks/human-flourishing-frameworks/issues"
   },
-  "homepage": "https://github.com/alex-place/human-flourishing-frameworks",
+  "homepage": "https://github.com/human-flourishing-frameworks/human-flourishing-frameworks",
   "engines": {
     "node": ">=14.0.0",
     "python": ">=3.9"

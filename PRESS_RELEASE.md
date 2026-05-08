@@ -143,7 +143,7 @@ Result: Even if attackers control 1/3 of network, they cannot affect decisions.
 - `pip install human-flourishing-frameworks`
 - `npm install -g human-flourishing-frameworks`
 - `docker pull alex-place/human-flourishing-frameworks`
-- Source: https://github.com/alex-place/human-flourishing-frameworks
+- Source: https://github.com/human-flourishing-frameworks/
 
 **Auto-Update:** Every 6 hours, nodes automatically check for updates and apply them. Zero manual intervention.
 
@@ -297,7 +297,7 @@ Anyone can:
 4. Confirm remediation progress
 5. Audit governance decisions
 
-**Source Code:** https://github.com/alex-place/human-flourishing-frameworks
+**Source Code:** https://github.com/human-flourishing-frameworks/
 
 **Live Dashboard:** https://human-flourishing-frameworks.onrender.com
 
@@ -322,7 +322,7 @@ Anyone can:
 ## NEXT STEPS
 
 1. **Review the system:** https://human-flourishing-frameworks.onrender.com
-2. **Read the docs:** https://github.com/alex-place/human-flourishing-frameworks
+2. **Read the docs:** https://github.com/human-flourishing-frameworks/
 3. **Deploy locally:** `pip install human-flourishing-frameworks`
 4. **Participate:** Deploy a node, vote on violations, join the network
 5. **Support:** Academic review, regulatory feedback, pilot deployment
@@ -331,8 +331,8 @@ Anyone can:
 
 ## CONTACT
 
-**Email:** alex.place.7@gmail.com  
-**GitHub:** https://github.com/alex-place/human-flourishing-frameworks  
+**Email:** board@human-flourishing-frameworks.org  
+**GitHub:** https://github.com/human-flourishing-frameworks/  
 **Live System:** https://human-flourishing-frameworks.onrender.com
 
 ---
@@ -349,4 +349,4 @@ An open-source, decentralized system for detecting, tracking, and fixing unfair 
 
 ---
 
-*For media inquiries, research requests, or pilot deployment discussions: alex.place.7@gmail.com*
+*For media inquiries, research requests, or pilot deployment discussions: board@human-flourishing-frameworks.org*

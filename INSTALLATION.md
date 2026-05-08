@@ -28,14 +28,14 @@ Automatic updates every 6 hours.
 
 ### 4. **Docker (Container)**
 ```bash
-docker pull alex-place/human-flourishing-frameworks:latest
-docker run -p 5000:5000 alex-place/human-flourishing-frameworks
+docker pull human-flourishing-frameworks/human-flourishing-frameworks:latest
+docker run -p 5000:5000 human-flourishing-frameworks/human-flourishing-frameworks
 ```
 Auto-pulls latest image. Automatic updates.
 
 ### 5. **From Source (Developers)**
 ```bash
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 pip install -r requirements.txt
 python app.py
@@ -120,7 +120,7 @@ http://localhost:5000
 
 ```bash
 # Clone
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 
 # Install dependencies

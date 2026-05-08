@@ -13,7 +13,7 @@ import time
 import hashlib
 from datetime import datetime
 
-GITHUB_REPO = "alex-place/human-flourishing-frameworks"
+GITHUB_REPO = "human-flourishing-frameworks/human-flourishing-frameworks"
 UPDATE_CHECK_INTERVAL = 3600  # Check every hour
 CURRENT_VERSION = os.environ.get('HFF_VERSION', '1.0.0')
 UPDATE_ENABLED = True

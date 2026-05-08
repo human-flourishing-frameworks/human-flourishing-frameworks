@@ -76,7 +76,7 @@ Please review:
 ### Installation
 
 ```bash
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 pip install -r requirements.txt
 ```
@@ -190,8 +190,8 @@ A peer-reviewed, published validation that:
 
 ## Contact & Next Steps
 
-**Email:** alex.place.7@gmail.com  
-**Repository:** https://github.com/alex-place/human-flourishing-frameworks  
+**Email:** board@human-flourishing-frameworks.org  
+**Repository:** https://github.com/human-flourishing-frameworks/human-flourishing-frameworks  
 **Live Demo:** https://human-flourishing-frameworks.onrender.com
 
 ---

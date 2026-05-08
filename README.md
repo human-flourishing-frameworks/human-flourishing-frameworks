@@ -26,7 +26,7 @@ No installation. No signup. No account. Open the link and start monitoring.
 
 | Platform | Click to Deploy | Time | Cost |
 |----------|---|---|---|
-| **Render.com** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/alex-place/human-flourishing-frameworks) | 2 min | Free tier included |
+| **Render.com** | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/human-flourishing-frameworks/human-flourishing-frameworks) | 2 min | Free tier included |
 | **Railway.app** | [![Deploy to Railway](https://railway.app/button.svg)](https://railway.app/template/hff) | 2 min | Free tier included |
 | **Heroku** | `heroku create && git push heroku master` | 3 min | Free tier available |
 
@@ -47,7 +47,7 @@ Your node automatically:
 
 ```powershell
 # Windows PowerShell
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 pip install Flask==2.3.0 requests
 python app.py
@@ -55,7 +55,7 @@ python app.py
 
 ```bash
 # Mac/Linux
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 pip3 install Flask==2.3.0 requests
 python3 app.py
@@ -129,7 +129,7 @@ If you want to help monitor or contribute code:
 
 **Windows:**
 ```powershell
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 pip install Flask==2.3.0 requests
 python app.py  # Node 1 on port 5000
@@ -275,7 +275,7 @@ Systems must change:
 
 ```powershell
 # Clone the repo
-git clone https://github.com/alex-place/human-flourishing-frameworks.git
+git clone https://github.com/human-flourishing-frameworks/human-flourishing-frameworks.git
 cd human-flourishing-frameworks
 
 # Install dependencies
@@ -311,7 +311,7 @@ Invoke-WebRequest http://localhost:5000/api/mesh/peers | ConvertTo-Json
 
 **One-click deployment:**
 
-1. **[Deploy to Render](https://render.com/deploy?repo=https://github.com/alex-place/human-flourishing-frameworks)** (2 minutes, free tier)
+1. **[Deploy to Render](https://render.com/deploy?repo=https://github.com/human-flourishing-frameworks/human-flourishing-frameworks)** (2 minutes, free tier)
 2. **[Deploy to Railway](https://railway.app/template/hff)** (2 minutes, free tier)
 3. **[Deploy to Heroku](https://heroku.com)** (`heroku create && git push heroku master`)
 

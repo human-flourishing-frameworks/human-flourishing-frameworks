@@ -24,7 +24,7 @@ We would like to request an independent peer review of our implementation, speci
 - ✅ 13 nodes deployed globally
 - ✅ 3/3 cryptographic signatures verified
 - ✅ Byzantine voting working (3 proposals approved at 100% consensus)
-- ✅ Open source (Apache 2.0): https://github.com/alex-place/human-flourishing-frameworks
+- ✅ Open source (Apache 2.0): https://github.com/human-flourishing-frameworks/human-flourishing-frameworks
 - ✅ Live deployment: https://human-flourishing-frameworks.onrender.com
 - ✅ Documentation: Full specs, architecture, test suite included
 
@@ -51,9 +51,9 @@ We believe independent academic validation would strengthen the credibility of t
 Would you be interested in reviewing this work?
 
 Best regards,  
-Alex Place  
-alex.place.7@gmail.com  
-https://github.com/alex-place/human-flourishing-frameworks
+Board Member  
+board@human-flourishing-frameworks.org  
+https://github.com/human-flourishing-frameworks/human-flourishing-frameworks
 
 ---
 
@@ -87,7 +87,7 @@ We have developed an open-source system for detecting AI bias that produces cryp
 - Full audit trail publicly available
 - Ready for regulatory pilot
 
-**Repository:** https://github.com/alex-place/human-flourishing-frameworks  
+**Repository:** https://github.com/human-flourishing-frameworks/human-flourishing-frameworks  
 **Live System:** https://human-flourishing-frameworks.onrender.com
 
 We are simultaneously seeking technical validation from computer science programs and legal validation from law schools. Your perspective on legal admissibility and regulatory acceptance would be invaluable.
@@ -95,8 +95,8 @@ We are simultaneously seeking technical validation from computer science program
 Available for discussion at your earliest convenience.
 
 Best regards,  
-Alex Place  
-alex.place.7@gmail.com
+Board Member  
+board@human-flourishing-frameworks.org
 
 ---
 
@@ -142,7 +142,7 @@ We have developed and deployed an open-source system for detecting AI bias that 
 - Independent from any company or government
 
 **Technical Details:**
-- Source: https://github.com/alex-place/human-flourishing-frameworks
+- Source: https://github.com/human-flourishing-frameworks/human-flourishing-frameworks
 - Live: https://human-flourishing-frameworks.onrender.com
 - All code open source and auditable
 
@@ -158,9 +158,9 @@ We believe decentralized, cryptographically-proven monitoring is critical infras
 Available for technical discussion, legal review, or pilot proposal at your earliest convenience.
 
 Best regards,  
-Alex Place  
-alex.place.7@gmail.com  
-https://github.com/alex-place/human-flourishing-frameworks
+Board Member  
+board@human-flourishing-frameworks.org  
+https://github.com/human-flourishing-frameworks/human-flourishing-frameworks
 
 ---
 
@@ -209,7 +209,7 @@ We have developed a production-ready system for detecting and tracking AI bias i
 - 13 nodes deployed
 - 7 violations tracked
 - Ready for federal pilot
-- All source code open (https://github.com/alex-place/human-flourishing-frameworks)
+- All source code open (https://github.com/human-flourishing-frameworks/human-flourishing-frameworks)
 - Live system: https://human-flourishing-frameworks.onrender.com
 
 **Request:**
@@ -224,8 +224,8 @@ This system enables the kind of transparent, decentralized, cryptographically-ve
 Available for technical briefing or pilot discussion.
 
 Best regards,  
-Alex Place  
-alex.place.7@gmail.com
+Board Member  
+board@human-flourishing-frameworks.org
 
 ---
 
@@ -272,15 +272,15 @@ We have developed an open-source system that implements Byzantine-fault-tolerant
 We believe independent peer review and NIST framework integration would significantly strengthen both our system and NIST's governance capabilities.
 
 **Resources:**
-- Source: https://github.com/alex-place/human-flourishing-frameworks
+- Source: https://github.com/human-flourishing-frameworks/human-flourishing-frameworks
 - Live: https://human-flourishing-frameworks.onrender.com
 - Full documentation included
 
 Available for technical discussion or collaboration planning.
 
 Best regards,  
-Alex Place  
-alex.place.7@gmail.com
+Board Member  
+board@human-flourishing-frameworks.org
 
 ---
 

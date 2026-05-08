@@ -58,7 +58,7 @@ We have developed an open-source system for detecting and tracking unfair AI sys
 
 - **Live dashboard:** https://human-flourishing-frameworks.onrender.com
 - **Public audit log:** /api/audit (all decisions, all votes)
-- **Source code:** https://github.com/alex-place/human-flourishing-frameworks
+- **Source code:** https://github.com/human-flourishing-frameworks/human-flourishing-frameworks
 - **Documentation:** Specifications, architecture, cryptographic proofs
 
 ### How This Helps FTC
@@ -105,8 +105,8 @@ We would appreciate:
 
 ### Contact
 
-**Email:** alex.place.7@gmail.com  
-**Repository:** https://github.com/alex-place/human-flourishing-frameworks  
+**Email:** board@human-flourishing-frameworks.org  
+**Repository:** https://github.com/human-flourishing-frameworks/human-flourishing-frameworks  
 **Live System:** https://human-flourishing-frameworks.onrender.com
 
 We believe this approach offers a path forward for scalable, decentralized, cryptographically-proven AI fairness monitoring—critical infrastructure for the AI accountability landscape the FTC is building.
