@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 DATA_MODE_BEST_EFFORT = "best_effort"
 STATUS_NOT_ENABLED = "not_enabled"
 STATUS_REGISTERED_NOT_RUN = "registered_not_run"
+STATUS_RUNNING = "running"
 STATUS_RAN_NO_MEASUREMENTS = "ran_no_measurements"
 STATUS_RAN_WITH_UPDATES = "ran_with_updates"
 STATUS_RAN_WITH_MEASUREMENTS_NO_UPDATES = "ran_with_measurements_no_updates"
@@ -94,6 +95,11 @@ class LiveObservationTelemetry:
         """Return the exact state represented by the current telemetry."""
         if not self.enabled:
             return STATUS_NOT_ENABLED
+        if (
+            self.last_observation_started_at is not None
+            and self.last_observation_finished_at is None
+        ):
+            return STATUS_RUNNING
         if self.observation_count == 0:
             return STATUS_REGISTERED_NOT_RUN
         if self.last_error_count > 0:
