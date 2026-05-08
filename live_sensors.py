@@ -25,12 +25,59 @@ Limitations:
 """
 
 import requests
-import time
 import math
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any, Tuple
 
 from sensors import Sensor, Measurement, SensorRegistry
+from live_observation_telemetry import (
+    LiveObservationTelemetry,
+    summarize_belief_activity,
+)
+
+
+def _patch_world_model_status_for_live_telemetry() -> None:
+    """Expose live observation telemetry through WorldModel.status().
+
+    app.py already serves `/api/world/status` from `world_model.status()`.
+    Patching the model status method here keeps the runtime integration local to
+    the live sensor subsystem and avoids duplicating Flask route logic.
+    """
+    try:
+        from world_model import WorldModel
+    except Exception:
+        return
+
+    if getattr(WorldModel, "_live_observation_status_patched", False):
+        return
+
+    original_status = WorldModel.status
+
+    def status_with_live_observation(self):
+        status = original_status(self)
+        telemetry = getattr(self, "live_observation_telemetry", None)
+        if telemetry is None:
+            telemetry = LiveObservationTelemetry(
+                enabled=False,
+                sensor_count=getattr(getattr(self, "sensors", None), "sensor_count", 0),
+            )
+
+        live_updated_entities = getattr(self, "live_updated_entities", set())
+        belief_activity = summarize_belief_activity(
+            getattr(self, "beliefs", {}),
+            live_updated_entities=live_updated_entities,
+        )
+        belief_activity["corrections_count"] = len(getattr(self, "correction_log", []))
+
+        status["live_observation_status"] = telemetry.to_dict()
+        status["belief_activity"] = belief_activity
+        return status
+
+    WorldModel.status = status_with_live_observation
+    WorldModel._live_observation_status_patched = True
+
+
+_patch_world_model_status_for_live_telemetry()
 
 
 # ---------------------------------------------------------------------------
@@ -609,11 +656,26 @@ def create_live_sensors() -> List[Sensor]:
 # Background observation loop
 # ---------------------------------------------------------------------------
 
+def _ensure_live_observation_telemetry(registry: SensorRegistry, world_model):
+    telemetry = getattr(world_model, "live_observation_telemetry", None)
+    if telemetry is None:
+        telemetry = LiveObservationTelemetry()
+        world_model.live_observation_telemetry = telemetry
+
+    telemetry.mark_enabled(registry.sensor_count)
+
+    if not hasattr(world_model, "live_updated_entities"):
+        world_model.live_updated_entities = set()
+
+    return telemetry
+
+
 def run_observation_loop(
     registry: SensorRegistry,
     world_model,
     interval_seconds: int = 3600,
     stop_event=None,
+    telemetry: Optional[LiveObservationTelemetry] = None,
 ):
     """Continuously observe and update the world model.
 
@@ -631,18 +693,44 @@ def run_observation_loop(
         World Bank data updates daily at most, so hourly is sufficient.
     stop_event : threading.Event, optional
         If provided, the loop exits when this event is set.
+    telemetry : LiveObservationTelemetry, optional
+        Runtime telemetry object exposed through `world_model.status()`.
     """
     import threading
 
     if stop_event is None:
         stop_event = threading.Event()
 
+    if telemetry is None:
+        telemetry = _ensure_live_observation_telemetry(registry, world_model)
+    else:
+        world_model.live_observation_telemetry = telemetry
+        telemetry.mark_enabled(registry.sensor_count)
+        if not hasattr(world_model, "live_updated_entities"):
+            world_model.live_updated_entities = set()
+
     while not stop_event.is_set():
+        telemetry.start_observation()
+        corrections_before = len(getattr(world_model, "correction_log", []))
         try:
             measurements = registry.observe_all()
+            updates = []
             if measurements:
                 updates = world_model.update(measurements)
+                for u in updates:
+                    entity = u.get("entity")
+                    if entity:
+                        world_model.live_updated_entities.add(entity)
                 now = datetime.now(timezone.utc).isoformat()
+                correction_delta = max(
+                    0,
+                    len(getattr(world_model, "correction_log", [])) - corrections_before,
+                )
+                telemetry.finish_observation(
+                    measurement_count=len(measurements),
+                    update_count=len(updates),
+                    correction_count=correction_delta,
+                )
                 print(
                     f"[LIVE SENSOR] {now} - Observed {len(measurements)} "
                     f"measurements, updated {len(updates)} beliefs"
@@ -654,9 +742,15 @@ def run_observation_loop(
                     )
             else:
                 now = datetime.now(timezone.utc).isoformat()
+                telemetry.finish_observation(
+                    measurement_count=0,
+                    update_count=0,
+                    correction_count=0,
+                )
                 print(f"[LIVE SENSOR] {now} - No measurements returned (APIs may be unavailable)")
         except Exception as e:
             now = datetime.now(timezone.utc).isoformat()
+            telemetry.record_failure(e)
             print(f"[LIVE SENSOR] {now} - Observation error: {e}")
 
         # Wait for the interval or until stop is requested
