@@ -761,6 +761,7 @@ class WorldModel:
             "economic": ["economic", "employment", "income", "poverty", "housing", "gini", "mobility", "wealth", "inequality"],
             "psychology": ["satisfaction", "wellbeing", "well-being", "autonomy", "happiness", "swls", "qoli", "sdt"],
             "social": ["social_capital", "trust", "freedom", "civic", "putnam"],
+            "astrophysics": ["universe", "galactic", "solar", "planet", "habitable", "cmb", "planck", "gaia", "exoplanet", "biomass", "earth"],
         }
         for domain, keywords in domain_keywords.items():
             if any(kw in text for kw in keywords):
