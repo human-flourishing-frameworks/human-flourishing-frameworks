@@ -4,11 +4,9 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app_autonomous:app --log-file -
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --log-file -
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
-      - key: PORT
-        value: 10000
     domains:
       - human-flourishing-frameworks.onrender.com
