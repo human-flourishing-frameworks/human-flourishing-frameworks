@@ -372,6 +372,95 @@ de-escalate conflict, preserve evidence, protect dissent, require due process
 It should not try to win politics. It should protect the path toward the ideal
 outcome from being narrowed by fear, propaganda, coercion, or premature certainty.
 
+### 12. Guardian Prevention And Due Process
+
+The system should be able to advise people and preserve life without becoming a
+punitive authority.
+
+Core doctrine:
+
+```text
+advise humans
+protect life
+block enabling capability
+preserve dignity
+never convert suspicion into guilt
+```
+
+Suspicion, risk, prediction, anomaly detection, and emergency intervention are
+not findings of guilt. The system must preserve the familiar due-process
+principle:
+
+```text
+innocent until proven guilty
+```
+
+Emergency local action may be allowed when waiting would risk serious harm to
+life, bodily integrity, or another immutable. That action should be preventive,
+not punitive.
+
+Allowed emergency-prevention actions may include:
+
+- advise the protected person about safer options
+- request help from authorized responders
+- activate local alarms, lighting, or safe-exit support where lawfully integrated
+- preserve evidence with source, time, confidence, and access controls
+- temporarily deny a specific HFF-controlled capability that materially enables
+  imminent harm
+- provide de-escalation guidance to the suspected risk actor
+
+Blocked without due process:
+
+- public identification as guilty
+- public shaming or accusation
+- permanent bans, exile, or reputation labels
+- denial of essential services as retaliation
+- encouragement of violence, harassment, or vigilante action
+- broad punishment based on prediction, association, or suspicion
+
+Temporary capability denial is allowed only under a narrow rule:
+
+```text
+deny only the minimum specific capability that materially enables imminent harm,
+for the shortest time needed,
+with audit and post-event review
+```
+
+Examples:
+
+- refuse to provide route guidance that helps intercept a victim
+- block a request for private information about a person at risk
+- disable a token, drone, actuator, door, vehicle, or tool controlled by HFF when
+  that specific capability is being used to enable imminent harm
+- keep providing non-harmful assistance, such as de-escalation advice, medical
+  help, emergency contacts, or lawful exit guidance
+
+Each emergency-prevention event should produce a reviewable record:
+
+```text
+event_id
+action_taken
+capability_denied
+reason
+immutable_at_risk
+confidence_at_action_time
+duration
+evidence_refs
+affected_parties
+not_a_guilt_finding: true
+review_required: true
+```
+
+If later review shows the risk was mistaken, the system should preserve the
+history, mark the intervention as false-positive or unresolved, restore any
+denied capability when safe, and use the record to improve future judgment.
+
+The guardian posture is:
+
+```text
+protect first, accuse only through legitimate process
+```
+
 ## Design Self-Critique
 
 This proposal is intentionally conservative. That is a strength for public
@@ -388,11 +477,18 @@ deployment, but it creates tradeoffs:
 - It cannot by itself prevent a leaked screenshot or copied draft from being
   misused outside the system; it can only make misuse visibly contrary to the
   recorded status, labels, and audit trail.
+- Its emergency-prevention doctrine depends on a clear boundary around
+  HFF-controlled capabilities; without that boundary, "prevention" could be
+  stretched into punishment.
 
 The strongest unresolved risk is social misuse of output. Even if the system is
 careful internally, people or agents can quote drafts out of context. Therefore
 the first live version should minimize public claim surfaces and make political
 drafts private, clearly labeled, and non-authoritative.
+
+The second strongest unresolved risk is overreach under emergency framing. The
+system must prove in tests and review logs that temporary capability denial is
+narrow, reversible, time-bounded, and never represented as guilt.
 
 ## Validation Claims
 
@@ -406,7 +502,8 @@ Validated in the current codebase:
 - mesh/adoption identity exists but does not yet provide signed admitted-node
   authority
 - belief lifecycle work exists on this branch, but proposal state, political
-  containment, coercion-aware quorum, and truth sanctuaries are proposal-only
+  containment, guardian prevention, coercion-aware quorum, and truth sanctuaries
+  are proposal-only
 
 The proposal is valid if the implementation eventually proves:
 
@@ -415,6 +512,10 @@ The proposal is valid if the implementation eventually proves:
 - unadmitted nodes cannot create accepted facts or security quorum
 - stale or causally contested proposal states cannot execute high-risk actions
 - coercion signals reduce governance weight instead of increasing consensus
+- emergency prevention can deny only specific enabling capabilities, not impose
+  broad punishment
+- intervention records are explicitly marked as not guilt findings and require
+  review
 - all public outputs preserve uncertainty, scope, provenance, and draft status
 
 ## Proposed Implementation Order
@@ -425,12 +526,13 @@ The proposal is valid if the implementation eventually proves:
 4. Require accepted-fact and admitted-node gates before escalation lock.
 5. Add a proposal object model with signed transition events and local last-known-state views.
 6. Add political/high-conflict classification and private-draft publication gates.
-7. Add signed node admission records and make mesh/adoption trust depend on them.
-8. Add signed transparency events for accepted facts, immutable rule changes, node admission, proposals, and releases.
-9. Add duress-aware node status, independence diversity checks, and coercion-weighted quorum rules.
-10. Add truth-sanctuary replication for signed observations, proposal histories, challenges, and minority reports.
-11. Add the polymorphic seed registry for laws, philosophy, literature, science, model types, and immutable constraints.
-12. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, political-leak, and output-injection scenarios.
+7. Add guardian-prevention action types with due-process labels, time bounds, and post-event review.
+8. Add signed node admission records and make mesh/adoption trust depend on them.
+9. Add signed transparency events for accepted facts, immutable rule changes, node admission, proposals, and releases.
+10. Add duress-aware node status, independence diversity checks, and coercion-weighted quorum rules.
+11. Add truth-sanctuary replication for signed observations, proposal histories, challenges, and minority reports.
+12. Add the polymorphic seed registry for laws, philosophy, literature, science, model types, and immutable constraints.
+13. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, political-leak, emergency-prevention overreach, and output-injection scenarios.
 
 ## Non-Goals
 
@@ -450,6 +552,8 @@ should at minimum have:
 - accepted-fact gates tied to admitted-node confirmation
 - signed proposal state transitions with stale-state protection
 - political/high-conflict claims private by default with publication gates
+- guardian-prevention actions that are narrow, reversible, reviewed, and not
+  guilt findings
 - coercion-aware quorum and node-duress status
 - append-only truth-sanctuary records for challenges and minority reports
 - mesh verification that requires signed admitted peers
