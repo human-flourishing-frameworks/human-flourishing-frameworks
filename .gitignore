@@ -2,8 +2,8 @@ __pycache__/
 *.py[cod]
 *.pyc
 .venv/
-*.db
 *.log
+*.db
 data/*.db
 data/*.db-*
 data/*.key
