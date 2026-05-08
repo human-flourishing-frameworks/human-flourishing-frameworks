@@ -136,15 +136,76 @@ Peer payloads should require:
 Unadmitted peers may contribute suggestions or challenges, but they must not
 increase verification counters that imply trust.
 
+### 8. Decentralized Proposal State
+
+Proposals should be the bridge between belief, advice, prevention, and action.
+They should be portable signed state objects, not only local SQLite rows.
+
+The proposal lifecycle should be explicit:
+
+```text
+draft -> reviewed -> challenged -> revised -> approved -> executed
+                         -> rejected
+                         -> expired
+```
+
+Each proposal should include:
+
+- proposal identifier derived from canonical genesis content
+- proposal kind, such as belief update, advice, prevention, action request, or node admission
+- claim being made
+- requested action, if any
+- evidence references and belief references
+- risk level and affected parties
+- confidence, source status, and admitted-node confirmations
+- prevention check result
+- expiration time or reinforcement policy
+- append-only signed transition history
+
+Nodes should exchange proposal state as signed transition events:
+
+```text
+proposal_id
+state_version
+previous_state_hash
+new_state_hash
+transition: draft -> challenged
+reason
+signed_by_node
+signature
+seen_at
+```
+
+Last-known state is local. A node may say, "as of my last verified sync, this
+proposal was approved by these admitted nodes." It must not claim universal
+agreement unless the required quorum and freshness checks are satisfied.
+
+Conflict is expected. If two peers present incompatible latest states, the node
+should store both views, mark the proposal conflicted, and resolve by policy:
+
+- valid signatures before unsigned claims
+- admitted nodes before unadmitted nodes
+- newer non-expired transitions before stale transitions
+- required quorum before local execution
+- explicit challenges before silent approval
+
+Execution requires fresh verified proposal state. No node should act from an old
+approval if it cannot verify recent admitted-node support, risk gates, and
+capability grants.
+
+Unadmitted forks may publish their own proposal states, but those states remain
+untrusted public views until admitted by signed node authority.
+
 ## Proposed Implementation Order
 
 1. Add request body, batch, string, and rate limits around all write endpoints.
 2. Escape or text-render all dashboard strings derived from models, peers, or API data.
 3. Add `HFF_AUTONOMY_MODE=observe_only` as the default and stop autonomous submit from locking escalations unless explicitly elevated.
 4. Require accepted-fact and admitted-node gates before escalation lock.
-5. Add signed node admission records and make mesh/adoption trust depend on them.
-6. Add signed transparency events for accepted facts, immutable rule changes, node admission, and releases.
-7. Expand tests around compromised-token, public-write, rogue-peer, and output-injection scenarios.
+5. Add a proposal object model with signed transition events and local last-known-state views.
+6. Add signed node admission records and make mesh/adoption trust depend on them.
+7. Add signed transparency events for accepted facts, immutable rule changes, node admission, proposals, and releases.
+8. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, and output-injection scenarios.
 
 ## Non-Goals
 
@@ -162,5 +223,6 @@ should at minimum have:
 - safe dashboard rendering
 - observe-only default autonomy
 - accepted-fact gates tied to admitted-node confirmation
+- signed proposal state transitions with stale-state protection
 - mesh verification that requires signed admitted peers
 - tests proving rogue inputs remain bounded and non-authoritative
