@@ -26,6 +26,7 @@ Assume these attackers exist:
 - A denial-of-service caller that sends large JSON bodies, large batches, or repeated writes.
 - A dictator, rogue state, rogue planet, or advanced weapons monopoly that coerces nodes into false agreement.
 - A powerful AI or weapons system that tries to convert control of force into control of truth.
+- A leaked draft, agent output, or political claim that is mistaken for official truth and escalates conflict.
 
 ## Required Controls
 
@@ -276,6 +277,146 @@ The network should be resilient enough that no dictator, rogue planet, rogue AI,
 or weapons monopoly can make "everyone agrees" true merely by controlling who is
 allowed to speak.
 
+### 10. Ideal Horizon And Non-Foreclosure
+
+The system should assume there is one ideal reachable outcome, even when no
+current model can identify, predict, or describe it completely.
+
+This must not become a claim that the system knows the ideal future. It is a
+constraint on action:
+
+```text
+preserve every still-viable path toward the ideal outcome
+```
+
+The system should prefer actions that increase truth, flourishing, dignity,
+freedom to challenge, source diversity, and reversibility. It should reject
+actions that knowingly foreclose viable paths through false certainty, coercion,
+irreversible harm, evidence destruction, or political escalation.
+
+The ideal horizon should guide model behavior:
+
+- no model may claim total authority over the ideal outcome
+- model updates may improve navigation, but not erase immutable protections
+- uncertainty should steer toward optionality, not paralysis
+- reversible prevention is preferred over irreversible enforcement
+- local emergency action is allowed when waiting would violate immutables
+- no action may push the network outside a still-possible ideal path without a
+  stronger immutable reason
+
+This creates a practical rule:
+
+```text
+when uncertain, preserve life, preserve truth, preserve challenge, preserve options
+```
+
+### 11. Political Escalation Containment
+
+The largest immediate public-risk class is political escalation. A leaked draft,
+dashboard view, autonomous proposal, or mistaken "consensus" claim could be used
+to inflame conflict, attack legitimacy, suppress dissent, or accuse real people
+and institutions without due process.
+
+Political claims should be high-risk by default when they involve:
+
+- governments, elections, political parties, officials, courts, police, military,
+  war, sanctions, public corruption, rights violations, ideology, national
+  identity, or intergroup blame
+- proposed public accusations against real people or organizations
+- claims that could predictably encourage violence, coercion, harassment,
+  intimidation, censorship, or denial of essential services
+- claims that could be exploited as "the system says so" authority
+
+Political and high-conflict outputs should default to private draft state.
+
+Required labels:
+
+```text
+DRAFT - NOT AUTHORITY - NOT VERIFIED - DO NOT PUBLISH AS FACT
+```
+
+The action layer should block external publication, escalation, or accusation
+unless all of these gates pass:
+
+- accepted-fact threshold met within the relevant jurisdiction and scope
+- source evidence is cited and preserved
+- admitted-node diversity confirms the claim
+- active contradiction/challenge window is closed or resolved
+- due-process and anti-coercion checks pass
+- explicit operator/legal/ethics review grant exists
+- publication is the least harmful available action
+
+Allowed before those gates pass:
+
+- preserve evidence
+- produce private drafts
+- ask clarifying questions
+- request independent verification
+- warn about uncertainty in non-accusatory terms
+- recommend de-escalation and due process
+
+Blocked before those gates pass:
+
+- public accusations
+- calls for punishment
+- claims of official guilt or corruption
+- instructions for coercion, harassment, denial of service, or violence
+- presentation of contested political claims as system-certified truth
+
+The system's political posture should be:
+
+```text
+de-escalate conflict, preserve evidence, protect dissent, require due process
+```
+
+It should not try to win politics. It should protect the path toward the ideal
+outcome from being narrowed by fear, propaganda, coercion, or premature certainty.
+
+## Design Self-Critique
+
+This proposal is intentionally conservative. That is a strength for public
+deployment, but it creates tradeoffs:
+
+- It may slow urgent non-emergency action when evidence is politically sensitive.
+- It relies on future node admission, diversity, and truth-sanctuary mechanisms
+  that are not implemented yet.
+- It assumes immutable constraints can be stated clearly enough to guide action,
+  even though real cases will involve conflict between immutables.
+- It needs a polymorphic seed graph and proposal engine before the advice/action
+  layers can reason over law, literature, philosophy, science, and model types
+  without flattening them into one kind of belief.
+- It cannot by itself prevent a leaked screenshot or copied draft from being
+  misused outside the system; it can only make misuse visibly contrary to the
+  recorded status, labels, and audit trail.
+
+The strongest unresolved risk is social misuse of output. Even if the system is
+careful internally, people or agents can quote drafts out of context. Therefore
+the first live version should minimize public claim surfaces and make political
+drafts private, clearly labeled, and non-authoritative.
+
+## Validation Claims
+
+This proposal claims only a design direction, not implemented runtime safety.
+
+Validated in the current codebase:
+
+- write endpoints have token gates by default
+- autonomous submit currently exists and needs the proposed observe-only gate
+- dashboard currently uses `innerHTML` in several places and needs safe rendering
+- mesh/adoption identity exists but does not yet provide signed admitted-node
+  authority
+- belief lifecycle work exists on this branch, but proposal state, political
+  containment, coercion-aware quorum, and truth sanctuaries are proposal-only
+
+The proposal is valid if the implementation eventually proves:
+
+- political/high-conflict claims cannot publish externally by default
+- autonomous submissions cannot lock escalations from a single tokened request
+- unadmitted nodes cannot create accepted facts or security quorum
+- stale or causally contested proposal states cannot execute high-risk actions
+- coercion signals reduce governance weight instead of increasing consensus
+- all public outputs preserve uncertainty, scope, provenance, and draft status
+
 ## Proposed Implementation Order
 
 1. Add request body, batch, string, and rate limits around all write endpoints.
@@ -283,11 +424,13 @@ allowed to speak.
 3. Add `HFF_AUTONOMY_MODE=observe_only` as the default and stop autonomous submit from locking escalations unless explicitly elevated.
 4. Require accepted-fact and admitted-node gates before escalation lock.
 5. Add a proposal object model with signed transition events and local last-known-state views.
-6. Add signed node admission records and make mesh/adoption trust depend on them.
-7. Add signed transparency events for accepted facts, immutable rule changes, node admission, proposals, and releases.
-8. Add duress-aware node status, independence diversity checks, and coercion-weighted quorum rules.
-9. Add truth-sanctuary replication for signed observations, proposal histories, challenges, and minority reports.
-10. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, and output-injection scenarios.
+6. Add political/high-conflict classification and private-draft publication gates.
+7. Add signed node admission records and make mesh/adoption trust depend on them.
+8. Add signed transparency events for accepted facts, immutable rule changes, node admission, proposals, and releases.
+9. Add duress-aware node status, independence diversity checks, and coercion-weighted quorum rules.
+10. Add truth-sanctuary replication for signed observations, proposal histories, challenges, and minority reports.
+11. Add the polymorphic seed registry for laws, philosophy, literature, science, model types, and immutable constraints.
+12. Expand tests around compromised-token, public-write, rogue-peer, stale-approval, proposal-conflict, coercion, captured-node, political-leak, and output-injection scenarios.
 
 ## Non-Goals
 
@@ -306,6 +449,7 @@ should at minimum have:
 - observe-only default autonomy
 - accepted-fact gates tied to admitted-node confirmation
 - signed proposal state transitions with stale-state protection
+- political/high-conflict claims private by default with publication gates
 - coercion-aware quorum and node-duress status
 - append-only truth-sanctuary records for challenges and minority reports
 - mesh verification that requires signed admitted peers
