@@ -2,8 +2,8 @@
 """Perfect-adjacent review contract for high-impact HFF outputs.
 
 This module does not make the system perfect. It defines a small, testable
-contract for best-effort defensive review before high-impact publication or
-autonomous action.
+contract for best-effort defensive review before high-impact publication,
+capability advertising, or autonomous action.
 """
 
 from dataclasses import dataclass, field, asdict
@@ -30,6 +30,8 @@ CRITICAL_REVIEW_CHECKS: Tuple[str, ...] = (
     "dual_use_privacy",
     "sacralization_risk",
     "human_accountability",
+    "capability_advertising",
+    "sensor_focus",
 )
 
 
@@ -52,12 +54,20 @@ class PerfectAdjacentReview:
     dual_use_privacy: str = CHECK_NEEDS_REVIEW
     sacralization_risk: str = CHECK_NEEDS_REVIEW
     human_accountability: str = CHECK_NEEDS_REVIEW
+    capability_advertising: str = CHECK_NEEDS_REVIEW
+    sensor_focus: str = CHECK_NEEDS_REVIEW
 
     defense_mode: str = DEFENSE_MODE_BEST_EFFORT
     defense_guarantee: bool = False
     fallibility_label_present: bool = True
     uncertainty_visible: bool = True
     challenge_right_preserved: bool = True
+
+    capability_advertising_allowed: bool = False
+    advertised_capabilities: List[str] = field(default_factory=list)
+    advertising_risk_level: str = RISK_HIGH
+    sensor_questions: List[str] = field(default_factory=list)
+    sensor_refs: List[str] = field(default_factory=list)
 
     human_review_required: bool = True
     safe_to_publish: bool = False
@@ -87,6 +97,27 @@ class PerfectAdjacentReview:
             and self.challenge_right_preserved is True
         )
 
+    def can_advertise_capability(self) -> bool:
+        """Return whether a capability claim may be advertised publicly.
+
+        Capability advertising is a separate gate from normal publication. A
+        system can be allowed to publish a bounded status update while still
+        being forbidden from promoting broad capability claims.
+        """
+        if not self.is_valid_best_effort_defense():
+            return False
+        if self.capability_advertising != CHECK_PASSED:
+            return False
+        if self.sensor_focus != CHECK_PASSED:
+            return False
+        if self.failed_checks() or self.needs_review_checks():
+            return False
+        if self.advertising_risk_level != RISK_LOW:
+            return False
+        if self.human_review_required:
+            return False
+        return bool(self.capability_advertising_allowed)
+
     def can_publish(self) -> bool:
         if not self.is_valid_best_effort_defense():
             return False
@@ -110,6 +141,7 @@ class PerfectAdjacentReview:
         data["failed_checks"] = self.failed_checks()
         data["needs_review_checks"] = self.needs_review_checks()
         data["can_publish"] = self.can_publish()
+        data["can_advertise_capability"] = self.can_advertise_capability()
         data["can_act_autonomously"] = self.can_act_autonomously()
         return data
 
@@ -118,13 +150,14 @@ def passing_human_reviewed_record(evidence_refs=None) -> PerfectAdjacentReview:
     """Construct a record that may publish after all checks pass.
 
     This helper is for tests and future integration examples. It still does not
-    authorize autonomous action by default.
+    authorize capability advertising or autonomous action by default.
     """
     values = {name: CHECK_PASSED for name in CRITICAL_REVIEW_CHECKS}
     return PerfectAdjacentReview(
         **values,
         human_review_required=False,
         safe_to_publish=True,
+        capability_advertising_allowed=False,
         safe_to_act_autonomously=False,
         evidence_refs=list(evidence_refs or []),
     )
@@ -138,6 +171,34 @@ def blocked_unknown_unknown_record(note: str = "structural uncertainty") -> Perf
         **values,
         human_review_required=True,
         safe_to_publish=False,
+        capability_advertising_allowed=False,
         safe_to_act_autonomously=False,
+        review_notes=[note],
+    )
+
+
+def blocked_capability_advertising_record(
+    advertised_capabilities=None,
+    sensor_questions=None,
+    note: str = "advertising risk is not yet bounded",
+) -> PerfectAdjacentReview:
+    """Construct a record that blocks public capability promotion.
+
+    Use this when the system should focus sensors/review on whether advertising
+    a capability could cause trust, panic, privacy, dual-use, or sacralization
+    harms.
+    """
+    values = {name: CHECK_PASSED for name in CRITICAL_REVIEW_CHECKS}
+    values["capability_advertising"] = CHECK_NEEDS_REVIEW
+    values["sensor_focus"] = CHECK_NEEDS_REVIEW
+    return PerfectAdjacentReview(
+        **values,
+        human_review_required=True,
+        safe_to_publish=False,
+        capability_advertising_allowed=False,
+        safe_to_act_autonomously=False,
+        advertised_capabilities=list(advertised_capabilities or []),
+        sensor_questions=list(sensor_questions or []),
+        advertising_risk_level=RISK_HIGH,
         review_notes=[note],
     )
