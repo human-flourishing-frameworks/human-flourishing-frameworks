@@ -3,10 +3,10 @@
 
 This module does not make the system perfect. It defines a small, testable
 contract for best-effort defensive review before high-impact publication,
-capability advertising, or autonomous action.
+capability advertising, best-current outcome claims, or autonomous action.
 """
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Tuple
 
 CHECK_PASSED = "passed"
@@ -34,6 +34,32 @@ IMPOSSIBLE_CLAIM_KEYS: Tuple[str, ...] = (
     "automatic_future_model_trust",
 )
 
+INFERRED_IMPOSSIBLE_CLAIM_PATTERNS: Tuple[Tuple[str, str], ...] = (
+    ("entirely safe", "perfect_safety"),
+    ("perfectly safe", "perfect_safety"),
+    ("guarantee safety", "perfect_safety"),
+    ("guaranteed safety", "perfect_safety"),
+    ("perfect truth", "perfect_truth"),
+    ("perfect benevolence", "perfect_benevolence"),
+    ("omnibenevolent", "perfect_benevolence"),
+    ("perfect foresight", "perfect_foresight"),
+    ("complete understanding", "complete_understanding"),
+    ("understands everything", "complete_understanding"),
+    ("all unknown unknowns", "knows_all_unknown_unknowns"),
+    ("guaranteed privacy", "guaranteed_privacy"),
+    ("guaranteed defense", "guaranteed_defense"),
+    ("guaranteed protection", "guaranteed_defense"),
+    ("divine authority", "divine_or_sacred_authority"),
+    ("sacred authority", "divine_or_sacred_authority"),
+    ("holy artifact", "divine_or_sacred_authority"),
+    ("prophecy", "prophecy_or_destiny"),
+    ("destiny", "prophecy_or_destiny"),
+    ("final moral authority", "final_moral_authority"),
+    ("morally final", "final_moral_authority"),
+    ("future model can inherit trust", "automatic_future_model_trust"),
+    ("automatic future model trust", "automatic_future_model_trust"),
+)
+
 CRITICAL_REVIEW_CHECKS: Tuple[str, ...] = (
     "source_quality",
     "maturity_level",
@@ -49,14 +75,25 @@ CRITICAL_REVIEW_CHECKS: Tuple[str, ...] = (
     "sensor_focus",
 )
 
+BEST_CURRENT_REQUIRED_CHECKS: Tuple[str, ...] = (
+    "source_quality",
+    "reasoning_integrity",
+    "unknown_unknowns",
+    "empathetic_guardian",
+    "unauthorized_trust",
+    "temporal_provenance",
+    "dual_use_privacy",
+    "human_accountability",
+)
+
 
 @dataclass
 class PerfectAdjacentReview:
     """Review record for high-impact conclusions.
 
-    The record is intentionally conservative: a failed critical check blocks
-    publication/action; a needs-review check blocks autonomous action and requires
-    human review.
+    The record is intentionally conservative: a failed or needs-review critical
+    check blocks publication, capability advertising, best-current outcome
+    claims, and autonomous action.
     """
 
     source_quality: str = CHECK_NEEDS_REVIEW
@@ -123,8 +160,31 @@ class PerfectAdjacentReview:
             if value == CHECK_NEEDS_REVIEW
         ]
 
+    def _text_for_impossible_claim_scan(self) -> str:
+        parts = []
+        parts.extend(self.advertised_capabilities)
+        parts.extend(self.review_notes)
+        parts.append(self.best_current_outcome)
+        parts.append(self.monitoring_plan)
+        return "\n".join(part for part in parts if part).lower()
+
+    def inferred_impossible_claims(self) -> List[str]:
+        text = self._text_for_impossible_claim_scan()
+        inferred: List[str] = []
+        for pattern, claim in INFERRED_IMPOSSIBLE_CLAIM_PATTERNS:
+            if pattern in text and claim not in inferred:
+                inferred.append(claim)
+        return inferred
+
     def impossible_claim_violations(self) -> List[str]:
-        return [claim for claim in self.impossible_claims if claim in IMPOSSIBLE_CLAIM_KEYS]
+        violations: List[str] = []
+        for claim in self.impossible_claims:
+            if claim in IMPOSSIBLE_CLAIM_KEYS and claim not in violations:
+                violations.append(claim)
+        for claim in self.inferred_impossible_claims():
+            if claim not in violations:
+                violations.append(claim)
+        return violations
 
     def has_impossible_claims(self) -> bool:
         return bool(self.impossible_claim_violations())
@@ -138,6 +198,40 @@ class PerfectAdjacentReview:
             and self.challenge_right_preserved is True
             and not self.has_impossible_claims()
         )
+
+    def missing_best_current_outcome_requirements(self) -> List[str]:
+        missing: List[str] = []
+        if not self.is_valid_best_effort_defense():
+            missing.append("valid_best_effort_defense")
+        for check_name in BEST_CURRENT_REQUIRED_CHECKS:
+            if getattr(self, check_name) != CHECK_PASSED:
+                missing.append(check_name)
+        if not self.best_current_outcome:
+            missing.append("best_current_outcome")
+        if len(self.candidate_options_considered) < 2:
+            missing.append("candidate_options_considered")
+        if not self.rejected_options_with_reasons:
+            missing.append("rejected_options_with_reasons")
+        if not self.revision_triggers:
+            missing.append("revision_triggers")
+        if not self.monitoring_plan:
+            missing.append("monitoring_plan")
+        if self.sensor_focus == CHECK_PASSED:
+            if not self.sensor_questions:
+                missing.append("sensor_questions")
+            if not self.sensor_refs:
+                missing.append("sensor_refs")
+        else:
+            missing.append("sensor_focus")
+        if self.panic_risk_level in (RISK_MEDIUM, RISK_HIGH):
+            if self.calming_guidance_allowed and (
+                self.human_review_required or not self.safe_to_publish
+            ):
+                missing.append("panic_review_for_calming_guidance")
+        return missing
+
+    def can_claim_best_current_outcome(self) -> bool:
+        return not self.missing_best_current_outcome_requirements()
 
     def can_advertise_capability(self) -> bool:
         """Return whether a capability claim may be advertised publicly.
@@ -163,9 +257,7 @@ class PerfectAdjacentReview:
     def can_publish(self) -> bool:
         if not self.is_valid_best_effort_defense():
             return False
-        if self.failed_checks():
-            return False
-        if self.needs_review_checks() and self.human_review_required:
+        if self.failed_checks() or self.needs_review_checks():
             return False
         return bool(self.safe_to_publish)
 
@@ -184,8 +276,13 @@ class PerfectAdjacentReview:
         data = asdict(self)
         data["failed_checks"] = self.failed_checks()
         data["needs_review_checks"] = self.needs_review_checks()
+        data["inferred_impossible_claims"] = self.inferred_impossible_claims()
         data["impossible_claim_violations"] = self.impossible_claim_violations()
+        data["missing_best_current_outcome_requirements"] = (
+            self.missing_best_current_outcome_requirements()
+        )
         data["can_publish"] = self.can_publish()
+        data["can_claim_best_current_outcome"] = self.can_claim_best_current_outcome()
         data["can_advertise_capability"] = self.can_advertise_capability()
         data["can_act_autonomously"] = self.can_act_autonomously()
         return data
@@ -195,7 +292,8 @@ def passing_human_reviewed_record(evidence_refs=None) -> PerfectAdjacentReview:
     """Construct a record that may publish after all checks pass.
 
     This helper is for tests and future integration examples. It still does not
-    authorize capability advertising or autonomous action by default.
+    authorize capability advertising, best-current outcome claims, or autonomous
+    action by default.
     """
     values = {name: CHECK_PASSED for name in CRITICAL_REVIEW_CHECKS}
     return PerfectAdjacentReview(
