@@ -45,6 +45,7 @@ app = Flask(__name__)
 
 MIN_CONSENSUS_NODES = int(os.environ.get('MIN_CONSENSUS_NODES', '3'))
 WRITE_TOKEN = os.environ.get('HFF_WRITE_TOKEN', '')
+ADOPTION_ACCEPT_TOKEN = os.environ.get('HFF_ADOPTION_ACCEPT_TOKEN', '')
 ALLOW_PUBLIC_WRITES = os.environ.get('HFF_ALLOW_PUBLIC_WRITES', '').lower() in {
     '1', 'true', 'yes', 'on'
 }
@@ -54,7 +55,12 @@ ENABLE_MESH_SYNC = os.environ.get('ENABLE_MESH_SYNC', '').lower() in {
 ENABLE_LIVE_SENSORS = os.environ.get('ENABLE_LIVE_SENSORS', '').lower() in {
     '1', 'true', 'yes', 'on'
 }
-
+def _request_bearer_or_header(header_name):
+    supplied = request.headers.get(header_name, '')
+    auth = request.headers.get('Authorization', '')
+    if auth.lower().startswith('bearer '):
+        supplied = auth[7:].strip()
+    return supplied
 
 def require_write_grant(action):
     """Return an error response unless this write has an explicit grant."""
@@ -1577,3 +1583,4 @@ if __name__ == '__main__':
 
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
