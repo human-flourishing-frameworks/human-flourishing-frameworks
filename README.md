@@ -61,6 +61,11 @@ Optional node metadata can help show distribution without publishing raw IP addr
 | `DEPLOYMENT_TYPE` | empty | Optional self-reported deployment type, such as `render`, `railway`, `docker`, or `local` |
 | `NODE_PUBLIC_KEY` | generated node key | Node identity key advertised for future admission checks |
 | `MIN_CONSENSUS_NODES` | `3` | Minimum verified active nodes needed before consensus can be security-backed |
+| `HFF_WRITE_TOKEN` | empty | Shared token required for production state-changing API calls |
+| `HFF_ALLOW_PUBLIC_WRITES` | empty/false | Demo override that reopens public writes; do not enable on production services |
+| `ENABLE_ADOPTION_SYNC` | empty/false | Opt in to posting node liveness metadata to `CENTRAL_SERVER` |
+| `ENABLE_MESH_SYNC` | empty/false | Opt in to background peer mesh sync |
+| `ENABLE_LIVE_SENSORS` | empty/false | Opt in to polling external public APIs in the live sensor loop |
 
 ## Architecture
 
@@ -89,7 +94,8 @@ Observe → Believe → Predict → Act → Observe again → Correct → Repeat
 | `GET /health` | Is the system running |
 | `GET /api/status` | Honest system status |
 | `GET /api/violations` | Current violations (mock data, labeled) |
-| `POST /api/autonomous/submit` | Submit evidence for autonomous processing |
+| `POST /api/adoption/register` | Register node liveness telemetry; requires write grant |
+| `POST /api/autonomous/submit` | Submit evidence for autonomous processing; requires write grant |
 | `GET /api/autonomous/status` | Agent system status |
 | `GET /api/autonomous/rules` | Immutable rules (transparency) |
 | `GET /api/autonomous/escalations` | Escalation queue |
@@ -97,12 +103,21 @@ Observe → Believe → Predict → Act → Observe again → Correct → Repeat
 | `GET /api/world/status` | World model status |
 | `GET /api/world/beliefs` | Current beliefs (filterable) |
 | `GET /api/world/flourishing` | Flourishing scores by scope |
-| `POST /api/world/observe` | Submit sensor measurements |
+| `POST /api/world/observe` | Submit sensor measurements; requires write grant |
 | `GET /api/world/corrections` | Every time the model self-corrected |
 | `GET /api/world/discover` | Anomalies and discovered patterns |
 
 Node adoption data is public liveness telemetry, not proof of identity. Public counts should be described as
 self-reported unless an independent verification layer is added.
+
+State-changing endpoints are closed by default. In production, send
+`Authorization: Bearer <HFF_WRITE_TOKEN>` or `X-HFF-Write-Token: <HFF_WRITE_TOKEN>`
+for writes such as node registration, autonomous submissions, and manual world-model observations.
+Only set `HFF_ALLOW_PUBLIC_WRITES=true` for local demos or disposable test nodes.
+
+Outbound network behavior is also opt-in. Local nodes do not post adoption
+metadata, sync mesh peers, or poll live sensor APIs unless the corresponding
+`ENABLE_*` setting is enabled.
 
 Unverified nodes may be visible in public stats, but they do not count toward security. Only admitted, verified,
 recently active nodes should count toward consensus or network security claims.

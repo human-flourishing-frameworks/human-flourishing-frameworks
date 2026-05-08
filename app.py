@@ -8,6 +8,7 @@ details on mock vs. real datasets.
 """
 
 from flask import Flask, jsonify, render_template_string, request
+import hmac
 import math
 import os
 from datetime import datetime
@@ -43,6 +44,40 @@ from live_sensors import create_live_sensors, run_observation_loop
 app = Flask(__name__)
 
 MIN_CONSENSUS_NODES = int(os.environ.get('MIN_CONSENSUS_NODES', '3'))
+WRITE_TOKEN = os.environ.get('HFF_WRITE_TOKEN', '')
+ALLOW_PUBLIC_WRITES = os.environ.get('HFF_ALLOW_PUBLIC_WRITES', '').lower() in {
+    '1', 'true', 'yes', 'on'
+}
+ENABLE_MESH_SYNC = os.environ.get('ENABLE_MESH_SYNC', '').lower() in {
+    '1', 'true', 'yes', 'on'
+}
+ENABLE_LIVE_SENSORS = os.environ.get('ENABLE_LIVE_SENSORS', '').lower() in {
+    '1', 'true', 'yes', 'on'
+}
+
+
+def require_write_grant(action):
+    """Return an error response unless this write has an explicit grant."""
+    if ALLOW_PUBLIC_WRITES:
+        return None
+
+    supplied = request.headers.get('X-HFF-Write-Token', '')
+    auth = request.headers.get('Authorization', '')
+    if auth.lower().startswith('bearer '):
+        supplied = auth[7:].strip()
+
+    if WRITE_TOKEN and supplied and hmac.compare_digest(supplied, WRITE_TOKEN):
+        return None
+
+    return jsonify({
+        "error": "write_grant_required",
+        "action": action,
+        "message": (
+            "This endpoint changes local state. Production writes require "
+            "HFF_WRITE_TOKEN or an explicit HFF_ALLOW_PUBLIC_WRITES=true "
+            "demo override."
+        ),
+    }), 403
 
 # ---------------------------------------------------------------------------
 # Database init (safe to call multiple times)
@@ -71,8 +106,9 @@ NODE_PUBLIC_KEY = os.environ.get('NODE_PUBLIC_KEY', '')
 # ---------------------------------------------------------------------------
 # Background threads — only heartbeat + mesh sync (no propagation)
 # ---------------------------------------------------------------------------
-mesh_sync_thread = threading.Thread(target=sync_with_mesh, daemon=True)
-mesh_sync_thread.start()
+if ENABLE_MESH_SYNC:
+    mesh_sync_thread = threading.Thread(target=sync_with_mesh, daemon=True)
+    mesh_sync_thread.start()
 
 # ---------------------------------------------------------------------------
 # Autonomous agent system — node keypair + initialization
@@ -166,20 +202,24 @@ _bootstrap_world_model()
 # On startup, sensors fire immediately so the model gets live data fast.
 # ---------------------------------------------------------------------------
 
-_live_sensors = create_live_sensors()
-for _sensor in _live_sensors:
-    _world_sensor_registry.register(_sensor)
-print(f"[SENSORS] Registered {len(_live_sensors)} live sensors")
+_live_sensors = []
+if ENABLE_LIVE_SENSORS:
+    _live_sensors = create_live_sensors()
+    for _sensor in _live_sensors:
+        _world_sensor_registry.register(_sensor)
+    print(f"[SENSORS] Registered {len(_live_sensors)} live sensors")
 
 # Background observation thread — polls APIs and feeds world_model.update()
-_observation_thread = threading.Thread(
-    target=run_observation_loop,
-    args=(_world_sensor_registry, world_model),
-    kwargs={"interval_seconds": 3600},  # 1 hour between cycles
-    daemon=True,
-)
-_observation_thread.start()
-print("[SENSORS] Background observation loop started (1-hour cycle)")
+    _observation_thread = threading.Thread(
+        target=run_observation_loop,
+        args=(_world_sensor_registry, world_model),
+        kwargs={"interval_seconds": 3600},  # 1 hour between cycles
+        daemon=True,
+    )
+    _observation_thread.start()
+    print("[SENSORS] Background observation loop started (1-hour cycle)")
+else:
+    print("[SENSORS] Live sensors disabled; set ENABLE_LIVE_SENSORS=true to enable")
 
 # ---------------------------------------------------------------------------
 # HTML template
@@ -980,6 +1020,22 @@ def api_status():
         "verified_nodes": adoption.get("verified_nodes", 0),
         "security_nodes": adoption.get("security_node_count", 0),
         "min_consensus_nodes": MIN_CONSENSUS_NODES,
+        "write_policy": {
+            "public_writes_enabled": ALLOW_PUBLIC_WRITES,
+            "write_token_configured": bool(WRITE_TOKEN),
+            "protected_endpoints": [
+                "/api/adoption/register",
+                "/api/autonomous/submit",
+                "/api/world/observe",
+            ],
+        },
+        "outbound_sync": {
+            "adoption_sync_enabled": os.environ.get('ENABLE_ADOPTION_SYNC', '').lower() in {
+                '1', 'true', 'yes', 'on'
+            },
+            "mesh_sync_enabled": ENABLE_MESH_SYNC,
+            "live_sensors_enabled": ENABLE_LIVE_SENSORS,
+        },
         "disclaimer": (
             "This is research software. Violation data shown is synthetic "
             "unless labeled otherwise."
@@ -1015,6 +1071,10 @@ def api_compas():
 @app.route('/api/adoption/register', methods=['POST'])
 def adoption_register():
     """Register a new node."""
+    grant_error = require_write_grant("adoption_register")
+    if grant_error:
+        return grant_error
+
     try:
         data = request.json
         register_node(
@@ -1113,6 +1173,10 @@ def autonomous_submit():
     Evidence must include 'accuracy_gap' (float), 'system_name' (str),
     and 'description' (str).
     """
+    grant_error = require_write_grant("autonomous_submit")
+    if grant_error:
+        return grant_error
+
     try:
         evidence = request.json
         if not evidence:
@@ -1300,6 +1364,10 @@ def world_observe():
         ]
     }
     """
+    grant_error = require_write_grant("world_observe")
+    if grant_error:
+        return grant_error
+
     try:
         data = request.json
         if not data or "measurements" not in data:
