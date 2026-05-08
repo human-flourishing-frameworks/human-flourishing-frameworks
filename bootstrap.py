@@ -1,14 +1,16 @@
-﻿import asyncio
+import asyncio
 import os
 import json
-import hmac
-import hashlib
+import threading
 from datetime import datetime
+from flask import Flask, jsonify
 from core.byzantine_consensus import ByzantineConsensus
 from core.cryptographic_proof import CryptographicProof
 from core.mesh_network import MeshNetwork
 from core.violation_detector import ViolationDetector
 from core.escalation import EscalationEngine
+
+app = Flask(__name__)
 
 class ImpossibilityEngine:
     def __init__(self):
@@ -18,20 +20,11 @@ class ImpossibilityEngine:
         self.detector = ViolationDetector()
         self.escalation = EscalationEngine()
         self.node_id = os.getenv('NODE_ID', 'bootstrap-node')
+        self.is_running = False
         
-    async def start(self):
-        """Start all subsystems"""
-        print(f"[{self.node_id}] Impossibility Engine initializing...")
-        await asyncio.gather(
-            self.detect_violations(),
-            self.consensus_loop(),
-            self.mesh_network_loop(),
-            self.self_improvement_loop()
-        )
-    
     async def detect_violations(self):
         """Hourly violation detection"""
-        while True:
+        while self.is_running:
             try:
                 violations = await self.detector.detect_all()
                 for violation in violations:
@@ -50,7 +43,7 @@ class ImpossibilityEngine:
     
     async def consensus_loop(self):
         """5-minute consensus voting"""
-        while True:
+        while self.is_running:
             try:
                 proposals = self.consensus.get_pending_proposals()
                 for proposal in proposals:
@@ -65,7 +58,7 @@ class ImpossibilityEngine:
     
     async def mesh_network_loop(self):
         """5-minute peer synchronization"""
-        while True:
+        while self.is_running:
             try:
                 peers = self.mesh.discover_peers()
                 for peer in peers:
@@ -78,7 +71,7 @@ class ImpossibilityEngine:
     
     async def self_improvement_loop(self):
         """Weekly protocol optimization"""
-        while True:
+        while self.is_running:
             try:
                 stats = self.consensus.get_statistics()
                 improvements = self._analyze_improvements(stats)
@@ -95,7 +88,53 @@ class ImpossibilityEngine:
             'mesh_redundancy': stats.get('peer_count', 0),
             'timestamp': datetime.utcnow().isoformat()
         }
+    
+    def run_async_loops(self):
+        """Run all async loops in a background thread"""
+        self.is_running = True
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(asyncio.gather(
+                self.detect_violations(),
+                self.consensus_loop(),
+                self.mesh_network_loop(),
+                self.self_improvement_loop()
+            ))
+        finally:
+            loop.close()
+
+# Global engine instance
+engine = ImpossibilityEngine()
+
+@app.route('/', methods=['GET'])
+def health():
+    return jsonify({
+        'status': 'running',
+        'engine': 'Impossibility Engine',
+        'node_id': engine.node_id,
+        'timestamp': datetime.utcnow().isoformat(),
+        'consensus_stats': engine.consensus.get_statistics()
+    }), 200
+
+@app.route('/health', methods=['GET'])
+def healthcheck():
+    return jsonify({'ok': True}), 200
+
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({
+        'running': engine.is_running,
+        'node_id': engine.node_id,
+        'stats': engine.consensus.get_statistics()
+    }), 200
 
 if __name__ == '__main__':
-    engine = ImpossibilityEngine()
-    asyncio.run(engine.start())
+    # Start background async loops in a separate thread
+    print(f"[{engine.node_id}] Starting Impossibility Engine...")
+    bg_thread = threading.Thread(target=engine.run_async_loops, daemon=True)
+    bg_thread.start()
+    
+    # Start Flask web server
+    port = int(os.getenv('PORT', 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
