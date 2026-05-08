@@ -17,14 +17,17 @@ CENTRAL_SERVER = os.environ.get('CENTRAL_SERVER', 'https://human-flourishing-fra
 SYNC_ENABLED = os.environ.get('ENABLE_ADOPTION_SYNC', '').lower() in {
     '1', 'true', 'yes', 'on'
 }
-WRITE_TOKEN = os.environ.get('HFF_WRITE_TOKEN', '')
+ADOPTION_SYNC_TOKEN = os.environ.get(
+    'HFF_ADOPTION_SYNC_TOKEN',
+    os.environ.get('HFF_WRITE_TOKEN', '')
+)
 
 
 def _write_headers():
-    """Return central write-grant headers when a token is configured."""
-    if not WRITE_TOKEN:
+    """Return central adoption-grant headers when a token is configured."""
+    if not ADOPTION_SYNC_TOKEN:
         return {}
-    return {'Authorization': f'Bearer {WRITE_TOKEN}'}
+    return {'Authorization': f'Bearer {ADOPTION_SYNC_TOKEN}'}
 
 def init_adoption_db():
     """Initialize adoption tracking database"""

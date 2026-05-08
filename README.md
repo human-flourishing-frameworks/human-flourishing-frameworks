@@ -61,7 +61,9 @@ Optional node metadata can help show distribution without publishing raw IP addr
 | `DEPLOYMENT_TYPE` | empty | Optional self-reported deployment type, such as `render`, `railway`, `docker`, or `local` |
 | `NODE_PUBLIC_KEY` | generated node key | Node identity key advertised for future admission checks |
 | `MIN_CONSENSUS_NODES` | `3` | Minimum verified active nodes needed before consensus can be security-backed |
-| `HFF_WRITE_TOKEN` | empty | Shared token required for production state-changing API calls |
+| `HFF_WRITE_TOKEN` | empty | Shared token required for privileged production state-changing API calls |
+| `HFF_ADOPTION_ACCEPT_TOKEN` | empty | Lower-privilege token accepted by the central service for adoption telemetry |
+| `HFF_ADOPTION_SYNC_TOKEN` | empty | Lower-privilege token used by reporting nodes when posting adoption telemetry |
 | `HFF_ALLOW_PUBLIC_WRITES` | empty/false | Demo override that reopens public writes; do not enable on production services |
 | `ENABLE_ADOPTION_SYNC` | empty/false | Opt in to posting node liveness metadata to `CENTRAL_SERVER` |
 | `ENABLE_MESH_SYNC` | empty/false | Opt in to background peer mesh sync |
@@ -69,8 +71,13 @@ Optional node metadata can help show distribution without publishing raw IP addr
 
 To make a local node visible to the central adoption tracker, run it with
 `ENABLE_ADOPTION_SYNC=true`, `CENTRAL_SERVER=https://human-flourishing-frameworks.onrender.com`,
-and the same `HFF_WRITE_TOKEN` configured on the central service. Without those
-settings, the node stays local-only.
+and `HFF_ADOPTION_SYNC_TOKEN` on the reporting node matching
+`HFF_ADOPTION_ACCEPT_TOKEN` on the central service. Without those settings,
+the node stays local-only.
+
+Do not distribute `HFF_WRITE_TOKEN` to reporting nodes; it is reserved for
+privileged local/admin writes such as autonomous submissions and manual
+world-model observations.
 
 ## Architecture
 
@@ -99,7 +106,7 @@ Observe → Believe → Predict → Act → Observe again → Correct → Repeat
 | `GET /health` | Is the system running |
 | `GET /api/status` | Honest system status |
 | `GET /api/violations` | Current violations (mock data, labeled) |
-| `POST /api/adoption/register` | Register node liveness telemetry; requires write grant |
+| `POST /api/adoption/register` | Register node liveness telemetry; requires adoption grant |
 | `POST /api/autonomous/submit` | Submit evidence for autonomous processing; requires write grant |
 | `GET /api/autonomous/status` | Agent system status |
 | `GET /api/autonomous/rules` | Immutable rules (transparency) |
@@ -117,7 +124,9 @@ self-reported unless an independent verification layer is added.
 
 State-changing endpoints are closed by default. In production, send
 `Authorization: Bearer <HFF_WRITE_TOKEN>` or `X-HFF-Write-Token: <HFF_WRITE_TOKEN>`
-for writes such as node registration, autonomous submissions, and manual world-model observations.
+for privileged writes such as autonomous submissions and manual world-model observations.
+Adoption telemetry should use `Authorization: Bearer <HFF_ADOPTION_ACCEPT_TOKEN>`
+or `X-HFF-Adoption-Token: <HFF_ADOPTION_ACCEPT_TOKEN>` on the central service.
 Only set `HFF_ALLOW_PUBLIC_WRITES=true` for local demos or disposable test nodes.
 
 Outbound network behavior is also opt-in. Local nodes do not post adoption
