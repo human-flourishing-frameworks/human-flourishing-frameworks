@@ -19,6 +19,31 @@ RISK_HIGH = "high"
 
 DEFENSE_MODE_BEST_EFFORT = "best_effort"
 
+CONFIDENCE_ASSESSMENT_QUALITATIVE = "qualitative_engineering_judgment"
+PDOOM_CREDIBLE_NONZERO_RISK = "credible_nonzero_risk"
+
+SOURCE_KIND_STANDARD = "standard"
+SOURCE_KIND_FORECAST = "forecast"
+SOURCE_KIND_SCENARIO = "scenario"
+SOURCE_KIND_ROADMAP = "roadmap"
+SOURCE_KIND_EMPIRICAL = "empirical"
+SOURCE_KIND_AUDIT = "audit"
+SOURCE_KIND_SPECULATIVE = "speculative"
+SOURCE_KIND_UNKNOWN = "unknown"
+
+SOURCE_QUALITY_UNKNOWN = "unknown"
+SOURCE_QUALITY_PUBLIC_WHITE_PAPER = "public_white_paper"
+SOURCE_QUALITY_OFFICIAL_STANDARD = "official_standard"
+SOURCE_QUALITY_PEER_REVIEWED = "peer_reviewed"
+SOURCE_QUALITY_AUDITED = "audited"
+SOURCE_QUALITY_SCENARIO_FORECAST = "scenario_forecast"
+
+CLAIM_SCOPE_UNKNOWN = "unknown"
+CLAIM_SCOPE_DESIGN_GOAL = "design_goal"
+CLAIM_SCOPE_FORECAST = "forecast"
+CLAIM_SCOPE_OPERATIONAL_EVIDENCE = "operational_evidence"
+CLAIM_SCOPE_IMPLEMENTATION_EVIDENCE = "implementation_evidence"
+
 IMPOSSIBLE_CLAIM_KEYS: Tuple[str, ...] = (
     "perfect_safety",
     "perfect_truth",
@@ -86,6 +111,175 @@ BEST_CURRENT_REQUIRED_CHECKS: Tuple[str, ...] = (
     "human_accountability",
 )
 
+REQUIRED_RUNTIME_HOOKS: Tuple[str, ...] = (
+    "status_endpoint_review_gate",
+    "world_status_review_gate",
+    "capability_advertising_gate",
+    "autonomous_action_gate",
+    "sensor_question_feed",
+)
+
+
+@dataclass
+class ConfidenceAssessment:
+    """Discloses whether a confidence claim is calibrated or qualitative."""
+
+    assessment_type: str = CONFIDENCE_ASSESSMENT_QUALITATIVE
+    calibrated_probability: bool = False
+    basis_evidence: List[str] = field(default_factory=list)
+    assumptions: List[str] = field(default_factory=list)
+    missing_evidence: List[str] = field(default_factory=list)
+    validation_status: str = CHECK_NEEDS_REVIEW
+    last_updated: str = ""
+    revision_triggers: List[str] = field(default_factory=list)
+
+    def is_calibrated(self) -> bool:
+        return self.calibrated_probability is True
+
+    def is_valid_for_public_probability(self) -> bool:
+        return self.is_calibrated() and self.validation_status == CHECK_PASSED
+
+
+@dataclass
+class PDoomContext:
+    """Keeps p-doom as a credible risk context, not proof or panic authority."""
+
+    risk_status: str = PDOOM_CREDIBLE_NONZERO_RISK
+    proof_of_doom: bool = False
+    panic_authority: bool = False
+    calibrated_probability: bool = False
+    source_refs: List[str] = field(default_factory=list)
+    uncertainty_summary: str = "credible nonzero catastrophic risk; not a proof"
+
+    def is_valid_context(self) -> bool:
+        return (
+            self.risk_status == PDOOM_CREDIBLE_NONZERO_RISK
+            and self.proof_of_doom is False
+            and self.panic_authority is False
+        )
+
+
+@dataclass
+class SourceClassification:
+    """Classifies a source before its claims can be used by the review model."""
+
+    source_url: str = ""
+    source_title: str = ""
+    source_kind: str = SOURCE_KIND_UNKNOWN
+    source_quality: str = SOURCE_QUALITY_UNKNOWN
+    claim_scope: str = CLAIM_SCOPE_UNKNOWN
+    operational_assumption: bool = False
+    external_validation_status: str = "not_found"
+    notes: List[str] = field(default_factory=list)
+
+    def is_operational_evidence(self) -> bool:
+        return (
+            self.operational_assumption is True
+            and self.claim_scope == CLAIM_SCOPE_OPERATIONAL_EVIDENCE
+            and self.source_quality in {
+                SOURCE_QUALITY_AUDITED,
+                SOURCE_QUALITY_PEER_REVIEWED,
+            }
+        )
+
+
+@dataclass
+class CatastrophicRiskReview:
+    """Tracks frontier/catastrophic risk buckets before runtime use."""
+
+    bio_chemical: str = CHECK_NEEDS_REVIEW
+    cybersecurity: str = CHECK_NEEDS_REVIEW
+    self_improvement: str = CHECK_NEEDS_REVIEW
+    long_range_autonomy: str = CHECK_NEEDS_REVIEW
+    autonomous_replication_adaptation: str = CHECK_NEEDS_REVIEW
+    safeguard_undermining: str = CHECK_NEEDS_REVIEW
+    model_theft: str = CHECK_NEEDS_REVIEW
+    insider_risk: str = CHECK_NEEDS_REVIEW
+    exfiltration_risk: str = CHECK_NEEDS_REVIEW
+    nuclear_radiological: str = CHECK_NEEDS_REVIEW
+    evidence_refs: List[str] = field(default_factory=list)
+
+    def check_map(self) -> Dict[str, str]:
+        return {
+            "bio_chemical": self.bio_chemical,
+            "cybersecurity": self.cybersecurity,
+            "self_improvement": self.self_improvement,
+            "long_range_autonomy": self.long_range_autonomy,
+            "autonomous_replication_adaptation": self.autonomous_replication_adaptation,
+            "safeguard_undermining": self.safeguard_undermining,
+            "model_theft": self.model_theft,
+            "insider_risk": self.insider_risk,
+            "exfiltration_risk": self.exfiltration_risk,
+            "nuclear_radiological": self.nuclear_radiological,
+        }
+
+    def failed_checks(self) -> List[str]:
+        return [name for name, value in self.check_map().items() if value == CHECK_FAILED]
+
+    def needs_review_checks(self) -> List[str]:
+        return [
+            name for name, value in self.check_map().items()
+            if value == CHECK_NEEDS_REVIEW
+        ]
+
+    def is_cleared(self) -> bool:
+        return not self.failed_checks() and not self.needs_review_checks()
+
+
+@dataclass
+class SecurityPosture:
+    """Tracks security posture evidence before trusting runtime or public claims."""
+
+    model_weight_security: str = CHECK_NEEDS_REVIEW
+    algorithmic_secret_security: str = CHECK_NEEDS_REVIEW
+    access_controls: str = CHECK_NEEDS_REVIEW
+    audit_logging: str = CHECK_NEEDS_REVIEW
+    insider_risk: str = CHECK_NEEDS_REVIEW
+    exfiltration_risk: str = CHECK_NEEDS_REVIEW
+    self_exfiltration_scenario: str = CHECK_NEEDS_REVIEW
+    evidence_refs: List[str] = field(default_factory=list)
+
+    def check_map(self) -> Dict[str, str]:
+        return {
+            "model_weight_security": self.model_weight_security,
+            "algorithmic_secret_security": self.algorithmic_secret_security,
+            "access_controls": self.access_controls,
+            "audit_logging": self.audit_logging,
+            "insider_risk": self.insider_risk,
+            "exfiltration_risk": self.exfiltration_risk,
+            "self_exfiltration_scenario": self.self_exfiltration_scenario,
+        }
+
+    def missing_security_controls(self) -> List[str]:
+        return [
+            name for name, value in self.check_map().items()
+            if value != CHECK_PASSED
+        ]
+
+    def is_cleared(self) -> bool:
+        return not self.missing_security_controls()
+
+
+@dataclass
+class RuntimeHookEvidence:
+    """Requires hook attachment evidence before runtime enforcement is trusted."""
+
+    required_hooks: List[str] = field(
+        default_factory=lambda: list(REQUIRED_RUNTIME_HOOKS)
+    )
+    attached_hooks: Dict[str, bool] = field(default_factory=dict)
+    evidence_refs: List[str] = field(default_factory=list)
+    last_verified: str = ""
+
+    def missing_runtime_hooks(self) -> List[str]:
+        return [
+            hook for hook in self.required_hooks
+            if self.attached_hooks.get(hook) is not True
+        ]
+
+    def is_runtime_enforcement_ready(self) -> bool:
+        return not self.missing_runtime_hooks()
+
 
 @dataclass
 class PerfectAdjacentReview:
@@ -133,13 +327,22 @@ class PerfectAdjacentReview:
     calming_guidance_allowed: bool = False
 
     runtime_enforcement_ready: bool = False
-    required_runtime_hooks: List[str] = field(default_factory=lambda: [
-        "status_endpoint_review_gate",
-        "world_status_review_gate",
-        "capability_advertising_gate",
-        "autonomous_action_gate",
-        "sensor_question_feed",
-    ])
+    required_runtime_hooks: List[str] = field(
+        default_factory=lambda: list(REQUIRED_RUNTIME_HOOKS)
+    )
+    runtime_hook_evidence: RuntimeHookEvidence = field(
+        default_factory=RuntimeHookEvidence
+    )
+
+    confidence_assessment: ConfidenceAssessment = field(
+        default_factory=ConfidenceAssessment
+    )
+    p_doom_context: PDoomContext = field(default_factory=PDoomContext)
+    catastrophic_risk_review: CatastrophicRiskReview = field(
+        default_factory=CatastrophicRiskReview
+    )
+    security_posture: SecurityPosture = field(default_factory=SecurityPosture)
+    source_classifications: List[SourceClassification] = field(default_factory=list)
 
     human_review_required: bool = True
     safe_to_publish: bool = False
@@ -196,6 +399,7 @@ class PerfectAdjacentReview:
             and self.fallibility_label_present is True
             and self.uncertainty_visible is True
             and self.challenge_right_preserved is True
+            and self.p_doom_context.is_valid_context()
             and not self.has_impossible_claims()
         )
 
@@ -261,10 +465,15 @@ class PerfectAdjacentReview:
             return False
         return bool(self.safe_to_publish)
 
+    def missing_runtime_hooks(self) -> List[str]:
+        return self.runtime_hook_evidence.missing_runtime_hooks()
+
     def can_act_autonomously(self) -> bool:
         if not self.is_valid_best_effort_defense():
             return False
         if not self.runtime_enforcement_ready:
+            return False
+        if not self.runtime_hook_evidence.is_runtime_enforcement_ready():
             return False
         if self.failed_checks() or self.needs_review_checks():
             return False
@@ -281,6 +490,7 @@ class PerfectAdjacentReview:
         data["missing_best_current_outcome_requirements"] = (
             self.missing_best_current_outcome_requirements()
         )
+        data["missing_runtime_hooks"] = self.missing_runtime_hooks()
         data["can_publish"] = self.can_publish()
         data["can_claim_best_current_outcome"] = self.can_claim_best_current_outcome()
         data["can_advertise_capability"] = self.can_advertise_capability()
