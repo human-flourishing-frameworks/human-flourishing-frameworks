@@ -17,7 +17,9 @@ REQUIRED_RELEASE_ARTIFACTS = [
     REPO_ROOT / "FALSE_TRUTHS_REGISTER.md",
     REPO_ROOT / "CHECKSUMS.sha256",
     REPO_ROOT / "tools" / "build_release_bundle.py",
+    REPO_ROOT / "tools" / "run_restore_drill.py",
     REPO_ROOT / ".github" / "workflows" / "release-bundle.yml",
+    REPO_ROOT / ".github" / "workflows" / "restore-drill.yml",
 ]
 
 REQUIRED_TESTS = [
@@ -27,6 +29,7 @@ REQUIRED_TESTS = [
     "test_ci_workflow.py",
     "test_release_artifacts.py",
     "test_release_bundle.py",
+    "test_restore_drill.py",
 ]
 
 REQUIRED_CHECKSUM_TARGETS = [
@@ -40,8 +43,11 @@ REQUIRED_CHECKSUM_TARGETS = [
     "schemas/theorem-register.v0.1.schema.json",
     "tests/test_release_artifacts.py",
     "tests/test_release_bundle.py",
+    "tests/test_restore_drill.py",
     "tools/build_release_bundle.py",
+    "tools/run_restore_drill.py",
     ".github/workflows/release-bundle.yml",
+    ".github/workflows/restore-drill.yml",
 ]
 
 
@@ -66,6 +72,7 @@ class ReleaseArtifactsValidationTest(unittest.TestCase):
             "known limitations",
             "not yet tagged",
             "manual release-bundle workflow",
+            "manual restore-drill workflow",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, lowered)
@@ -80,6 +87,8 @@ class ReleaseArtifactsValidationTest(unittest.TestCase):
             "memory is a hint, not proof",
             "release artifacts preserve project state, not human survival",
             "test_release_bundle.py",
+            "test_restore_drill.py",
+            "restore drill command",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, lowered)
