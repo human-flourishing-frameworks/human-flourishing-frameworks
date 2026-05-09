@@ -266,6 +266,7 @@ Current safety and public-boundary documents include:
 - [`docs/keystone-source-use-discipline.md`](./docs/keystone-source-use-discipline.md): when Keystone should use memory, last-known state, committed docs, web sources, or fresh runtime checks.
 - [`docs/keystone-chatgpt-export-intake.md`](./docs/keystone-chatgpt-export-intake.md): safe handling for ChatGPT exports without raw transcript ingestion.
 - [`docs/keystone-shell-command-discipline.md`](./docs/keystone-shell-command-discipline.md): PowerShell/CMD/Bash discipline, command evidence, and unsafe-shell boundaries.
+- [`docs/keystone-anomaly-and-tail-risk-model.md`](./docs/keystone-anomaly-and-tail-risk-model.md): tail-risk, outlier, anomaly, and positive-exception modeling without surveillance or enforcement.
 
 Authoritative actions require explicit operator approval, especially:
 
