@@ -104,14 +104,17 @@ minimum protocol:
 5. Check held runtime PRs, especially #20 until closed, merged, or superseded.
 6. Check newest relevant PRs after the docs anchor.
 7. Check current branch and commit state before assuming `master` equals runtime.
-8. If runtime health matters, require fresh endpoint checks or deployment logs.
-9. Produce a short convergence delta:
+8. If ChatGPT/app availability is part of the failure, check OpenAI status and
+   treat its metrics as aggregate rather than proof of the operator's local
+   experience.
+9. If runtime health matters, require fresh endpoint checks or deployment logs.
+10. Produce a short convergence delta:
    - what changed;
    - what is still held;
    - what evidence is fresh;
    - what evidence is stale;
    - safest next action.
-10. Do not merge, deploy, or enable runtime autonomy as part of resync.
+11. Do not merge, deploy, or enable runtime autonomy as part of resync.
 
 Operator handoff packet for another model or degraded session:
 
@@ -172,6 +175,9 @@ sources:
 - OpenAI's public ChatGPT memory guidance says ChatGPT does not remember every
   detail from past chats and that users should use saved memories for anything
   that must remain top-of-mind.
+- OpenAI's public status page should be checked when ChatGPT availability is part
+  of the failure mode, but its availability metrics are aggregate and individual
+  customer availability may vary by tier, model, and feature.
 - Railway healthchecks gate deployment activation but are not continuous live
   monitoring after deployment.
 - GitHub Actions job reruns use the original event SHA/ref; a rerun is not the
@@ -184,6 +190,7 @@ https://www.nist.gov/itl/ai-risk-management-framework
 https://www.nist.gov/news-events/news/2023/01/nist-risk-management-framework-aims-improve-trustworthiness-artificial
 https://www.oecd.org/en/topics/ai-principles.html
 https://help.openai.com/en/articles/8590148-memory-in-chatgpt
+https://status.openai.com/
 https://docs.railway.com/reference/healthchecks
 https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
 ```
