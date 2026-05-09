@@ -29,6 +29,7 @@ From a recovered checkout or bundle:
 6. Parse data/theorem-register.v0.1.json.
 7. Inspect schemas/theorem-register.v0.1.schema.json.
 8. Run the validation commands below.
+9. Build a release bundle if preparing a tag or pre-release.
 ```
 
 ## Required validation commands
@@ -41,6 +42,22 @@ python -m unittest discover -s tests -p "test_schema_source_lore.py" -t .
 python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
 python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
+python -m unittest discover -s tests -p "test_release_bundle.py" -t .
+```
+
+## Release bundle command
+
+From a clean checkout:
+
+```powershell
+python tools/build_release_bundle.py --output-dir dist
+```
+
+Expected outputs:
+
+```text
+dist/hff-convergence-v0.1.zip
+dist/hff-convergence-v0.1/CHECKSUMS.sha256
 ```
 
 ## Required recovery files
@@ -60,6 +77,10 @@ tests/test_schema_source_lore.py
 tests/test_recovery_artifacts.py
 tests/test_ci_workflow.py
 tests/test_release_artifacts.py
+tests/test_release_bundle.py
+tools/build_release_bundle.py
+.github/workflows/convergence-validation.yml
+.github/workflows/release-bundle.yml
 ```
 
 ## What to verify first
@@ -69,6 +90,7 @@ current branch or release tag
 commit SHA if present
 whether this copy came from primary GitHub, mirror, release bundle, offline copy, or witness packet
 whether CHECKSUMS.sha256 is current or a pre-release placeholder
+whether bundle-local CHECKSUMS.sha256 contains real SHA256 hashes
 whether all validation tests pass
 whether living operator correction is available
 whether current sources/tool claims need refresh
@@ -106,9 +128,9 @@ lore is treated as operational proof
 ## Checksum note
 
 `CHECKSUMS.sha256` may be a pre-release placeholder while release hardening is in
-progress. Before tagging or publishing `hff-convergence-v0.1`, regenerate it
-from a clean checkout and verify it covers the final release bundle and required
-recovery files.
+progress. The bundle builder writes a finalized checksum file inside the staging
+bundle. Before tagging or publishing `hff-convergence-v0.1`, build from a clean
+checkout and verify the bundle-local checksum file covers the final release files.
 
 ## Non-goals
 
