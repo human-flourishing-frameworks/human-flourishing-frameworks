@@ -161,6 +161,8 @@ Resync before action after context loss.
 | #20 Runtime safety gates | Closed superseded | Do not merge as-is. Use only as historical inventory for smaller successor branches from current `master`. |
 | #42 False-narrative copy guard | Merged | Public copy now has an extra regression guard against stale live-status, automatic behavior, and self-correction claims. |
 | #43 World-model shape guard | Merged | World model has a regression guard confirming scalar belief-ledger shape and no matrix/ML overclaim. |
+| #44 Autonomous executor gate | Merged | Focused tests prove the executor stays default-off unless explicitly enabled. |
+| #45 Mesh sync default-closed gate | Merged | Mesh sync receive path exists but returns 403 by default unless `ENABLE_MESH_SYNC=true`. |
 | Open PRs | None | Current successor work should start from fresh `master`. |
 
 ## External alignment
@@ -214,6 +216,16 @@ local full unittest discovery: Ran 114 tests - OK
 GitHub Actions unittest: passed
 merge commit: 195eb973fded5290e3b8510108d6cdc56950dc5e
 
+PR #44 autonomous executor gate:
+local focused autonomous executor tests: Ran 3 tests - OK
+local full unittest discovery: Ran 114 tests - OK
+GitHub Actions unittest: passed
+
+PR #45 mesh sync default-closed gate:
+local focused mesh/app runtime tests: Ran 5 tests - OK
+local full unittest discovery: Ran 119 tests - OK
+GitHub Actions unittest: passed
+
 Render public smoke from local machine:
 scripts/validate_public_site.ps1 against https://human-flourishing-frameworks.onrender.com
 result: PASS
@@ -249,15 +261,15 @@ The current highest-confidence action is a small successor branch from current
 `master`:
 
 ```text
-autonomous executor default-off gate, scoped to agent_system.py and focused tests
+no open successor PR is currently justified without fresh evidence
 ```
 
-Then evaluate runtime gates one at a time:
+Deferred items:
 
 ```text
-mesh sync default-closed gate
-CI workflow changes after shell-injection review
-deployment/dependency cleanup only with surface-specific evidence
+CI workflow changes: deferred because current master workflow is stricter than the stale PR #20 workflow.
+deployment/dependency cleanup: deferred because changing safe_app/deploy entrypoints needs surface-specific deployment evidence.
+issue #18: remains open as the dual-use governance boundary.
 ```
 
 ## Explicit non-goals
