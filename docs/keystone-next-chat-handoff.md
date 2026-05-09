@@ -22,7 +22,7 @@ Render public smoke check passed from Alex's local machine.
 Exit code was 0.
 Nodes endpoint returned [] twice.
 Docs-only convergence material has been landed on master.
-PR #20 remains open/draft and should not be merged without explicit review.
+PR #20 was closed as superseded and should not be reopened or merged as-is.
 ```
 
 ## Latest chat-tail memory
@@ -90,7 +90,7 @@ Do not confuse Render with Railway.
 Do not confuse cmd.exe with PowerShell.
 Do not claim live state without fresh evidence.
 Do not commit raw chat logs.
-Keep PR #20 held until reviewed.
+Keep PR #20 closed as superseded unless Alex explicitly reopens it.
 Prefer small docs/tests/scripts commits.
 ```
 

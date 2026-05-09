@@ -158,7 +158,7 @@ Resync before action after context loss.
 
 | Pull request | Status | Convergence meaning |
 |---|---:|---|
-| #20 Runtime safety gates | Open draft | Keep held. Re-evaluate after convergence docs land. |
+| #20 Runtime safety gates | Closed superseded | Do not merge as-is. Use only as historical inventory for smaller successor branches from current `master`. |
 | Recent docs/safety PRs | Merged | The doctrine is moving toward default-closed advisory behavior. |
 
 ## External alignment
@@ -274,8 +274,8 @@ consensus hardening before live telemetry evidence
 After this docs anchor lands:
 
 ```text
-review #20 again
-prefer splitting broad runtime changes into small successor PRs
+keep #20 closed as superseded unless Alex explicitly reopens it
+prefer rebuilding useful broad-runtime material as small successor PRs
 keep default-closed behavior as the baseline
 require live endpoint/deployment-log evidence before release validation
 run the resync protocol after any major context loss
