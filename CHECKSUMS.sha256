@@ -17,6 +17,9 @@ PRE_RELEASE_PLACEHOLDER  tests/test_recovery_artifacts.py
 PRE_RELEASE_PLACEHOLDER  tests/test_ci_workflow.py
 PRE_RELEASE_PLACEHOLDER  tests/test_release_artifacts.py
 PRE_RELEASE_PLACEHOLDER  tests/test_release_bundle.py
+PRE_RELEASE_PLACEHOLDER  tests/test_restore_drill.py
 PRE_RELEASE_PLACEHOLDER  tools/build_release_bundle.py
+PRE_RELEASE_PLACEHOLDER  tools/run_restore_drill.py
 PRE_RELEASE_PLACEHOLDER  .github/workflows/convergence-validation.yml
 PRE_RELEASE_PLACEHOLDER  .github/workflows/release-bundle.yml
+PRE_RELEASE_PLACEHOLDER  .github/workflows/restore-drill.yml
