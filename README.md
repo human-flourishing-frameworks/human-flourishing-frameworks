@@ -263,6 +263,7 @@ Current safety and public-boundary documents include:
 - [`docs/world-system-priority-model.md`](./docs/world-system-priority-model.md): confidence-graded world/system priorities for action selection.
 - [`docs/traversal-protocol.md`](./docs/traversal-protocol.md): minimum requirements for any safe HFF door or crossing.
 - [`docs/keystone-autonomous-work-queue.md`](./docs/keystone-autonomous-work-queue.md): what Keystone may continue alone and where operator review is required.
+- [`docs/keystone-source-use-discipline.md`](./docs/keystone-source-use-discipline.md): when Keystone should use memory, last-known state, committed docs, web sources, or fresh runtime checks.
 
 Authoritative actions require explicit operator approval, especially:
 
