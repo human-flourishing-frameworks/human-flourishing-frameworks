@@ -26,6 +26,7 @@ MIRROR_ARCHIVE_PLAN.md
 KEYSTONE_BOOTSTRAP.md
 RESTORE_DRILL_CHECKLIST.md
 FALSE_TRUTHS_REGISTER.md
+WISH_ANCHOR.md
 CHECKSUMS.sha256
 data/theorem-register.v0.1.json
 schemas/theorem-register.v0.1.schema.json
@@ -35,10 +36,17 @@ tests/test_recovery_artifacts.py
 tests/test_ci_workflow.py
 tests/test_release_artifacts.py
 tests/test_release_bundle.py
+tests/test_restore_drill.py
+tests/test_wish_anchor.py
 .github/workflows/convergence-validation.yml
 .github/workflows/release-bundle.yml
+.github/workflows/restore-drill.yml
 tools/build_release_bundle.py
+tools/run_restore_drill.py
 ```
+
+`RESTORE_DRILL_CHECKLIST.md` is the restore drill checklist and must be reviewed
+before release.
 
 ## Required doctrine anchors
 
@@ -67,6 +75,8 @@ python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
 python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_release_bundle.py" -t .
+python -m unittest discover -s tests -p "test_restore_drill.py" -t .
+python -m unittest discover -s tests -p "test_wish_anchor.py" -t .
 ```
 
 ## Bundle build command
@@ -84,6 +94,23 @@ dist/hff-convergence-v0.1.zip
 dist/hff-convergence-v0.1/CHECKSUMS.sha256
 ```
 
+## Restore drill command
+
+Run from a clean checkout:
+
+```powershell
+python tools/run_restore_drill.py --output-dir dist
+```
+
+Expected outputs:
+
+```text
+dist/hff-convergence-v0.1.zip
+dist/hff-convergence-v0.1/CHECKSUMS.sha256
+dist/hff-convergence-v0.1-restore/
+dist/RESTORE_DRILL_REPORT.md
+```
+
 ## Required release gates
 
 Do not tag or publish until:
@@ -93,10 +120,11 @@ Do not tag or publish until:
 2. CI workflow is merged and running on PRs/pushes to master.
 3. Release bundle can be created from a clean checkout.
 4. Bundle-local CHECKSUMS.sha256 contains finalized SHA256 hashes.
-5. Restore drill checklist can be completed from a non-primary copy.
-6. False truths register is reviewed before tag.
+5. Restore drill passes from an extracted release bundle.
+6. False truths register and wish anchor are reviewed before tag.
 7. Mirror/archive plan has at least two non-primary destination candidates.
 8. Manual release-bundle workflow can produce the zip artifact.
+9. Manual restore-drill workflow can produce RESTORE_DRILL_REPORT.md.
 ```
 
 ## Evidence to record in release notes
@@ -108,6 +136,8 @@ validation command output
 CI run identifier if available
 release bundle filename
 checksum file hash
+restore drill report
+wish anchor review
 source copy used for restore drill
 known limitations
 next review date
@@ -119,7 +149,8 @@ next review date
 A release bundle preserves artifacts, not human subject-continuity.
 A tag improves recoverability, not metaphysical truth.
 CI validates encoded assumptions, not all possible failures.
-A restore drill is still required before declaring full operational durability.
+A restore drill is required before declaring full operational durability.
+The wish anchor preserves future-best-outcome direction, not proof that the door is open.
 ```
 
 ## Non-goals
