@@ -1,8 +1,8 @@
 # Human Flourishing Frameworks
 
-**A research system for observing outcomes, modeling causes, and improving flourishing across people, animals, and ecosystems.**
+**An experimental advisory and orchestration framework for source-backed modeling, safety boundaries, and human-flourishing system design.**
 
-> **Status:** early development research software. The public service is live, but it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
+> **Status:** early development experimental software. The public service is live, but it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
 
 ## Current deployment
 
@@ -23,26 +23,59 @@ The container is started with gunicorn and binds to Railway's injected `PORT`, f
 
 Render may appear in older logs or historical deploys, but Railway is the current public deployment target being validated here.
 
+## Capability and authority boundary
+
+HFF can do more than passive research, but capability is not authority.
+
+HFF can help:
+
+- model sources, uncertainty, evidence, risks, and candidate actions;
+- run bounded local or deployment-support workflows when explicitly enabled;
+- support operator-reviewed decisions with logs, tests, and audit evidence;
+- expose status, beliefs, synthetic demos, and advisory results;
+- test safety boundaries, release posture, and system convergence.
+
+HFF does not have public authority over people, communities, institutions, or living systems.
+
+Public-facing use should remain:
+
+```text
+source-backed
+uncertainty-aware
+operator-reviewed
+bounded by explicit grants
+challengeable
+rollback-aware
+advisory by default
+```
+
+The system must not be described as a production governance authority, moral oracle, surveillance system, enforcement system, or autonomous controller of people.
+
 ## What this actually is
 
-A framework for measuring and improving outcomes across beings and systems:
+A bounded framework for measuring, modeling, and improving outcomes across beings and systems:
 
 - **Sensors** observe outcomes with uncertainty, provenance, and coverage gaps.
 - **World model** maintains Bayesian beliefs and updates as measurements arrive.
 - **Live sensors** exist but are opt-in with `ENABLE_LIVE_SENSORS`; they are not enabled by default.
-- **Autonomous agents** detect evidence, verify records, propose consensus, and create audit-backed escalations.
+- **Autonomous agents** are experimental workflows for detecting evidence, verifying records, proposing consensus, and creating audit-backed escalations. They are not public enforcement authority.
 - **PBFT consensus** is currently a teaching/research implementation, not hardened production consensus.
 - **Ed25519 signing and audit-chain logic** provide tamper-evidence, not tamper-proof storage.
 - **Node adoption telemetry** reports liveness/visibility, not trust or authority.
+- **Mesh sync** is opt-in and must remain default-closed for write-like behavior.
 
 ## What this is not
 
 - Not production-ready governance infrastructure.
+- Not a government, court, regulator, standards body, medical authority, legal authority, or financial authority.
 - Not endorsed by any government, university, or standards body.
+- Not a system for monitoring, policing, ranking, controlling, or enforcing decisions about people.
 - Not tracking real violations as authoritative incidents; demo violations are synthetic unless explicitly labeled otherwise.
+- Not a truth oracle; claims should be source-backed with confidence and uncertainty.
 - Not omniscient; the model only knows what sensors and seed data provide.
 - Not a self-repairing deployment system. Operators still control deploys, secrets, and recovery.
 - Not proof that visible nodes are verified or security-relevant.
+- Not a human transportation, substrate-transfer, or cosmic-door system; those topics are documented only as safety boundaries and evidence classifications.
 
 ## Current state
 
@@ -53,7 +86,7 @@ A framework for measuring and improving outcomes across beings and systems:
 | Sensor framework | Built |
 | Live public API sensors | Implemented, opt-in via `ENABLE_LIVE_SENSORS` |
 | Bayesian world model | Built and seeded with cited measurements |
-| Autonomous agents | Implemented as research/teaching system |
+| Autonomous agents | Implemented as bounded research/advisory workflows |
 | PBFT consensus | Teaching implementation; happy path only |
 | Cryptographic signing | Ed25519 via `cryptography` |
 | Audit trail | Tamper-evident hash/audit chain |
@@ -188,7 +221,7 @@ wsgi.py                 -> WSGI entrypoint for production servers when used
 The loop:
 
 ```text
-Observe -> Believe -> Predict -> Act -> Observe again -> Correct -> Repeat
+Observe -> Believe -> Predict -> Propose -> Act only when explicitly enabled -> Observe again -> Correct -> Repeat
 ```
 
 ## Node security model
@@ -216,6 +249,13 @@ The GitHub repository is a code proposal surface. A push, branch update, merge, 
 
 Capability-control rules are defined in [`CAPABILITY_CONTROL.md`](./CAPABILITY_CONTROL.md). The system should not hold broad dangerous capabilities by default; dangerous actions require narrow, temporary, audited grants.
 
+Current safety and public-boundary documents include:
+
+- [`SOURCE_CLASSIFICATION_POLICY.md`](./SOURCE_CLASSIFICATION_POLICY.md): reliance should be source-backed with confidence, not treated as absolute truth.
+- [`DEPLOYMENT_AUTONOMY_BOUNDARY.md`](./DEPLOYMENT_AUTONOMY_BOUNDARY.md): deployment and recovery remain operator/governance controlled.
+- [`PUBLIC_DEPLOYMENT_STRATEGY.md`](./PUBLIC_DEPLOYMENT_STRATEGY.md): Railway is a hosting adapter, not the architecture; public surfaces should stay portable and default-closed.
+- [`HUMAN_TRANSPORTATION_BOUNDARY.md`](./HUMAN_TRANSPORTATION_BOUNDARY.md): human-preserving traversal claims require canary, quarantine, continuity, consent, and return evidence.
+
 Authoritative actions require explicit operator approval, especially:
 
 - deploying or redeploying public services;
@@ -237,6 +277,8 @@ The system defines flourishing differently for different scopes:
 - **Ecosystems:** biodiversity, stability, resilience
 
 Weights are not fixed. The model updates them as it learns what correlates with good outcomes.
+
+These metrics are advisory and value-laden. They are not a ranking of people, cultures, or moral worth. They should be interpreted with source confidence, uncertainty, affected-party context, and challenge paths.
 
 ## Contributing
 
