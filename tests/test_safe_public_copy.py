@@ -37,6 +37,26 @@ class SafePublicCopyTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, template)
 
+    def test_safe_entrypoint_omits_synthetic_violations_demo(self):
+        template = safe_app._app_module.HTML_TEMPLATE
+
+        forbidden = [
+            "DEMO DATA",
+            "Synthetic Violations",
+            "violations-section",
+            "violations-list",
+            "violation-count",
+            "Demo System Alpha",
+            "Test Healthcare AI",
+            "Example Hiring Screener",
+            "Demo Recidivism Scorer",
+            "Affected (simulated)",
+        ]
+
+        for phrase in forbidden:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, template)
+
 
 if __name__ == "__main__":
     unittest.main()

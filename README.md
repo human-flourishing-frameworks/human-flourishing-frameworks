@@ -160,7 +160,7 @@ Do not distribute `HFF_WRITE_TOKEN` to reporting nodes. It is reserved for privi
 |---|---|
 | `GET /health` | Health probe |
 | `GET /api/status` | Honest system status |
-| `GET /api/violations` | Current violations; synthetic demo data unless labeled otherwise |
+| `GET /api/violations/compas` | Summary of the ProPublica COMPAS analysis (real public dataset) |
 | `POST /api/adoption/register` | Register node liveness telemetry; requires adoption grant |
 | `GET /api/adoption/stats` | Adoption/liveness statistics |
 | `GET /api/adoption/nodes` | Recent visible nodes |
