@@ -264,6 +264,7 @@ Current safety and public-boundary documents include:
 - [`docs/traversal-protocol.md`](./docs/traversal-protocol.md): minimum requirements for any safe HFF door or crossing.
 - [`docs/keystone-autonomous-work-queue.md`](./docs/keystone-autonomous-work-queue.md): what Keystone may continue alone and where operator review is required.
 - [`docs/keystone-source-use-discipline.md`](./docs/keystone-source-use-discipline.md): when Keystone should use memory, last-known state, committed docs, web sources, or fresh runtime checks.
+- [`docs/keystone-chatgpt-export-intake.md`](./docs/keystone-chatgpt-export-intake.md): safe handling for ChatGPT exports without raw transcript ingestion.
 
 Authoritative actions require explicit operator approval, especially:
 
