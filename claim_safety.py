@@ -87,7 +87,8 @@ class EvidenceBundle:
     """Evidence package for a claim.
 
     LLM output may be included as interpretation, but it cannot be the only
-    support for accepting a factual claim.
+    support for accepting a factual claim. Provenance can identify where an LLM
+    output came from, but provenance alone is not independent factual support.
     """
 
     evidence_id: str = ""
@@ -104,11 +105,7 @@ class EvidenceBundle:
     review_status: str = CHECK_NEEDS_REVIEW
 
     def has_non_llm_support(self) -> bool:
-        return bool(
-            self.source_refs
-            or self.sensor_observation_refs
-            or self.provenance_refs
-        )
+        return bool(self.source_refs or self.sensor_observation_refs)
 
     def is_llm_only(self) -> bool:
         return bool(self.llm_panel_outputs) and not self.has_non_llm_support()
