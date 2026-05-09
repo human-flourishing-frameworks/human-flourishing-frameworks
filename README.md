@@ -2,26 +2,26 @@
 
 **An experimental advisory and orchestration framework for source-backed modeling, safety boundaries, and human-flourishing system design.**
 
-> **Status:** early development experimental software. The public service is live, but it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
+> **Status:** early development experimental software. A public deployment is validated only by fresh, surface-specific smoke evidence; it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
 
 ## Current deployment
 
 Primary cloud URL:
 
 ```text
-https://web-production-46794.up.railway.app/
+https://human-flourishing-frameworks.onrender.com/
 ```
 
 Health/status checks:
 
 ```bash
-curl -i https://web-production-46794.up.railway.app/health
-curl -i https://web-production-46794.up.railway.app/api/status
+curl -i https://human-flourishing-frameworks.onrender.com/health
+curl -i https://human-flourishing-frameworks.onrender.com/api/status
 ```
 
-The container is started with gunicorn and binds to Railway's injected `PORT`, falling back to `5000` for local Docker runs.
+The container is started with gunicorn and binds to the injected `PORT`, falling back to `5000` for local Docker runs.
 
-Render may appear in older logs or historical deploys, but Railway is the current public deployment target being validated here.
+Railway may appear in older logs or historical deploys, but Render is the primary public surface currently covered by the repo smoke scripts.
 
 ## Capability and authority boundary
 
@@ -81,7 +81,7 @@ A bounded framework for measuring, modeling, and improving outcomes across being
 
 | Component | Status |
 |---|---|
-| Flask app + dashboard | Live on Railway |
+| Flask app + dashboard | Render primary surface; validate with fresh smoke evidence |
 | Docker/gunicorn | Uses `${PORT:-5000}` for cloud/local binding |
 | Sensor framework | Built |
 | Live public API sensors | Implemented, opt-in via `ENABLE_LIVE_SENSORS` |
@@ -166,7 +166,7 @@ Do not distribute `HFF_WRITE_TOKEN` to reporting nodes. It is reserved for privi
 | `GET /api/adoption/nodes` | Recent visible nodes |
 | `POST /api/autonomous/submit` | Submit evidence for autonomous processing; requires write grant |
 | `GET /api/autonomous/status` | Agent system status |
-| `GET /api/autonomous/rules` | Immutable rules transparency endpoint |
+| `GET /api/autonomous/rules` | Public rules projection endpoint |
 | `GET /api/autonomous/escalations` | Escalation queue |
 | `GET /api/autonomous/audit` | Audit trail with chain verification |
 | `GET /api/world/status` | World model status |
