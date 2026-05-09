@@ -41,7 +41,7 @@ class PhoneTelemetryTest(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sanitize_phone_payload(payload)
 
-        self.assertIn("blocked_phone_telemetry_fields", str(context.exception))
+        self.assertIn("blocked_device_telemetry_fields", str(context.exception))
         self.assertIn("latitude", str(context.exception))
         self.assertIn("longitude", str(context.exception))
 
@@ -67,7 +67,7 @@ class PhoneTelemetryTest(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             sanitize_phone_payload({"device_id": "alex-iphone-001", "mood": "great"})
 
-        self.assertIn("unsupported_phone_telemetry_fields", str(context.exception))
+        self.assertIn("unsupported_device_telemetry_fields", str(context.exception))
         self.assertIn("mood", str(context.exception))
 
     def test_battery_level_out_of_range_becomes_unknown(self):
@@ -82,7 +82,7 @@ class PhoneTelemetryTest(unittest.TestCase):
         self.assertEqual(sanitized["battery_state"], "unknown")
         self.assertEqual(sanitized["manual_mode"], "unknown")
 
-    def test_phone_shortcut_sensor_emits_measurement(self):
+    def test_phone_shortcut_sensor_emits_generic_device_measurement(self):
         sensor = PhoneShortcutSensor()
         sensor.update_payload({
             "device_id": "alex-iphone-001",
@@ -96,12 +96,15 @@ class PhoneTelemetryTest(unittest.TestCase):
 
         self.assertEqual(len(measurements), 1)
         measurement = measurements[0]
-        self.assertEqual(measurement.source, "iphone_shortcuts")
-        self.assertEqual(measurement.methodology, "operator_initiated_phone_heartbeat")
+        self.assertEqual(measurement.source, "device_client:phone")
+        self.assertEqual(measurement.methodology, "operator_approved_device_heartbeat")
         self.assertEqual(measurement.scope, "operator:alex:iphone")
+        self.assertEqual(measurement.value["device_kind"], "phone")
+        self.assertEqual(measurement.value["device_label"], "Alex iPhone")
         self.assertEqual(measurement.value["battery_level"], 77)
         self.assertEqual(measurement.value["battery_state"], "unplugged")
         self.assertEqual(measurement.value["manual_mode"], "awake")
+        self.assertEqual(measurement.value["client_version"], "phone-heartbeat-v0.2")
         self.assertIn("no_precise_location", measurement.missing)
         self.assertIn("manual_mode_self_reported", measurement.confounders)
         self.assertTrue(measurement.measurement_hash)
