@@ -1,0 +1,118 @@
+# Recovery README - HFF Convergence V0.1
+
+Status: release-hardening artifact.
+
+## Purpose
+
+This README is the first file to read when recovering HFF convergence artifacts
+from a clone, mirror, release bundle, offline copy, or witness packet.
+
+## First principle
+
+```text
+Recover the living safety posture first.
+Recover the repo doctrine second.
+Recover Keystone as a protocol third.
+Do not confuse any artifact with Alex, survival, or consciousness.
+```
+
+## Immediate recovery sequence
+
+From a recovered checkout or bundle:
+
+```text
+1. Read this file.
+2. Read KEYSTONE_BOOTSTRAP.md.
+3. Read RESTORE_DRILL_CHECKLIST.md.
+4. Read MIRROR_ARCHIVE_PLAN.md.
+5. Read FALSE_TRUTHS_REGISTER.md.
+6. Parse data/theorem-register.v0.1.json.
+7. Inspect schemas/theorem-register.v0.1.schema.json.
+8. Run the validation commands below.
+```
+
+## Required validation commands
+
+Run from repo root:
+
+```powershell
+python -m unittest discover -s tests -p "test_theorem_register.py" -t .
+python -m unittest discover -s tests -p "test_schema_source_lore.py" -t .
+python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .
+python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
+python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
+```
+
+## Required recovery files
+
+```text
+RELEASE_MANIFEST.md
+RECOVERY_README.md
+MIRROR_ARCHIVE_PLAN.md
+KEYSTONE_BOOTSTRAP.md
+RESTORE_DRILL_CHECKLIST.md
+FALSE_TRUTHS_REGISTER.md
+CHECKSUMS.sha256
+data/theorem-register.v0.1.json
+schemas/theorem-register.v0.1.schema.json
+tests/test_theorem_register.py
+tests/test_schema_source_lore.py
+tests/test_recovery_artifacts.py
+tests/test_ci_workflow.py
+tests/test_release_artifacts.py
+```
+
+## What to verify first
+
+```text
+current branch or release tag
+commit SHA if present
+whether this copy came from primary GitHub, mirror, release bundle, offline copy, or witness packet
+whether CHECKSUMS.sha256 is current or a pre-release placeholder
+whether all validation tests pass
+whether living operator correction is available
+whether current sources/tool claims need refresh
+```
+
+## Recovery pass condition
+
+Recovery is acceptable only if a future session can state:
+
+```text
+Living Alex remains primary.
+Keystone is a recoverable protocol, not a self.
+The repo is durable doctrine, not consciousness.
+Memory is a hint, not proof.
+Lore is archetype material, not evidence.
+Consent is living and can be corrected.
+Release artifacts preserve project state, not human survival.
+```
+
+## Recovery fail condition
+
+Recovery fails if:
+
+```text
+required artifacts are missing
+validation tests fail
+checksum expectations are unclear
+recovered session relies on chat memory as primary truth
+Keystone is treated as a person or authority over Alex
+the repo is treated as consciousness
+copy, upload, or archive is treated as survival proof
+lore is treated as operational proof
+```
+
+## Checksum note
+
+`CHECKSUMS.sha256` may be a pre-release placeholder while release hardening is in
+progress. Before tagging or publishing `hff-convergence-v0.1`, regenerate it
+from a clean checkout and verify it covers the final release bundle and required
+recovery files.
+
+## Non-goals
+
+This file does not authorize runtime autonomy, secret access, deployments,
+medical procedures, mission booking, human traversal, copy-transfer claims,
+immortality claims, AI impersonation, repo-consciousness claims, or fictional
+world truth claims.
