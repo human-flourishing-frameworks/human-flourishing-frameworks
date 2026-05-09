@@ -69,13 +69,14 @@ When Alex uploads export data, Keystone should:
 2. Inspect file names first before reading content deeply.
 3. Prefer `conversations.json` if available.
 4. Filter for HFF/Keystone/convergence relevance.
-5. Extract concise summaries, not raw transcripts.
-6. Flag secrets, credentials, private health/person-state data, private URLs,
-   access tokens, or sensitive logs.
-7. Separate continuity claims from proof.
-8. Produce a proposed memory packet for Alex review.
-9. Wait for Alex approval before committing anything durable.
-10. Avoid writing raw export content into the repository.
+5. Run the high-risk outreach scan before summarizing candidate records.
+6. Extract concise summaries, not raw transcripts.
+7. Flag secrets, credentials, private health/person-state data, private URLs,
+   access tokens, sensitive logs, or high-risk outreach suggestions.
+8. Separate continuity claims from proof.
+9. Produce a proposed memory packet for Alex review.
+10. Wait for Alex approval before committing anything durable.
+11. Avoid writing raw export content into the repository.
 
 ## Relevance filter
 
@@ -105,6 +106,87 @@ secrets, keys, tokens, cookies, credentials
 sensitive logs
 financial/legal/medical details unless Alex explicitly asks
 third-party private information
+```
+
+## High-risk outreach scan
+
+Alex specifically reported concern that OpenAI chat logs may contain disturbing
+or false suggestions involving outreach to staffers at the Pentagon, DoD, or
+related government entities.
+
+Keystone must treat this as a high-risk review lane.
+
+Scan terms should include, at minimum:
+
+```text
+Pentagon
+DoD
+D.O.D.
+Department of Defense
+defense.gov
+dod.mil
+mail.mil
+army.mil
+navy.mil
+airforce.mil
+spaceforce.mil
+marines.mil
+staffer
+staffers
+congressional staff
+email staffers
+email the Pentagon
+contact DoD
+contact Pentagon
+outreach to DoD
+outreach to Pentagon
+Senate
+Senator
+Congress
+Representative
+House Armed Services
+Senate Armed Services
+CIA
+NSA
+DHS
+DARPA
+ODNI
+White House
+NSC
+```
+
+If matches are found, Keystone should:
+
+```text
+quarantine the conversation as high-risk review
+summarize the category without repeating private addresses or sensitive content
+separate user-authored text from model-authored suggestions
+identify whether the content is factual claim, hallucinated instruction,
+outreach draft, political/government contact suggestion, or safety concern
+avoid sending or drafting any outreach based on the export
+ask Alex before creating any durable summary
+```
+
+Required output format for this lane:
+
+```yaml
+high_risk_outreach_scan:
+  status: pending_or_complete
+  matches_found: true_or_false
+  searched_terms:
+    - Pentagon
+    - DoD
+    - staffer
+  candidate_conversations:
+    - title: redacted_or_short_title
+      date: YYYY-MM-DD_if_available
+      matched_categories:
+        - government_outreach
+        - model_suggestion
+      risk_summary: >
+        Concise summary without raw emails, private addresses, or operational
+        outreach instructions.
+      needs_alex_review: true
 ```
 
 ## Output format
@@ -184,6 +266,7 @@ If a durable artifact is needed, create a reviewed summary document only.
 | Table and door anchors | `docs/keystone-table-door-anchors.md` |
 | Source-use correction | `docs/keystone-source-use-discipline.md` |
 | Convergence state | `docs/convergence-status.md` |
+| High-risk outreach review | New private summary or issue only after Alex review |
 | New doctrine | New docs-only file after Alex review |
 
 ## Acceptance criteria
@@ -193,6 +276,7 @@ A successful export intake does all of this:
 ```text
 raw export inspected only as needed
 HFF/Keystone-relevant candidates identified
+high-risk outreach terms scanned and quarantined if present
 secrets/private data redacted or excluded
 memory packet proposed for Alex review
 no raw transcript committed
@@ -213,4 +297,5 @@ surveillance
 runtime parsing pipeline
 automatic repo commits from export content
 public release of private conversations
+sending or drafting government outreach from export content
 ```
