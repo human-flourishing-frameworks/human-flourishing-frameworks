@@ -1258,7 +1258,13 @@ def autonomous_audit():
 
 @app.route('/api/autonomous/rules')
 def autonomous_rules():
-    """Return IMMUTABLE_RULES for full transparency."""
+    """Return the public projection of declared rules.
+
+    Internal-only flags whose names imply governance authority the software
+    does not possess (e.g., ``no_human_override``, ``escalation_is_irreversible``)
+    are omitted from this public payload; see
+    ``agent_system.public_immutable_rules_view`` for the projection logic.
+    """
     try:
         return jsonify(autonomous_system.get_rules()), 200
     except Exception as e:

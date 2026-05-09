@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """
-Autonomous agent system for AI bias monitoring.
+Research-mode autonomous advisory pipeline for AI bias monitoring.
 
-Governance flow is algorithmic: 7 single-responsibility agents coordinate
-through PBFT consensus. Operator/deployment authority remains external. Once
-consensus is reached, escalation is locked for 24 hours; background execution
-is default-off unless explicitly enabled.
+Seven single-responsibility agents coordinate through PBFT consensus to record
+proposed violations to an append-only audit log. Operator and deployment
+authority remain external to this software. Once consensus is reached, an
+escalation record is time-locked for 24 hours before it becomes eligible for
+execution; background execution is default-off unless explicitly enabled by an
+operator.
 
 Limitations:
-- "Escalation" currently means logging to the audit trail and flagging for
-  review. Actual regulatory notification requires institutional partnerships
-  that do not yet exist.
-- The system runs on the nodes you deploy. It is not self-propagating.
+- "Escalation" currently means appending a row to the audit log and flagging it
+  for human review. Actual regulatory notification requires institutional
+  partnerships that do not yet exist.
+- The system runs only on the nodes you deploy. It is not self-propagating.
 - Declared rules are enforced in software. A database administrator with
   direct SQLite access could modify records.
+- This is research/advisory software. It is not a human board, regulator,
+  court, enforcement system, or autonomous authority.
 """
 
 import json
@@ -67,6 +71,36 @@ IMMUTABLE_RULES = {
     "agent_count": 7,
     "append_only_audit": True,
 }
+
+# Fields kept internal-only because their flag-style names imply governance
+# authority the software does not actually possess. Operator and deployment
+# authority are external. The audit log is append-only by design, but a database
+# administrator with direct SQLite access can still modify records.
+_INTERNAL_ONLY_RULE_KEYS = ("escalation_is_irreversible", "no_human_override")
+
+PUBLIC_RULES_DISCLAIMER = (
+    "Research advisory software. Operator and deployment authority are "
+    "external to this system. Escalation records are audit-log entries "
+    "pending human review, not regulatory actions or autonomous enforcement."
+)
+
+
+def public_immutable_rules_view():
+    """Return a public projection of IMMUTABLE_RULES.
+
+    Omits flag-style fields whose names imply governance authority the software
+    does not possess (the assertions on those flags are internal startup
+    invariants, not enforcement mechanisms). Adds an explicit research-mode
+    disclaimer so the public payload cannot be misread as governance claim.
+    """
+    public = {
+        key: value
+        for key, value in IMMUTABLE_RULES.items()
+        if key not in _INTERNAL_ONLY_RULE_KEYS
+    }
+    public["mode"] = "research"
+    public["disclaimer"] = PUBLIC_RULES_DISCLAIMER
+    return public
 
 # ---------------------------------------------------------------------------
 # Escalation persistence (SQLite, append-only table)
@@ -367,7 +401,6 @@ class AutonomousEscalationAgent(AgentBase):
             "lock_time": lock_time,
             "execute_time": execute_time,
             "lock_hours": lock_hours,
-            "irreversible": IMMUTABLE_RULES["escalation_is_irreversible"],
         })
 
         return {
@@ -712,7 +745,8 @@ class AutonomousAgentSystem:
             self.network_discovery,
         ]
 
-        # Log system startup
+        # Log system startup. The audit log is reachable via the public
+        # /api/autonomous/audit route, so use the public projection here too.
         self._audit_log.append({
             "agent": "system",
             "action": "startup",
@@ -720,7 +754,7 @@ class AutonomousAgentSystem:
                 "node_id": node_id,
                 "peer_count": len(peer_urls),
                 "agent_count": len(self._agents),
-                "immutable_rules": IMMUTABLE_RULES,
+                "immutable_rules": public_immutable_rules_view(),
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
@@ -824,7 +858,7 @@ class AutonomousAgentSystem:
         return {
             "node_id": self._node_id,
             "agents": agents_status,
-            "immutable_rules": IMMUTABLE_RULES,
+            "immutable_rules": public_immutable_rules_view(),
             "consensus_threshold": _compute_consensus_threshold(
                 self._pbft_node.n
             ),
@@ -838,10 +872,14 @@ class AutonomousAgentSystem:
         }
 
     def get_rules(self) -> dict:
-        """Return IMMUTABLE_RULES for transparency."""
+        """Return the public projection of declared rules for transparency.
+
+        Internal-only flags whose names imply governance authority the software
+        does not possess are omitted; see ``public_immutable_rules_view``.
+        """
         n = self._pbft_node.n
         return {
-            "immutable_rules": IMMUTABLE_RULES,
+            "immutable_rules": public_immutable_rules_view(),
             "computed_values": {
                 "n": n,
                 "f": max_faulty(n),
