@@ -30,6 +30,7 @@ REQUIRED_RELEASE_FILES = [
     "WISH_ANCHOR.md",
     "data/theorem-register.v0.1.json",
     "schemas/theorem-register.v0.1.schema.json",
+    "tests/__init__.py",
     "tests/test_theorem_register.py",
     "tests/test_schema_source_lore.py",
     "tests/test_recovery_artifacts.py",

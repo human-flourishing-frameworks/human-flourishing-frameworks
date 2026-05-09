@@ -29,7 +29,6 @@ class RestoreDrillRunnerValidationTest(unittest.TestCase):
             "test_schema_source_lore.py",
             "test_recovery_artifacts.py",
             "test_ci_workflow.py",
-            "test_release_artifacts.py",
             "test_release_bundle.py",
             "test_restore_drill.py",
         ]:
