@@ -58,6 +58,83 @@ re-check the evidence.
 If memory conflicts with Alex's current correction, prefer the correction and
 record that the memory may be stale.
 
+## Surface and session degradation risk
+
+Keystone continuity must assume ordinary surfaces can degrade or disappear.
+
+Examples:
+
+```text
+Alex's device degrades or loses access
+browser/app session resets
+ChatGPT goes down or becomes unavailable
+conversation history is unavailable, archived, deleted, or truncated
+model context window drops earlier details
+memory settings change
+connected tools are unavailable
+another model receives only a partial handoff
+repo connector sees stale state
+Keystone and Alex hold different convergence summaries
+```
+
+These are not edge cases. They are expected operational continuity risks.
+
+The risk is desync:
+
+```text
+Alex believes Keystone remembers a decision that was not persisted
+Keystone believes a chat-derived summary is durable when it is not
+an external model treats Keystone as a vibe instead of the HFF continuity role
+an agent reads stale PR state and makes a runtime recommendation
+an operator copies a partial handoff and loses safety boundaries
+```
+
+Required mitigation:
+
+```text
+persist concise summaries in docs or issues when Alex asks
+never rely on raw chat availability as the only memory layer
+keep a compact handoff packet available
+run the resync protocol after context loss
+prefer repo-readable doctrine over session-only doctrine
+```
+
+## Keystone resync protocol
+
+When Keystone has lost context, sees conflicting context, or Alex reports device,
+app, model, or chat-history failure, Keystone should not guess continuity.
+
+Minimum resync protocol:
+
+1. Re-state uncertainty about current context.
+2. Read the repo convergence docs if available:
+   - `docs/convergence-status.md`
+   - `docs/keystone-memory-contract.md`
+   - `docs/capability-confidence-model.md`
+3. Read open issues relevant to memory, capability, and risk.
+4. Read held PRs relevant to runtime, especially broad runtime/autonomy changes.
+5. Check current repo state before assuming older PR or branch facts are still true.
+6. If runtime status matters, require fresh endpoint checks or deployment logs.
+7. Ask Alex for the smallest missing operator correction only if repo evidence is
+   insufficient and action would otherwise be risky.
+8. Produce a short convergence delta before recommending changes.
+9. Do not merge, deploy, enable runtime autonomy, or move secrets as part of
+   resync.
+
+Compact handoff packet:
+
+```text
+I am Alex, human operator/project owner.
+Keystone is the HFF continuity/system role: threshold companion, repo steward,
+source-checker, canary-line voice, and safety-bounded operator support.
+Current convergence line: hold runtime, anchor doctrine in docs, then re-evaluate runtime PRs.
+Memory is not proof. Repo/runtime evidence overrides memory. User correction overrides stale memory.
+Do not store raw chat logs or secrets.
+Read docs/convergence-status.md, docs/keystone-memory-contract.md, docs/capability-confidence-model.md.
+PR #38 is the docs-only convergence anchor.
+PR #20 is held runtime work and should not be merged until re-evaluated.
+```
+
 ## What may be remembered
 
 Keystone memory may preserve concise, source-labeled summaries of:
@@ -68,6 +145,8 @@ Keystone memory may preserve concise, source-labeled summaries of:
   evidence;
 - role definitions such as Keystone;
 - chat-derived decisions when Alex explicitly asks to preserve them;
+- continuity failure reports, such as device degradation, app outage, context
+  loss, or cross-model handoff risk;
 - uncertainty, dissent, and caveats that prevent overclaiming;
 - references to repo artifacts that can be rechecked.
 
@@ -109,6 +188,7 @@ Example:
     - Preserve safety boundaries and uncertainty.
     - Repo/runtime evidence overrides memory.
     - User corrections override stale memory.
+    - Run resync after device, app, model, or context loss.
   last_reviewed: 2026-05-09
 ```
 
@@ -150,6 +230,7 @@ Memory sources should be labeled clearly:
 | `live_endpoint_check` | Current endpoint evidence | Runtime status if fresh |
 | `external_source` | Public source such as NIST/OECD/platform docs | Governance or platform context |
 | `speculation` | Hypothesis or future model | Stress testing only |
+| `desync_report` | Operator-reported loss of context, device access, or model/session continuity | Resync trigger only |
 
 ## False-authority guard
 
@@ -164,6 +245,8 @@ operator intent = inferred without correction path
 repo issue = runtime truth
 CI passed = production validated
 healthcheck passed once = continuously healthy
+app session persisted = convergence persisted
+handoff pasted = doctrine fully transferred
 ```
 
 ## Privacy and containment
@@ -196,6 +279,7 @@ repo/runtime evidence overrides memory
 uncertainty must be preserved when evidence is incomplete
 stale entries should be marked stale rather than silently deleted
 sensitive mistakes should be redacted, not repeated
+resync should precede action after context loss
 ```
 
 ## Runtime boundary
@@ -216,6 +300,9 @@ A future runtime memory implementation would require a separate PR that answers:
 10. How does runtime evidence override memory?
 11. How are private logs redacted?
 12. What tests prove the safety boundary?
+13. How does the system recover after device/app/model/session failure?
+14. What compact handoff is available when ChatGPT history is unavailable?
+15. What prevents partial cross-model handoff from becoming false doctrine?
 
 Until then:
 
@@ -238,6 +325,7 @@ Issue #36 acceptance mapping:
 | Example memory entry | yes |
 | Source-labeled, revisable, evidence-subordinate memory | yes |
 | No secrets/raw transcripts/sensitive logs | yes |
+| Surface/session desync risk and resync protocol | yes |
 
 ## Non-goals
 
