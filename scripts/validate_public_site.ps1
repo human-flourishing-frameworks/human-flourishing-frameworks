@@ -82,4 +82,33 @@ catch {
     exit 1
 }
 
+$ForbiddenApiPhrases = @(
+    "no_human_override",
+    "escalation_is_irreversible",
+    "ALGORITHMIC GOVERNANCE",
+    "No human board",
+    "irreversible after a 24-hour lock"
+)
+
+foreach ($endpoint in @("/api/autonomous/status", "/api/autonomous/rules")) {
+    Write-Host "Checking autonomous endpoint: $BaseUrl$endpoint"
+    $autonomousResponse = Invoke-WithRetry -Label "GET $endpoint" -Action {
+        Invoke-WebRequest -Uri "$BaseUrl$endpoint" -UseBasicParsing -TimeoutSec 30
+    }
+    try {
+        $null = $autonomousResponse.Content | ConvertFrom-Json
+    }
+    catch {
+        Write-Error "FAIL: $endpoint did not return valid JSON: $($_.Exception.Message)"
+        exit 1
+    }
+    $autonomousBody = [string]$autonomousResponse.Content
+    foreach ($phrase in $ForbiddenApiPhrases) {
+        if ($autonomousBody.Contains($phrase)) {
+            Write-Error "FAIL: forbidden authority phrase '$phrase' is still present in $endpoint"
+            exit 1
+        }
+    }
+}
+
 Write-Host "PASS: public site smoke validation succeeded for $BaseUrl"
