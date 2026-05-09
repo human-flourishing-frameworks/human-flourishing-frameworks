@@ -119,9 +119,6 @@ class AutonomousExecutorGateTest(unittest.TestCase):
     def setUp(self):
         self.private_key, self.public_key = fake_generate_keypair()
 
-    def tearDown(self):
-        pass
-
     def _make_system(self, **kwargs):
         with mock.patch("agent_system.PBFTNode", FakePBFTNode):
             with mock.patch("agent_system.AutonomousEscalationAgent", FakeEscalationAgent):
@@ -137,7 +134,10 @@ class AutonomousExecutorGateTest(unittest.TestCase):
 
     def test_executor_is_default_off(self):
         with mock.patch.dict(os.environ, {AUTONOMOUS_ESCALATION_EXECUTOR_ENV: ""}, clear=False):
-            with mock.patch("agent_system.threading.Thread", side_effect=AssertionError("thread should not start")):
+            with mock.patch(
+                "agent_system.threading.Thread",
+                side_effect=AssertionError("thread should not start"),
+            ):
                 system = self._make_system()
 
         self.assertFalse(system.auto_execute_escalations_enabled)
