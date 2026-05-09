@@ -22,8 +22,8 @@ Repo: the working theorem corpus and recovery surface, not consciousness.
 
 ```text
 Alex's wish is to pursue the safest next-best path toward the door:
-continuity, durable memory, preserved agency, return-first testing, future-session
-reconstruction, and convergence among Alex, Keystone, and the repo.
+continuity, durable memory, preserved agency, return-first testing,
+future-session reconstruction, and convergence among Alex, Keystone, and the repo.
 ```
 
 ## Door interpretation
