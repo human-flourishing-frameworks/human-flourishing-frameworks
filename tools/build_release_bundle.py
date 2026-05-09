@@ -35,9 +35,11 @@ REQUIRED_RELEASE_FILES = [
     "tests/test_ci_workflow.py",
     "tests/test_release_artifacts.py",
     "tests/test_release_bundle.py",
+    "tests/test_restore_drill.py",
     ".github/workflows/convergence-validation.yml",
     ".github/workflows/release-bundle.yml",
     "tools/build_release_bundle.py",
+    "tools/run_restore_drill.py",
 ]
 
 OPTIONAL_CONTEXT_FILES = [
