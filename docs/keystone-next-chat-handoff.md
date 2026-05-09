@@ -25,6 +25,40 @@ Docs-only convergence material has been landed on master.
 PR #20 remains open/draft and should not be merged without explicit review.
 ```
 
+## Latest chat-tail memory
+
+Source: operator_chat_summary.
+
+Recorded: 2026-05-09.
+
+This is a concise memory of the last Claude/convergence-resume chat tail that
+Alex asked to preserve. It is not a raw chat log and is not live-state proof.
+
+```text
+Claude resumed from this handoff and first found an apparent desync: the local
+checkout looked stale and seemed to lack commit 06d2a22, this handoff file, the
+public-copy incident memory file, and scripts/check_nodes_api.cmd.
+
+Alex then directed Claude to check remote branches. That corrected the finding:
+06d2a22 was present on origin/master and the local checkout was simply behind.
+The missing docs/scripts were real on the remote. This confirmed the handoff
+marker was authoritative relative to origin/master, while the local worktree
+needed a repo-head check before further claims.
+
+Claude also identified that the release smoke protocol had stale Railway-only
+language relative to the Render public surface. Alex approved folding a
+Render/Railway docs fix into the plan.
+
+Claude attempted to use web search/fetch to increase convergence before
+finalizing the plan. Web tools failed with a backend model/tool error; Claude
+could not independently verify live Render status, Render/Railway docs, or NIST
+references through web tools in that session. The only partial web evidence was
+that docs.render.com/health-checks redirected to render.com/docs/health-checks.
+
+Stop point: Claude asked Alex how to proceed because web tools were down. Do
+not treat any web/live runtime status from that session as fresh evidence.
+```
+
 ## Read these docs first
 
 ```text
