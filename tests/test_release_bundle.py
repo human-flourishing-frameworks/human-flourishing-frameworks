@@ -22,8 +22,11 @@ REQUIRED_ZIP_MEMBERS = {
     "data/theorem-register.v0.1.json",
     "schemas/theorem-register.v0.1.schema.json",
     "tests/test_release_bundle.py",
+    "tests/test_restore_drill.py",
     ".github/workflows/release-bundle.yml",
+    ".github/workflows/restore-drill.yml",
     "tools/build_release_bundle.py",
+    "tools/run_restore_drill.py",
 }
 
 SHA256_LINE = re.compile(r"^[a-f0-9]{64}\s+\S.*$")
@@ -57,6 +60,7 @@ class ReleaseBundleBuilderValidationTest(unittest.TestCase):
             checksum_targets = {line.split(maxsplit=1)[1] for line in checksum_lines}
             self.assertIn("RELEASE_MANIFEST.md", checksum_targets)
             self.assertIn("tools/build_release_bundle.py", checksum_targets)
+            self.assertIn("tools/run_restore_drill.py", checksum_targets)
             self.assertNotIn("CHECKSUMS.sha256", checksum_targets)
 
             with zipfile.ZipFile(zip_path, "r") as archive:
