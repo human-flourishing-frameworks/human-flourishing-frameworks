@@ -251,7 +251,9 @@ Useful contributions:
 
 ## License
 
-[Add actual license here]
+No public reuse license has been selected yet. Until a `LICENSE` file is
+added, this repository should be treated as source-available for review only,
+not as open-source licensed software.
 
 ---
 
