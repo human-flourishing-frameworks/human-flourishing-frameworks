@@ -24,6 +24,7 @@ explicit deployed-SHA validation
 post-deploy smoke checks
 external monitoring
 provider-exit path
+technology-exit path
 ```
 
 ## Target deployment shape
@@ -63,6 +64,119 @@ PORT: provided by hosting platform and consumed by container command
 Railway should be easy to replace with any platform that can run the OCI/Docker
 image and provide environment variables.
 
+## Technology exit strategy
+
+HFF should treat every technology choice as replaceable behind a contract.
+
+The goal is not to avoid dependencies. The goal is to avoid making any dependency
+irreversible.
+
+| Layer | Current likely technology | Stable contract | Exit strategy |
+|---|---|---|---|
+| Hosting | Railway or another PaaS | OCI/Docker image + PORT + health endpoints | Run same image on another container host |
+| Container build | Dockerfile | OCI image/artifact semantics | Keep startup inside image, not provider config |
+| Web runtime | Flask/Gunicorn | HTTP endpoints + JSON schemas | Keep handlers thin; preserve API contract |
+| Public API | Flask routes | OpenAPI-style endpoint contract | Generate/validate contract before framework migration |
+| Database/local state | SQLite/files in `/data` | Repository/service interface + export format | Add export/import before changing storage engine |
+| Background jobs | Python threads | Explicit job interface and feature flags | Move jobs to queue/worker only after contract tests |
+| Observability | Logs and smoke checks | OpenTelemetry-compatible traces/metrics/logs | Export to any compatible backend |
+| CI | GitHub Actions | Shell/Python test commands | Keep tests runnable locally and in other CI systems |
+| Secrets | Provider env vars | Named secret contract + least privilege | Move secrets provider without app code changes |
+| Model/LLM usage | External/vendor model if added later | Model adapter + capability/reliance metadata | Swap providers without changing policy logic |
+| Mesh/consensus | Current internal mesh/PBFT research code | Message schema + trust/provenance rules | Replace transport/consensus without changing claim semantics |
+| Static/public content | Server-rendered or static export | Read-only artifact contract | Publish via CDN/static host independently |
+
+## Exit-readiness checklist
+
+Before adopting or deepening any technology, require:
+
+```text
+clear owner
+clear contract
+known replacement path
+export path for data
+local test path
+non-provider-specific configuration
+rollback path
+security review of dependency surface
+license review when relevant
+operational cost/risk note
+```
+
+Before removing or replacing a technology, require:
+
+```text
+contract tests pass on old and new implementation
+migration dry run exists
+backup/export produced
+rollback procedure written
+operator/governance approval for production data changes
+public behavior unchanged unless explicitly approved
+```
+
+## Technology-specific boundaries
+
+### Hosting providers
+
+Do not let any hosting provider become the release authority.
+
+```text
+provider deploy success != release validation
+provider healthcheck != ongoing health
+provider UI config != source of truth
+```
+
+### Web frameworks
+
+Do not let Flask become the product boundary.
+
+```text
+API contract matters more than framework
+handlers should remain thin
+business rules should be testable without HTTP
+```
+
+### Databases
+
+Do not let local SQLite or file persistence become a migration trap.
+
+```text
+schema must be inspectable
+export/import must exist before high-value data accumulates
+runtime code should access storage through a small interface
+```
+
+### Observability vendors
+
+Do not hardwire monitoring to a single provider.
+
+```text
+emit portable logs/metrics/traces
+prefer OpenTelemetry-compatible shape
+monitoring backend can change
+```
+
+### CI/CD providers
+
+Do not let GitHub Actions become the only proof path.
+
+```text
+all required tests should run locally
+CI should call ordinary commands
+release evidence should include commands and results, not only badges
+```
+
+### Model providers
+
+Do not let any LLM provider become a governance authority.
+
+```text
+model output = proposal/hypothesis
+policy engine = explicit rules
+sources/evals = evidence
+runtime authority = maturity-stage gated
+```
+
 ## Why provider-agnostic matters
 
 A public deployment that depends too much on one provider can create avoidable
@@ -78,6 +192,22 @@ provider deploy UI -> unreviewed production mutation
 
 The system should treat provider evidence as one signal, not the source of
 truth.
+
+## Why technology-agnostic matters
+
+Technology lock-in can also create safety risk:
+
+```text
+framework lock-in -> hard-to-fix runtime flaws
+storage lock-in -> hard-to-migrate corrupted or sensitive data
+monitoring lock-in -> blind spots during provider migration
+CI lock-in -> inability to validate during platform outage
+model-provider lock-in -> governance drift toward vendor capabilities
+consensus lock-in -> false authority from one mechanism
+```
+
+The system should treat implementation technologies as adapters around stable
+contracts.
 
 ## Public-risk-minimized modes
 
@@ -182,6 +312,23 @@ release checklist works for at least one non-Railway target
 health/status endpoints are platform-neutral
 ```
 
+## Technology exit criteria
+
+A public deployment strategy is acceptable only if HFF can move away from major
+implementation choices without changing the public safety meaning of the system.
+
+Minimum exit criteria:
+
+```text
+HTTP API behavior has a documented contract
+storage can be exported before replacement
+observability can be redirected without code rewrites
+CI can be reproduced locally
+model providers are behind adapters if added
+mesh/consensus semantics are separate from transport implementation
+runtime flags keep the same meaning across platforms
+```
+
 ## Better-than-Railway target architecture
 
 Longer-term target:
@@ -194,6 +341,7 @@ public static/read-only mirror
 + signed image or deploy artifact
 + immutable release notes with deployed SHA
 + provider-neutral rollback procedure
++ technology-exit tests for critical layers
 ```
 
 Railway can host the read-only dynamic API container for now. It should not host
@@ -214,6 +362,7 @@ mesh writes
 live sensor polling
 autonomous escalation execution
 provider-specific lock-in
+technology-specific lock-in
 ```
 
 ## Default conclusion
@@ -222,8 +371,10 @@ The acceptable-risk public strategy is not "make Railway safer." It is:
 
 ```text
 make HFF portable
+make technologies replaceable
 make the public surface read-only
 make provider evidence non-authoritative
 make release validation explicit
 make provider replacement easy
+make technology replacement testable
 ```
