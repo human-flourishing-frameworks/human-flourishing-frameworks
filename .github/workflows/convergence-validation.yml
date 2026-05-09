@@ -53,3 +53,6 @@ jobs:
 
       - name: Validate wish anchor guardrails
         run: python -m unittest discover -s tests -p "test_wish_anchor.py" -t .
+
+      - name: Validate public-readiness documentation guardrails
+        run: python -m unittest discover -s tests -p "test_public_readiness_docs.py" -t .
