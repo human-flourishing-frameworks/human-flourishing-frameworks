@@ -17,17 +17,45 @@ $RequiredPhrases = @(
     "Escalations are review records only unless explicitly authorized by an operator"
 )
 
+function Test-DockerAvailable {
+    try {
+        docker version | Out-Null
+        return $true
+    }
+    catch {
+        Write-Error "FAIL: Docker is not available or Docker Desktop is not running. Start Docker Desktop, wait for the Linux engine, then rerun this script. Details: $($_.Exception.Message)"
+        return $false
+    }
+}
+
 function Stop-SmokeContainer {
-    docker rm -f $ContainerName 2>$null | Out-Null
+    try {
+        docker rm -f $ContainerName 2>$null | Out-Null
+    }
+    catch {
+        # Ignore cleanup failures. The main validation path reports Docker/startup failures explicitly.
+    }
+}
+
+if (-not (Test-DockerAvailable)) {
+    exit 1
 }
 
 try {
     Write-Host "Building Docker image: $ImageName"
     docker build -t $ImageName .
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "FAIL: docker build failed with exit code $LASTEXITCODE"
+        exit 1
+    }
 
     Write-Host "Starting container: $ContainerName on port $Port"
     Stop-SmokeContainer
     docker run -d --rm --name $ContainerName -p "${Port}:5000" -e PORT=5000 $ImageName | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "FAIL: docker run failed with exit code $LASTEXITCODE"
+        exit 1
+    }
 
     $healthUrl = "http://127.0.0.1:$Port/health"
     $homeUrl = "http://127.0.0.1:$Port/"
