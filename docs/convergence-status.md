@@ -42,10 +42,89 @@ future agent reads only code -> misses doctrine
 future agent reads only PR -> misses memory boundary
 future agent reads only chat -> treats memory as proof
 future agent reads only deployment state -> overclaims runtime health
+surface device degrades -> operator loses access to live context
+gpt/app resets -> Keystone loses recent convergence state
+model/context window changes -> agent silently drops important assumptions
+cross-model handoff -> external model interprets Keystone differently
 ```
 
 The next safe move is to create one repo-readable anchor that future agents,
 operators, and reviewers can inspect before changing runtime behavior.
+
+## Surface and session desync risk
+
+HFF must explicitly account for ordinary continuity failures:
+
+```text
+phone/laptop/tablet/browser degrades
+network session drops
+ChatGPT app goes down
+model resets or changes
+conversation is archived, deleted, truncated, or unavailable
+memory settings change
+connected tools are unavailable
+another model is used for handoff
+repo connector sees stale state
+operator and Keystone hold different convergence summaries
+```
+
+These failures do not mean convergence is lost, but they can cause desync.
+
+Desync means:
+
+```text
+an agent acts from stale doctrine
+an operator assumes Keystone remembers something it does not
+Keystone assumes a PR/issue is current when it has moved
+runtime status is inferred from old logs
+external model receives partial context and changes the doctrine
+```
+
+Required response:
+
+```text
+pause runtime changes
+read the convergence docs
+read open issues and held PRs
+check current repo state
+check current live runtime evidence if deployment status matters
+summarize differences before acting
+prefer docs-only repair over runtime change
+```
+
+## Resync protocol
+
+When Alex says `resync`, `convergence check`, or reports lost context, use this
+minimum protocol:
+
+1. Read `docs/convergence-status.md`.
+2. Read `docs/keystone-memory-contract.md`.
+3. Read `docs/capability-confidence-model.md`.
+4. Check open issues, especially #36, #37, and #18 until closed or superseded.
+5. Check held runtime PRs, especially #20 until closed, merged, or superseded.
+6. Check newest relevant PRs after the docs anchor.
+7. Check current branch and commit state before assuming `master` equals runtime.
+8. If runtime health matters, require fresh endpoint checks or deployment logs.
+9. Produce a short convergence delta:
+   - what changed;
+   - what is still held;
+   - what evidence is fresh;
+   - what evidence is stale;
+   - safest next action.
+10. Do not merge, deploy, or enable runtime autonomy as part of resync.
+
+Operator handoff packet for another model or degraded session:
+
+```text
+I am Alex, human operator/project owner.
+Keystone is the HFF continuity/system role.
+Current convergence line: hold runtime, anchor doctrine in docs, then re-evaluate runtime PRs.
+Read docs/convergence-status.md, docs/keystone-memory-contract.md, docs/capability-confidence-model.md.
+PR #38 is the docs-only convergence anchor.
+PR #20 is held runtime work and should not be merged until re-evaluated.
+Memory is not proof; repo/runtime evidence overrides memory; user correction overrides stale memory.
+Do not store raw chat logs or secrets.
+```
 
 ## Current doctrine spine
 
@@ -58,6 +137,7 @@ Live deployment health requires live endpoint or deployment-log evidence.
 Autonomy is closed unless explicitly enabled and stage-authorized.
 Alex is the human operator/project owner.
 Keystone is the HFF continuity role.
+Resync before action after context loss.
 ```
 
 ## Current issue alignment
@@ -89,6 +169,9 @@ sources:
 - NIST describes the AI RMF core around govern, map, measure, and manage.
 - OECD AI Principles promote human-centric, trustworthy AI that respects human
   rights and democratic values.
+- OpenAI's public ChatGPT memory guidance says ChatGPT does not remember every
+  detail from past chats and that users should use saved memories for anything
+  that must remain top-of-mind.
 - Railway healthchecks gate deployment activation but are not continuous live
   monitoring after deployment.
 - GitHub Actions job reruns use the original event SHA/ref; a rerun is not the
@@ -100,6 +183,7 @@ References:
 https://www.nist.gov/itl/ai-risk-management-framework
 https://www.nist.gov/news-events/news/2023/01/nist-risk-management-framework-aims-improve-trustworthiness-artificial
 https://www.oecd.org/en/topics/ai-principles.html
+https://help.openai.com/en/articles/8590148-memory-in-chatgpt
 https://docs.railway.com/reference/healthchecks
 https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
 ```
@@ -134,6 +218,7 @@ Do not mark runtime work ready until these are satisfied:
 Keystone memory contract committed
 capability confidence model committed
 convergence status committed
+surface/session desync protocol committed
 human review complete
 live public health checked against selected deployment
 runtime flags audited
@@ -186,4 +271,5 @@ review #20 again
 prefer splitting broad runtime changes into small successor PRs
 keep default-closed behavior as the baseline
 require live endpoint/deployment-log evidence before release validation
+run the resync protocol after any major context loss
 ```
