@@ -72,6 +72,14 @@ IMMUTABLE_RULES = {
 # ---------------------------------------------------------------------------
 
 _ESCALATION_DB = os.environ.get("ESCALATION_DB_PATH", "./data/escalations.db")
+AUTONOMOUS_ESCALATION_EXECUTOR_ENV = "ENABLE_AUTONOMOUS_ESCALATION_EXECUTOR"
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.lower() in {"1", "true", "yes", "on"}
 
 
 def _init_escalation_db(db_path: str = _ESCALATION_DB) -> None:
@@ -643,6 +651,7 @@ class AutonomousAgentSystem:
         escalation_db_path: str = _ESCALATION_DB,
         pbft_db_path: str = "./data/autonomous_pbft.db",
         node_id: str = "autonomous-node",
+        auto_execute_escalations: Optional[bool] = None,
     ):
         if peer_urls is None:
             peer_urls = []
@@ -651,6 +660,10 @@ class AutonomousAgentSystem:
         self._public_key = public_key
         self._peer_urls = peer_urls
         self._node_id = node_id
+        if auto_execute_escalations is None:
+            auto_execute_escalations = _env_flag(AUTONOMOUS_ESCALATION_EXECUTOR_ENV)
+        self.auto_execute_escalations_enabled = bool(auto_execute_escalations)
+        self._executor_thread = None
 
         # Shared audit log
         self._audit_log = AuditLog(db_path=audit_db_path)
@@ -708,12 +721,12 @@ class AutonomousAgentSystem:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
-        # Start background thread for auto-executing expired escalations
-        self._executor_thread = threading.Thread(
-            target=self._escalation_executor_loop,
-            daemon=True,
-        )
-        self._executor_thread.start()
+        if self.auto_execute_escalations_enabled:
+            self._executor_thread = threading.Thread(
+                target=self._escalation_executor_loop,
+                daemon=True,
+            )
+            self._executor_thread.start()
 
     def _escalation_executor_loop(self):
         """Background loop that auto-executes escalations after lock period."""
@@ -817,6 +830,7 @@ class AutonomousAgentSystem:
             },
             "audit_chain": chain_info,
             "peer_count": len(self._peer_urls),
+            "auto_execute_escalations_enabled": self.auto_execute_escalations_enabled,
         }
 
     def get_rules(self) -> dict:

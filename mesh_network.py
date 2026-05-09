@@ -11,12 +11,13 @@ import os
 import requests
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 
 DB_PATH = "./data/mesh.db"
 NODE_ID = os.environ.get('NODE_ID', 'unknown')
 MESH_PORT = int(os.environ.get('MESH_PORT', 5001))
+MAX_SYNC_VIOLATIONS = 500
 
 def init_mesh_db():
     """Initialize mesh network database"""
@@ -90,22 +91,112 @@ def add_mesh_peer(node_id, ip_address, port):
     conn.commit()
     conn.close()
 
+
+def _violation_from_row(row):
+    return {
+        "violation_id": row[0],
+        "system_name": row[1],
+        "violation_type": row[2],
+        "severity": row[3],
+        "affected_count": row[4],
+        "harm_amount": row[5],
+        "first_reported": row[6],
+        "last_updated": row[7],
+    }
+
+
+def _local_mesh_violation_records():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''
+        SELECT violation_id, system_name, violation_type, severity,
+               affected_count, harm_amount, first_reported, last_updated
+        FROM mesh_violations
+        ORDER BY last_updated DESC
+        LIMIT ?
+    ''', (MAX_SYNC_VIOLATIONS,))
+    records = [_violation_from_row(row) for row in c.fetchall()]
+    conn.close()
+    return records
+
+
+def _merge_peer_violations(peer_node_id, violations):
+    if not isinstance(violations, list):
+        raise ValueError("violations must be a list")
+    if len(violations) > MAX_SYNC_VIOLATIONS:
+        raise ValueError(f"violations exceeds max {MAX_SYNC_VIOLATIONS}")
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    merged = 0
+    for violation in violations:
+        if not isinstance(violation, dict):
+            continue
+        violation_id = violation.get('violation_id') or violation.get('id')
+        if not violation_id:
+            continue
+        try:
+            c.execute('''
+                INSERT INTO mesh_violations
+                (violation_id, system_name, violation_type, severity,
+                 affected_count, harm_amount, first_reported, last_updated, verified_by_peers)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ''', (
+                violation_id,
+                violation.get('system_name') or violation.get('system'),
+                violation.get('violation_type') or violation.get('type'),
+                violation.get('severity'),
+                violation.get('affected_count') or violation.get('affected'),
+                violation.get('harm_amount') or violation.get('harm'),
+                violation.get('first_reported'),
+                violation.get('last_updated') or datetime.now(timezone.utc).isoformat(),
+            ))
+        except sqlite3.IntegrityError:
+            c.execute('''
+                UPDATE mesh_violations
+                SET verified_by_peers = verified_by_peers + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE violation_id = ?
+            ''', (violation_id,))
+        merged += 1
+
+    c.execute('''
+        INSERT INTO mesh_sync_log (peer_node_id, sync_type, items_synced, status)
+        VALUES (?, ?, ?, ?)
+    ''', (peer_node_id, 'violation_receive', merged, 'success'))
+    conn.commit()
+    conn.close()
+    return merged
+
+
+def receive_mesh_sync(payload):
+    """Merge peer violations and return this node's shareable mesh records."""
+    if not isinstance(payload, dict):
+        raise ValueError("JSON object required")
+
+    peer_node_id = payload.get('node_id')
+    if not peer_node_id:
+        raise ValueError("node_id required")
+
+    merged = _merge_peer_violations(peer_node_id, payload.get('violations', []))
+    return {
+        "node_id": NODE_ID,
+        "merged": merged,
+        "violations": _local_mesh_violation_records(),
+    }
+
+
 def sync_violations_with_peer(peer_node_id, peer_ip, peer_port):
     """Sync violations with a peer node"""
     try:
-        # Get our violations
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('SELECT * FROM mesh_violations')
-        our_violations = c.fetchall()
-        conn.close()
+        our_violations = _local_mesh_violation_records()
 
         # Send to peer
         response = requests.post(
-            f'http://{peer_ip}:{peer_port}/mesh/sync',
+            f'http://{peer_ip}:{peer_port}/api/mesh/sync',
             json={
                 'node_id': NODE_ID,
-                'violations': [dict(row) for row in our_violations]
+                'violations': our_violations
             },
             timeout=5
         )
@@ -113,39 +204,17 @@ def sync_violations_with_peer(peer_node_id, peer_ip, peer_port):
         if response.status_code == 200:
             # Receive peer's violations
             peer_data = response.json()
+            merged = _merge_peer_violations(
+                peer_node_id,
+                peer_data.get('violations', []),
+            )
 
-            # Merge and store peer violations
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            for violation in peer_data.get('violations', []):
-                try:
-                    c.execute('''
-                        INSERT INTO mesh_violations
-                        (violation_id, system_name, violation_type, severity,
-                         affected_count, harm_amount, first_reported, last_updated, verified_by_peers)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-                    ''', (
-                        violation.get('violation_id'),
-                        violation.get('system_name'),
-                        violation.get('violation_type'),
-                        violation.get('severity'),
-                        violation.get('affected_count'),
-                        violation.get('harm_amount'),
-                        violation.get('first_reported'),
-                        violation.get('last_updated')
-                    ))
-                except sqlite3.IntegrityError:
-                    c.execute('''
-                        UPDATE mesh_violations
-                        SET verified_by_peers = verified_by_peers + 1,
-                            last_updated = CURRENT_TIMESTAMP
-                        WHERE violation_id = ?
-                    ''', (violation.get('violation_id'),))
-
             c.execute('''
                 INSERT INTO mesh_sync_log (peer_node_id, sync_type, items_synced, status)
                 VALUES (?, ?, ?, ?)
-            ''', (peer_node_id, 'violation_sync', len(our_violations), 'success'))
+            ''', (peer_node_id, 'violation_sync', merged, 'success'))
 
             conn.commit()
             conn.close()

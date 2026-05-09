@@ -104,6 +104,7 @@ Optional node metadata can help show distribution without publishing raw IP addr
 | `CENTRAL_SERVER` | `https://human-flourishing-frameworks.onrender.com` | Adoption telemetry target when sync is enabled |
 | `ENABLE_MESH_SYNC` | empty/false | Opt in to background peer mesh sync |
 | `ENABLE_LIVE_SENSORS` | empty/false | Opt in to polling external public APIs in the live sensor loop |
+| `ENABLE_AUTONOMOUS_ESCALATION_EXECUTOR` | empty/false | Opt in to background execution of locked autonomous escalations |
 
 To make a local node visible to a central adoption tracker, run it with:
 
@@ -131,6 +132,7 @@ Do not distribute `HFF_WRITE_TOKEN` to reporting nodes. It is reserved for privi
 | `POST /api/adoption/register` | Register node liveness telemetry; requires adoption grant |
 | `GET /api/adoption/stats` | Adoption/liveness statistics |
 | `GET /api/adoption/nodes` | Recent visible nodes |
+| `POST /api/mesh/sync` | Receive peer mesh sync payloads; closed unless `ENABLE_MESH_SYNC=true` |
 | `POST /api/autonomous/submit` | Submit evidence for autonomous processing; requires write grant |
 | `GET /api/autonomous/status` | Agent system status |
 | `GET /api/autonomous/rules` | Immutable rules transparency endpoint |
