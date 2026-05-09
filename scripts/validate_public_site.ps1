@@ -19,7 +19,7 @@ function Invoke-WithRetry {
         }
         catch {
             $lastError = $_
-            Write-Warning "$Label failed on attempt $i/$Retries: $($_.Exception.Message)"
+            Write-Warning "${Label} failed on attempt ${i}/${Retries}: $($_.Exception.Message)"
             if ($i -lt $Retries) {
                 Start-Sleep -Seconds $RetryDelaySeconds
             }
