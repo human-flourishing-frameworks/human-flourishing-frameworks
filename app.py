@@ -21,7 +21,7 @@ from adoption_tracker import (
     get_verified_node_count
 )
 from mesh_network import (
-    init_mesh_db, get_mesh_violations, sync_with_mesh
+    init_mesh_db, get_mesh_violations, receive_mesh_sync, sync_with_mesh
 )
 from data_sources import get_compas_summary
 from seed_data import ALL_SEED_MEASUREMENTS
@@ -1127,6 +1127,26 @@ def mesh_violations():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 200
+
+
+@app.route('/api/mesh/sync', methods=['POST'])
+def mesh_sync():
+    """Receive mesh sync payloads only when mesh sync is explicitly enabled."""
+    if not ENABLE_MESH_SYNC:
+        return jsonify({
+            "error": "mesh_sync_disabled",
+            "message": "Set ENABLE_MESH_SYNC=true to allow mesh sync writes.",
+        }), 403
+
+    try:
+        payload = request.get_json(silent=True)
+        if not payload:
+            return jsonify({"error": "JSON body required"}), 400
+        return jsonify(receive_mesh_sync(payload)), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------
