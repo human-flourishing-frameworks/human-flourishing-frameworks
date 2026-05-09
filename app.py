@@ -23,7 +23,7 @@ from adoption_tracker import (
 from mesh_network import (
     init_mesh_db, get_mesh_violations, sync_with_mesh
 )
-from data_sources import get_mock_violations, get_compas_summary
+from data_sources import get_compas_summary
 from seed_data import ALL_SEED_MEASUREMENTS
 from agent_system import (
     AutonomousAgentSystem,
@@ -572,25 +572,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- SYNTHETIC VIOLATIONS (collapsed by default) -->
-        <!-- ============================================================ -->
-        <h2 style="color: #ffcc00;">
-            <span class="collapsible-header collapsed" onclick="toggleSection('violations-section', this)">
-                <span class="arrow">&#9660;</span> Synthetic Violations (Demo)
-                <span style="font-size: 13px; font-weight: normal; color: #888;">
-                    &mdash; <span id="violation-count">0</span> mock entries
-                </span>
-            </span>
-        </h2>
-        <div id="violations-section" style="display: none;">
-            <div class="section-banner banner-yellow">
-                <strong>DEMO DATA</strong> &mdash; These violations are synthetic examples.
-                They do not represent real incidents. Real data lives in the world model above.
-            </div>
-            <div id="violations-list"></div>
-        </div>
-
         <footer>
             <p>Human Flourishing Frameworks &mdash; Research Software</p>
             <p style="margin-top: 8px;">
@@ -963,30 +944,6 @@ HTML_TEMPLATE = """
             })
             .catch(() => {});
 
-        // ---- SYNTHETIC VIOLATIONS ----
-        fetch('/api/violations')
-            .then(r => r.json())
-            .then(data => {
-                const violations = data.violations || [];
-                document.getElementById('violation-count').textContent = violations.length;
-
-                const list = document.getElementById('violations-list');
-                list.innerHTML = '';
-                violations.forEach(v => {
-                    const sev = (v.severity || 'medium').toLowerCase();
-                    const card = document.createElement('div');
-                    card.className = 'violation-card';
-                    card.innerHTML = `
-                        <h3>${v.system_name || v.id}</h3>
-                        <p>${v.description}</p>
-                        <p>Affected (simulated): ${(v.affected_count||0).toLocaleString()}</p>
-                        <span class="sev-badge sev-${sev}">${sev.toUpperCase()}</span>
-                    `;
-                    list.appendChild(card);
-                });
-            })
-            .catch(() => {});
-
         // Register this browser as a node
         fetch('/api/adoption/register', {
             method: 'POST',
@@ -1066,21 +1023,6 @@ def api_status():
         "disclaimer": (
             "This is research software. Violation data shown is synthetic "
             "unless labeled otherwise."
-        ),
-    })
-
-
-@app.route('/api/violations')
-def api_violations():
-    """Return mock violations from data_sources, clearly labeled."""
-    violations = get_mock_violations()
-    return jsonify({
-        "violations": violations,
-        "count": len(violations),
-        "data_source": "mock",
-        "disclaimer": (
-            "These violations are synthetic examples for testing. "
-            "See data_sources.py for real public datasets."
         ),
     })
 

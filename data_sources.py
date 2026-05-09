@@ -87,72 +87,6 @@ def get_compas_summary() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Mock / demo data — clearly labelled as synthetic
-# ---------------------------------------------------------------------------
-
-_MOCK_VIOLATIONS: list[dict[str, Any]] = [
-    {
-        "id": "MOCK-001",
-        "system_name": "Demo System Alpha",
-        "description": (
-            "Synthetic example: demographic parity gap exceeds threshold "
-            "in loan-approval demo model."
-        ),
-        "affected_count": 1_200,
-        "severity": "high",
-        "source": "MOCK - Not Real Data",
-        "created_at": "2026-01-15T00:00:00Z",
-    },
-    {
-        "id": "MOCK-002",
-        "system_name": "Test Healthcare AI",
-        "description": (
-            "Synthetic example: predictive model under-refers patients from "
-            "underrepresented group in simulated triage scenario."
-        ),
-        "affected_count": 340,
-        "severity": "medium",
-        "source": "MOCK - Not Real Data",
-        "created_at": "2026-02-01T00:00:00Z",
-    },
-    {
-        "id": "MOCK-003",
-        "system_name": "Example Hiring Screener",
-        "description": (
-            "Synthetic example: resume-screening model shows statistically "
-            "significant score disparity across gender in test dataset."
-        ),
-        "affected_count": 870,
-        "severity": "high",
-        "source": "MOCK - Not Real Data",
-        "created_at": "2026-03-10T00:00:00Z",
-    },
-    {
-        "id": "MOCK-004",
-        "system_name": "Demo Recidivism Scorer",
-        "description": (
-            "Synthetic example: risk-score calibration differs by more than "
-            "5 percentage points between racial groups in test data."
-        ),
-        "affected_count": 2_100,
-        "severity": "critical",
-        "source": "MOCK - Not Real Data",
-        "created_at": "2026-04-22T00:00:00Z",
-    },
-]
-
-
-def get_mock_violations() -> list[dict[str, Any]]:
-    """Return clearly-labelled mock violation data for demos and tests.
-
-    Every record has ``source='MOCK - Not Real Data'``. These are synthetic
-    examples used for UI development and testing -- they do not represent
-    real incidents.
-    """
-    return [v.copy() for v in _MOCK_VIOLATIONS]
-
-
-# ---------------------------------------------------------------------------
 # Data-loading stub (not yet implemented)
 # ---------------------------------------------------------------------------
 
@@ -160,7 +94,7 @@ def get_mock_violations() -> list[dict[str, Any]]:
 def load_data_source(source: DataSource) -> list[dict[str, Any]]:
     """Download and cache data from the source URL.
 
-    Not yet implemented -- currently returns mock data with a warning.
+    Not yet implemented -- currently returns an empty list with a warning.
 
     When implemented this function will:
     1. Check a local cache directory for a previously downloaded copy.
@@ -177,11 +111,12 @@ def load_data_source(source: DataSource) -> list[dict[str, Any]]:
     -------
     list[dict]
         Parsed records from the source. Until real loading is implemented,
-        returns mock data so callers have a consistent return type.
+        returns an empty list so callers receive a consistent return type
+        without synthetic data leaking into measurements.
     """
     print(
         f"WARNING: load_data_source() is not yet implemented. "
-        f"Returning mock data instead of real data from '{source.name}'. "
+        f"Returning [] instead of real data from '{source.name}'. "
         f"See {source.url} to download the dataset manually."
     )
-    return get_mock_violations()
+    return []
