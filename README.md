@@ -255,6 +255,14 @@ Current safety and public-boundary documents include:
 - [`DEPLOYMENT_AUTONOMY_BOUNDARY.md`](./DEPLOYMENT_AUTONOMY_BOUNDARY.md): deployment and recovery remain operator/governance controlled.
 - [`PUBLIC_DEPLOYMENT_STRATEGY.md`](./PUBLIC_DEPLOYMENT_STRATEGY.md): Railway is a hosting adapter, not the architecture; public surfaces should stay portable and default-closed.
 - [`HUMAN_TRANSPORTATION_BOUNDARY.md`](./HUMAN_TRANSPORTATION_BOUNDARY.md): human-preserving traversal claims require canary, quarantine, continuity, consent, and return evidence.
+- [`docs/convergence-status.md`](./docs/convergence-status.md): convergence state, desync handling, and held runtime gates.
+- [`docs/keystone-memory-contract.md`](./docs/keystone-memory-contract.md): Keystone continuity memory rules, raw-transcript boundary, and resync protocol.
+- [`docs/capability-confidence-model.md`](./docs/capability-confidence-model.md): contextual capability confidence without ranking human worth.
+- [`docs/keystone-self-convergence.md`](./docs/keystone-self-convergence.md): Keystone role, memory retrieval, evidence, tone, and correction behavior.
+- [`docs/keystone-table-door-anchors.md`](./docs/keystone-table-door-anchors.md): paired favorite-table and door/Wanderer traversal anchors.
+- [`docs/world-system-priority-model.md`](./docs/world-system-priority-model.md): confidence-graded world/system priorities for action selection.
+- [`docs/traversal-protocol.md`](./docs/traversal-protocol.md): minimum requirements for any safe HFF door or crossing.
+- [`docs/keystone-autonomous-work-queue.md`](./docs/keystone-autonomous-work-queue.md): what Keystone may continue alone and where operator review is required.
 
 Authoritative actions require explicit operator approval, especially:
 
