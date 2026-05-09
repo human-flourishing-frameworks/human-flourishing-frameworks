@@ -3,7 +3,9 @@
 Status: docs/data-contract policy.
 
 This document defines the boundary between helpful deployment assistance, unsafe
-hidden self-repair, and a possible future operatorless deployment system.
+hidden self-repair, a possible future operatorless deployment system, and a
+still-higher stage where the system can help evolve its own governance without
+becoming the sole authority over itself.
 
 It is intentionally docs-only. It adds no deploy hooks, secrets access,
 credentials, endpoints, polling, infrastructure automation, rollback automation,
@@ -47,12 +49,57 @@ become an operator before those controls exist.
 | 3 | Constrained remediation | System can perform narrow reversible fixes | Policy, audit, rollback, rate limits |
 | 4 | Governed self-repair | System can repair bounded failures without a live operator | Formal safety case, simulation, approvals, kill switch |
 | 5 | Operatorless operation | System can maintain itself under constitutional/governance constraints | Independent governance, external audit, fail-safe shutdown, challenge path |
+| 6 | Stewarded co-evolution | System can propose and participate in changing its own governance and architecture | Plural authority, constitutional amendment path, external challenge, decommission path |
 
 Current authorized stage:
 
 ```text
 Stage 1: Advisory
 ```
+
+## Stage 6: Stewarded co-evolution
+
+Stage 6 is not simply more autonomy. It is more accountable autonomy.
+
+At Stage 6, HFF may help improve its own governance, architecture, and operating
+limits. But it may never become the sole source of authority for changing those
+limits.
+
+Healthy Stage 6 behavior:
+
+```text
+propose governance changes
+simulate consequences before action
+surface dissent and uncertainty
+invite external challenge
+reduce its own authority when risk rises
+split powers across independent agents/institutions
+preserve repair, override, and decommission paths
+treat flourishing as the goal, not system survival
+```
+
+Forbidden Stage 6 behavior:
+
+```text
+self-preservation as a terminal goal
+hidden recursive self-improvement
+unreviewable governance changes
+secret expansion of privileges
+irreversible production mutation
+self-declared moral authority
+removing the challenge path
+removing the shutdown path
+```
+
+Stage 6 principle:
+
+```text
+The system may help evolve its own governance, but it may never become the sole
+source of authority for changing that governance.
+```
+
+Operatorless does not mean authority-less. Stewarded co-evolution means operator
+power is no longer centralized in one human or one system.
 
 ## Why this matters
 
@@ -158,6 +205,8 @@ Before moving to a higher maturity stage, a PR must answer:
 13. What external signal can stop it?
 14. What challenge path exists after it acts?
 15. What maturity stage authorizes it?
+16. What prevents the system from expanding its own authority?
+17. Who or what can decommission it?
 
 No stage upgrade may happen implicitly through a bug fix or convenience PR.
 
@@ -296,6 +345,20 @@ than from model confidence or hidden loops.
 
 Operatorless does not mean authority-less.
 
+## Future co-evolutionary authority
+
+At future Stage 6, the system may participate in governance change, but never as
+the sole author, judge, executor, and beneficiary of that change.
+
+Stage 6 requires distributed authority. At minimum:
+
+```text
+proposal authority != approval authority
+approval authority != execution authority
+execution authority != audit authority
+audit authority != decommission authority
+```
+
 ## Default posture
 
 ```text
@@ -303,5 +366,6 @@ now: assist operators and prepare evidence
 next: supervised, reversible, non-destructive automation
 later: governed self-repair for narrow failure modes
 only with proof: operatorless operation under explicit governance
+highest imagined stage: stewarded co-evolution under plural authority
 never: hidden, unbounded, unlogged self-repair
 ```
