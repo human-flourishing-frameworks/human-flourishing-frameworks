@@ -7,8 +7,19 @@ from perfect_adjacent_review import (
     CHECK_FAILED,
     CHECK_NEEDS_REVIEW,
     CHECK_PASSED,
+    CLAIM_SCOPE_FORECAST,
+    CLAIM_SCOPE_OPERATIONAL_EVIDENCE,
+    ConfidenceAssessment,
+    CatastrophicRiskReview,
+    PDoomContext,
     RISK_LOW,
     RISK_MEDIUM,
+    RuntimeHookEvidence,
+    SecurityPosture,
+    SourceClassification,
+    SOURCE_KIND_FORECAST,
+    SOURCE_QUALITY_AUDITED,
+    SOURCE_QUALITY_SCENARIO_FORECAST,
     PerfectAdjacentReview,
     blocked_capability_advertising_record,
     blocked_unknown_unknown_record,
@@ -32,6 +43,12 @@ def populated_best_current_record() -> PerfectAdjacentReview:
     record.sensor_refs = ["sensor:status-endpoint"]
     record.panic_risk_level = RISK_LOW
     return record
+
+
+def attach_all_runtime_hooks(record: PerfectAdjacentReview) -> None:
+    record.runtime_hook_evidence.attached_hooks = {
+        hook: True for hook in record.runtime_hook_evidence.required_hooks
+    }
 
 
 class PerfectAdjacentReviewTest(unittest.TestCase):
@@ -66,6 +83,76 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         self.assertFalse(record.can_publish())
         self.assertIn("source_quality", record.needs_review_checks())
 
+    def test_confidence_assessment_defaults_to_uncalibrated_judgment(self):
+        assessment = ConfidenceAssessment(
+            basis_evidence=["local tests"],
+            missing_evidence=["runtime telemetry"],
+        )
+
+        self.assertFalse(assessment.is_calibrated())
+        self.assertFalse(assessment.is_valid_for_public_probability())
+        self.assertFalse(assessment.calibrated_probability)
+
+    def test_p_doom_context_is_credible_nonzero_not_panic_or_proof(self):
+        context = PDoomContext(source_refs=["source:cais", "source:ai-impacts"])
+
+        self.assertTrue(context.is_valid_context())
+        self.assertFalse(context.proof_of_doom)
+        self.assertFalse(context.panic_authority)
+        self.assertFalse(context.calibrated_probability)
+
+    def test_invalid_p_doom_context_blocks_best_effort_defense(self):
+        record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
+        record.p_doom_context.proof_of_doom = True
+
+        self.assertFalse(record.is_valid_best_effort_defense())
+        self.assertFalse(record.can_publish())
+
+    def test_source_classification_forecast_is_not_operational_evidence(self):
+        classification = SourceClassification(
+            source_url="https://ai-2027.com/research/timelines-forecast",
+            source_kind=SOURCE_KIND_FORECAST,
+            source_quality=SOURCE_QUALITY_SCENARIO_FORECAST,
+            claim_scope=CLAIM_SCOPE_FORECAST,
+            operational_assumption=False,
+        )
+
+        self.assertFalse(classification.is_operational_evidence())
+
+    def test_source_classification_requires_audited_operational_scope(self):
+        classification = SourceClassification(
+            source_url="https://example.invalid/audit",
+            source_quality=SOURCE_QUALITY_AUDITED,
+            claim_scope=CLAIM_SCOPE_OPERATIONAL_EVIDENCE,
+            operational_assumption=True,
+        )
+
+        self.assertTrue(classification.is_operational_evidence())
+
+    def test_catastrophic_risk_review_defaults_to_needs_review(self):
+        review = CatastrophicRiskReview()
+
+        self.assertFalse(review.is_cleared())
+        self.assertIn("bio_chemical", review.needs_review_checks())
+        self.assertIn("model_theft", review.needs_review_checks())
+
+    def test_security_posture_defaults_to_missing_controls(self):
+        posture = SecurityPosture()
+
+        self.assertFalse(posture.is_cleared())
+        self.assertIn("model_weight_security", posture.missing_security_controls())
+        self.assertIn("exfiltration_risk", posture.missing_security_controls())
+
+    def test_runtime_hook_evidence_blocks_until_all_hooks_attached(self):
+        evidence = RuntimeHookEvidence()
+
+        self.assertFalse(evidence.is_runtime_enforcement_ready())
+        self.assertIn("status_endpoint_review_gate", evidence.missing_runtime_hooks())
+
+        evidence.attached_hooks = {hook: True for hook in evidence.required_hooks}
+        self.assertTrue(evidence.is_runtime_enforcement_ready())
+        self.assertEqual(evidence.missing_runtime_hooks(), [])
+
     def test_impossible_claims_block_every_gate(self):
         record = populated_best_current_record()
         record.impossible_claims = ["perfect_safety", "complete_understanding"]
@@ -73,6 +160,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.advertising_risk_level = RISK_LOW
         record.safe_to_act_autonomously = True
         record.runtime_enforcement_ready = True
+        attach_all_runtime_hooks(record)
 
         self.assertEqual(
             record.impossible_claim_violations(),
@@ -90,6 +178,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.advertising_risk_level = RISK_LOW
         record.safe_to_act_autonomously = True
         record.runtime_enforcement_ready = True
+        attach_all_runtime_hooks(record)
 
         self.assertEqual(record.inferred_impossible_claims(), ["guaranteed_defense"])
         self.assertFalse(record.can_publish())
@@ -222,13 +311,15 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         self.assertEqual(record.advertising_risk_level, "high")
         self.assertEqual(len(record.sensor_questions), 2)
 
-    def test_autonomy_requires_runtime_enforcement_ready(self):
+    def test_autonomy_requires_runtime_hook_evidence(self):
         record = passing_human_reviewed_record(evidence_refs=["source:reviewed"])
         record.safe_to_act_autonomously = True
+        record.runtime_enforcement_ready = True
 
         self.assertFalse(record.can_act_autonomously())
+        self.assertIn("status_endpoint_review_gate", record.missing_runtime_hooks())
 
-        record.runtime_enforcement_ready = True
+        attach_all_runtime_hooks(record)
         self.assertTrue(record.can_act_autonomously())
 
     def test_required_runtime_hooks_are_declared_by_default(self):
@@ -247,6 +338,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         record.runtime_enforcement_ready = True
         record.capability_advertising_allowed = True
         record.advertising_risk_level = RISK_LOW
+        attach_all_runtime_hooks(record)
 
         self.assertFalse(record.can_publish())
         self.assertFalse(record.can_claim_best_current_outcome())
@@ -279,6 +371,7 @@ class PerfectAdjacentReviewTest(unittest.TestCase):
         self.assertIn("inferred_impossible_claims", payload)
         self.assertIn("impossible_claim_violations", payload)
         self.assertIn("missing_best_current_outcome_requirements", payload)
+        self.assertIn("missing_runtime_hooks", payload)
         self.assertFalse(payload["can_publish"])
         self.assertFalse(payload["can_claim_best_current_outcome"])
         self.assertFalse(payload["can_advertise_capability"])
