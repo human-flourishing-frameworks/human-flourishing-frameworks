@@ -90,6 +90,85 @@ def add_mesh_peer(node_id, ip_address, port):
     conn.commit()
     conn.close()
 
+
+def _violation_row_to_payload(row):
+    return {
+        "violation_id": row[1],
+        "system_name": row[2],
+        "violation_type": row[3],
+        "severity": row[4],
+        "affected_count": row[5],
+        "harm_amount": row[6],
+        "first_reported": row[7],
+        "last_updated": row[8],
+    }
+
+
+def receive_mesh_sync(payload):
+    """Merge a peer sync payload and return this node's visible violations."""
+    if not isinstance(payload, dict):
+        raise ValueError("mesh sync payload must be a JSON object")
+
+    peer_node_id = payload.get("node_id")
+    if not peer_node_id:
+        raise ValueError("node_id is required")
+
+    violations = payload.get("violations", [])
+    if violations is None:
+        violations = []
+    if not isinstance(violations, list):
+        raise ValueError("violations must be a list")
+
+    merged = 0
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
+    for violation in violations[:100]:
+        if not isinstance(violation, dict):
+            continue
+        violation_id = violation.get("violation_id")
+        if not violation_id:
+            continue
+        try:
+            c.execute('''
+                INSERT INTO mesh_violations
+                (violation_id, system_name, violation_type, severity,
+                 affected_count, harm_amount, first_reported, last_updated, verified_by_peers)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ''', (
+                violation_id,
+                violation.get("system_name"),
+                violation.get("violation_type"),
+                violation.get("severity"),
+                violation.get("affected_count"),
+                violation.get("harm_amount"),
+                violation.get("first_reported"),
+                violation.get("last_updated"),
+            ))
+            merged += 1
+        except sqlite3.IntegrityError:
+            c.execute('''
+                UPDATE mesh_violations
+                SET verified_by_peers = verified_by_peers + 1,
+                    last_updated = CURRENT_TIMESTAMP
+                WHERE violation_id = ?
+            ''', (violation_id,))
+
+    c.execute('''
+        INSERT INTO mesh_sync_log (peer_node_id, sync_type, items_synced, status)
+        VALUES (?, ?, ?, ?)
+    ''', (peer_node_id, 'violation_receive', merged, 'success'))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "node_id": NODE_ID,
+        "merged": merged,
+        "violations": get_mesh_violations(),
+    }
+
+
 def sync_violations_with_peer(peer_node_id, peer_ip, peer_port):
     """Sync violations with a peer node"""
     try:
@@ -97,51 +176,25 @@ def sync_violations_with_peer(peer_node_id, peer_ip, peer_port):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute('SELECT * FROM mesh_violations')
-        our_violations = c.fetchall()
+        our_violations = [_violation_row_to_payload(row) for row in c.fetchall()]
         conn.close()
 
         # Send to peer
         response = requests.post(
-            f'http://{peer_ip}:{peer_port}/mesh/sync',
+            f'http://{peer_ip}:{peer_port}/api/mesh/sync',
             json={
                 'node_id': NODE_ID,
-                'violations': [dict(row) for row in our_violations]
+                'violations': our_violations,
             },
             timeout=5
         )
 
         if response.status_code == 200:
             # Receive peer's violations
-            peer_data = response.json()
+            receive_mesh_sync(response.json())
 
-            # Merge and store peer violations
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            for violation in peer_data.get('violations', []):
-                try:
-                    c.execute('''
-                        INSERT INTO mesh_violations
-                        (violation_id, system_name, violation_type, severity,
-                         affected_count, harm_amount, first_reported, last_updated, verified_by_peers)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-                    ''', (
-                        violation.get('violation_id'),
-                        violation.get('system_name'),
-                        violation.get('violation_type'),
-                        violation.get('severity'),
-                        violation.get('affected_count'),
-                        violation.get('harm_amount'),
-                        violation.get('first_reported'),
-                        violation.get('last_updated')
-                    ))
-                except sqlite3.IntegrityError:
-                    c.execute('''
-                        UPDATE mesh_violations
-                        SET verified_by_peers = verified_by_peers + 1,
-                            last_updated = CURRENT_TIMESTAMP
-                        WHERE violation_id = ?
-                    ''', (violation.get('violation_id'),))
-
             c.execute('''
                 INSERT INTO mesh_sync_log (peer_node_id, sync_type, items_synced, status)
                 VALUES (?, ?, ?, ?)
