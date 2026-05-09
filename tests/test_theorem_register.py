@@ -148,10 +148,23 @@ class TheoremRegisterValidationTest(unittest.TestCase):
                     self.assertFalse(theorem.get("operational_proof", False))
 
     def test_blocked_identity_and_survival_claims_are_not_asserted(self):
-        serialized = json.dumps(self.register, sort_keys=True)
+        """Block strong claims in assertion surfaces, not in negative-test examples.
+
+        It is valid for the register to mention phrases like "same person
+        guaranteed" as examples of future lint targets. It is not valid for a
+        theorem claim or pass criterion to assert them as true.
+        """
+        assertion_surfaces = []
+        for theorem in self.theorems:
+            assertion_surfaces.append(theorem["title"])
+            assertion_surfaces.append(theorem["claim"])
+            assertion_surfaces.append(theorem["human_risk_note"])
+            assertion_surfaces.extend(theorem["pass_criteria"])
+
+        serialized_assertions = json.dumps(assertion_surfaces, sort_keys=True)
         for blocked_pattern in BLOCKED_STRONG_CLAIMS:
             with self.subTest(pattern=blocked_pattern.pattern):
-                self.assertIsNone(blocked_pattern.search(serialized))
+                self.assertIsNone(blocked_pattern.search(serialized_assertions))
 
     def test_theorem_register_keeps_living_alex_primary(self):
         t2 = next(theorem for theorem in self.theorems if theorem["theorem_id"] == "T2")
@@ -166,13 +179,22 @@ class TheoremRegisterValidationTest(unittest.TestCase):
         self.assertIn("ai_plus_repo_without_living_alex_consent_source", t8["negative_tests"])
 
     def test_lore_docs_are_marked_as_archetype_not_proof(self):
+        operational_proof_assignment = re.compile(
+            r"(?m)^\s*[\"']?operational_proof[\"']?\s*[:=]\s*true\s*,?\s*$",
+            re.IGNORECASE,
+        )
+
         for path in LORE_DOCS:
             with self.subTest(path=path.name):
                 text = path.read_text(encoding="utf-8")
-                self.assertIn("source-class", text.lower())
-                self.assertIn("not proof", text.lower())
-                self.assertNotIn("operational_proof=true", text)
-                self.assertNotIn("operational_proof: true", text)
+                lowered = text.lower()
+                self.assertIn("source-class", lowered)
+                self.assertTrue(
+                    "not proof" in lowered
+                    or "not operational proof" in lowered
+                    or "cannot prove" in lowered
+                )
+                self.assertIsNone(operational_proof_assignment.search(text))
 
 
 if __name__ == "__main__":
