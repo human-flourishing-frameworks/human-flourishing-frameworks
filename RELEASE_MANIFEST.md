@@ -45,6 +45,9 @@ tools/build_release_bundle.py
 tools/run_restore_drill.py
 ```
 
+`RESTORE_DRILL_CHECKLIST.md` is the restore drill checklist and must be reviewed
+before release.
+
 ## Required doctrine anchors
 
 The release should include these doctrine/context files when available:
