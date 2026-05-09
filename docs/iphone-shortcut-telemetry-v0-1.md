@@ -1,12 +1,12 @@
 # iPhone Shortcut Telemetry V0.1
 
-Status: implemented as operator Shortcut recipe using the existing adoption heartbeat surface.
+Status: transitional Shortcut recipe; superseded architecturally by `phone_telemetry.py`.
 
 Last reviewed: 2026-05-09.
 
 ## Purpose
 
-Add a small amount of useful iPhone telemetry without adding a new runtime endpoint or collecting private phone data.
+Add a small amount of useful iPhone telemetry without collecting private phone data.
 
 V0.1 builds on the already-working iPhone adoption heartbeat:
 
@@ -14,6 +14,29 @@ V0.1 builds on the already-working iPhone adoption heartbeat:
 POST /api/adoption/register
 platform: iphone_shortcuts
 node_name: Alex iPhone
+```
+
+## Architecture correction
+
+HFF already has a sensor/measurement model in `sensors.py`. Phone telemetry should be represented as real `Measurement` objects, not only as adoption-node metadata.
+
+The repo now includes:
+
+```text
+phone_telemetry.py
+PhoneShortcutSensor
+sanitize_phone_payload
+tests/test_phone_telemetry.py
+```
+
+The existing adoption heartbeat remains useful for node visibility. It should not be treated as the final telemetry model.
+
+Correct layering:
+
+```text
+iPhone Shortcut heartbeat -> visible adoption node
+sanitized iPhone payload -> PhoneShortcutSensor -> Measurement
+future endpoint/table -> stores bounded phone telemetry separately
 ```
 
 ## Telemetry allowed in V0.1
@@ -25,6 +48,7 @@ battery_level_percent
 battery_state: charging | unplugged | full | unknown
 manual_mode: awake | working | sleep_soon | traveling | unknown
 shortcut_version
+operator_note: optional short bounded note
 ```
 
 Do not collect or transmit by default:
@@ -45,20 +69,11 @@ browser history
 raw notification content
 ```
 
-## Why this version uses existing fields
+## Current Shortcut bridge
 
-The current adoption schema already stores visible node metadata:
+Until HFF adds a dedicated phone telemetry endpoint/table, the iPhone Shortcut can still encode coarse telemetry into existing adoption metadata fields for visibility.
 
-```text
-version
-region
-operator_type
-deployment_type
-```
-
-Until HFF adds a dedicated phone telemetry endpoint/table, the iPhone Shortcut can encode coarse telemetry into those existing metadata fields.
-
-This avoids a runtime migration while still proving that the phone can report more than bare liveness.
+This is a bridge only.
 
 ## Recommended Shortcut actions
 
@@ -85,7 +100,7 @@ traveling
 unknown
 ```
 
-## Updated JSON body
+## Transitional JSON body
 
 Use the same URL and token as the working heartbeat.
 
@@ -106,6 +121,43 @@ Update the JSON body to:
 
 In Shortcuts, insert the variables using the variable picker rather than typing `${BatteryLevel}` literally.
 
+## Measurement model target
+
+The proper model is:
+
+```python
+Measurement(
+    value={
+        "device_id": "alex-iphone-001",
+        "battery_level": 83,
+        "battery_state": "charging",
+        "manual_mode": "working",
+        "shortcut_version": "phone-heartbeat-v0.2",
+    },
+    uncertainty=0.35,
+    confidence_interval=(0.0, 1.0),
+    sample_size=1,
+    source="iphone_shortcuts",
+    methodology="operator_initiated_phone_heartbeat",
+    temporal_range=("instant", "instant"),
+    scope="operator:alex:iphone",
+    confounders=[
+        "operator_controlled_shortcut",
+        "manual_mode_self_reported",
+        "phone_shortcut_may_fail_or_be_stale",
+    ],
+    missing=[
+        "no_precise_location",
+        "no_health_data",
+        "no_contacts",
+        "no_messages",
+        "no_audio",
+        "no_camera",
+        "no_notification_content",
+    ],
+)
+```
+
 ## Expected visible result
 
 After running the shortcut, check:
@@ -121,7 +173,7 @@ name: Alex iPhone
 platform: iphone_shortcuts
 ```
 
-and should now expose coarse telemetry inside visible metadata fields, for example:
+and may expose coarse bridge metadata inside visible adoption fields, for example:
 
 ```text
 version: phone-heartbeat-v0.1 battery=83
@@ -132,15 +184,15 @@ region: coarse_only
 
 ## Limits
 
-This is not a real phone telemetry table yet. It is a low-friction V0.1 bridge using existing adoption metadata.
+This is not a real phone telemetry table yet. It is a low-friction bridge plus a now-available sensor adapter.
 
-A later V1 can add:
+A later V1 should add:
 
 ```text
 POST /api/operator/phone/heartbeat
 GET /api/operator/phone/latest
 phone-specific token
-bounded schema validation
+bounded schema validation using phone_telemetry.py
 separate retention policy
 explicit privacy review
 ```
@@ -172,6 +224,7 @@ private personal-state proof
 2. Confirm Shortcut returns success.
 3. Open /api/adoption/nodes.
 4. Confirm Alex iPhone appears.
-5. Confirm battery and mode metadata are visible.
+5. Confirm coarse bridge metadata is visible if using the transitional JSON body.
 6. Confirm no token, location, health, contact, message, audio, camera, or notification data appears.
+7. Run tests/test_phone_telemetry.py when local or CI execution is available.
 ```
