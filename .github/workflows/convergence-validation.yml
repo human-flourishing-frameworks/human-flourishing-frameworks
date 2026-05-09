@@ -16,7 +16,7 @@ jobs:
   validation:
     name: Run convergence guardrails
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
@@ -47,3 +47,6 @@ jobs:
 
       - name: Validate release bundle builder
         run: python -m unittest discover -s tests -p "test_release_bundle.py" -t .
+
+      - name: Validate restore drill runner
+        run: python -m unittest discover -s tests -p "test_restore_drill.py" -t .
