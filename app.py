@@ -500,7 +500,7 @@ HTML_TEMPLATE = """
             <h1>Human Flourishing Frameworks</h1>
             <p class="subtitle">Observe outcomes. Model causes. Optimize for flourishing.</p>
             <div class="status-badge" id="status-badge">
-                ONLINE &mdash; <span id="wm-belief-count-header">0</span> beliefs
+                STATUS &mdash; <span id="wm-belief-count-header">0</span> beliefs
                 &mdash; <span id="wm-sensor-count-header">0</span> live sensors
                 &mdash; <span id="wm-domains-header">0</span> domains
             </div>
@@ -537,8 +537,8 @@ HTML_TEMPLATE = """
         <!-- ============================================================ -->
         <h2 style="color: #00ff88;">Live Sensors</h2>
         <div class="section-banner banner-green">
-            These sensors poll real public APIs every hour. When a sensor
-            returns new data, the model runs a Bayesian update and beliefs shift.
+            Live sensors are optional and default off. When explicitly enabled,
+            sensor data can update the model and shift beliefs.
         </div>
         <div id="sensors-container">
             <p style="color: #888;">Loading sensors...</p>
@@ -575,7 +575,7 @@ HTML_TEMPLATE = """
         <footer>
             <p>Human Flourishing Frameworks &mdash; Research Software</p>
             <p style="margin-top: 8px;">
-                The model is always wrong somewhere. It knows this, and it keeps correcting.
+                The model is always incomplete somewhere. Corrections are logged for review.
             </p>
         </footer>
     </div>
