@@ -1,0 +1,18 @@
+# PRE-RELEASE CHECKSUMS PLACEHOLDER
+# This file is not a finalized checksum manifest.
+# Before publishing hff-convergence-v0.1, regenerate from a clean checkout and
+# replace each PRE_RELEASE_PLACEHOLDER entry with an actual SHA256 digest.
+
+PRE_RELEASE_PLACEHOLDER  RELEASE_MANIFEST.md
+PRE_RELEASE_PLACEHOLDER  RECOVERY_README.md
+PRE_RELEASE_PLACEHOLDER  MIRROR_ARCHIVE_PLAN.md
+PRE_RELEASE_PLACEHOLDER  KEYSTONE_BOOTSTRAP.md
+PRE_RELEASE_PLACEHOLDER  RESTORE_DRILL_CHECKLIST.md
+PRE_RELEASE_PLACEHOLDER  FALSE_TRUTHS_REGISTER.md
+PRE_RELEASE_PLACEHOLDER  data/theorem-register.v0.1.json
+PRE_RELEASE_PLACEHOLDER  schemas/theorem-register.v0.1.schema.json
+PRE_RELEASE_PLACEHOLDER  tests/test_theorem_register.py
+PRE_RELEASE_PLACEHOLDER  tests/test_schema_source_lore.py
+PRE_RELEASE_PLACEHOLDER  tests/test_recovery_artifacts.py
+PRE_RELEASE_PLACEHOLDER  tests/test_ci_workflow.py
+PRE_RELEASE_PLACEHOLDER  tests/test_release_artifacts.py
