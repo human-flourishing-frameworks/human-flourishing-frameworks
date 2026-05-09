@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""Privacy-bounded iPhone Shortcut telemetry sensor.
+"""Backward-compatible iPhone Shortcut telemetry adapter.
 
-This module adapts coarse, operator-approved phone heartbeat payloads into the
-existing HFF sensor/measurement model. It intentionally does not add a runtime
-endpoint and does not collect private phone data by default.
+The generic implementation now lives in device_telemetry.py. This module keeps
+phone-specific names for existing callers/tests while routing through the shared
+DeviceTelemetrySensor and sanitizer.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping
 
-from sensors import Measurement, Sensor
+from device_telemetry import (
+    ALLOWED_BATTERY_STATES,
+    ALLOWED_MANUAL_MODES,
+    BLOCKED_DEVICE_TELEMETRY_FRAGMENTS,
+    DeviceTelemetrySensor,
+    blocked_device_telemetry_fields,
+    sanitize_device_payload,
+)
 
 
 ALLOWED_PHONE_TELEMETRY_FIELDS = frozenset({
@@ -24,209 +30,63 @@ ALLOWED_PHONE_TELEMETRY_FIELDS = frozenset({
     "recorded_at",
 })
 
-BLOCKED_PHONE_TELEMETRY_FRAGMENTS = (
-    "location",
-    "gps",
-    "latitude",
-    "longitude",
-    "coordinate",
-    "address",
-    "contact",
-    "message",
-    "call_log",
-    "photo",
-    "microphone",
-    "audio",
-    "camera",
-    "video",
-    "health",
-    "biometric",
-    "sleep",
-    "calendar",
-    "browser_history",
-    "notification",
-)
-
-ALLOWED_BATTERY_STATES = frozenset({"charging", "unplugged", "full", "unknown"})
-ALLOWED_MANUAL_MODES = frozenset({"awake", "working", "sleep_soon", "traveling", "unknown"})
-MAX_DEVICE_ID_LENGTH = 80
-MAX_VERSION_LENGTH = 80
-MAX_OPERATOR_NOTE_LENGTH = 160
-
-
-def _normalise_key(key: Any) -> str:
-    """Normalize a JSON key for allowlist/blocklist checks."""
-    return str(key).strip().lower().replace("-", "_").replace(" ", "_")
-
-
-def _bounded_text(value: Any, default: str, max_length: int) -> str:
-    """Return a stripped bounded text value."""
-    if value is None:
-        return default
-    text = str(value).strip()
-    if not text:
-        return default
-    return text[:max_length]
-
-
-def _choice(value: Any, allowed: frozenset[str], default: str) -> str:
-    """Normalize a bounded enum-like field."""
-    text = _bounded_text(value, default, 64).lower().replace(" ", "_").replace("-", "_")
-    return text if text in allowed else default
-
-
-def _coerce_battery_level(value: Any) -> Optional[int]:
-    """Coerce battery level to an integer percentage in [0, 100]."""
-    if value is None or value == "":
-        return None
-
-    if isinstance(value, str):
-        value = value.strip().rstrip("%")
-
-    try:
-        numeric = float(value)
-    except (TypeError, ValueError):
-        return None
-
-    if numeric < 0 or numeric > 100:
-        return None
-    return int(round(numeric))
+BLOCKED_PHONE_TELEMETRY_FRAGMENTS = BLOCKED_DEVICE_TELEMETRY_FRAGMENTS
 
 
 def blocked_phone_telemetry_fields(payload: Mapping[str, Any]) -> List[str]:
     """Return payload keys that look like disallowed private phone data."""
-    blocked: List[str] = []
-    for key in payload.keys():
-        normalised = _normalise_key(key)
-        if any(fragment in normalised for fragment in BLOCKED_PHONE_TELEMETRY_FRAGMENTS):
-            blocked.append(str(key))
-    return sorted(blocked)
+    return blocked_device_telemetry_fields(payload)
 
 
 def sanitize_phone_payload(payload: Mapping[str, Any]) -> Dict[str, Any]:
     """Validate and sanitize a coarse iPhone Shortcut telemetry payload.
 
-    The input must be a mapping with only allowlisted keys. Any key that looks
-    like location, health, messages, audio/video, contacts, or other private
-    phone data is rejected even if the value is blank.
+    This accepts the original phone-specific `shortcut_version` field and maps
+    it to the generic device telemetry `client_version` field.
     """
     if not isinstance(payload, Mapping):
         raise ValueError("phone telemetry payload must be a JSON object")
 
-    blocked = blocked_phone_telemetry_fields(payload)
-    if blocked:
-        raise ValueError("blocked_phone_telemetry_fields: " + ", ".join(blocked))
+    translated: Dict[str, Any] = dict(payload)
+    if "shortcut_version" in translated and "client_version" not in translated:
+        translated["client_version"] = translated.pop("shortcut_version")
 
-    normalised_keys = {_normalise_key(key) for key in payload.keys()}
-    unsupported = sorted(normalised_keys - ALLOWED_PHONE_TELEMETRY_FIELDS)
-    if unsupported:
-        raise ValueError("unsupported_phone_telemetry_fields: " + ", ".join(unsupported))
+    translated.setdefault("device_kind", "phone")
+    translated.setdefault("device_label", "Alex iPhone")
 
-    by_key = {_normalise_key(key): value for key, value in payload.items()}
-    battery_level = _coerce_battery_level(by_key.get("battery_level"))
-
+    sanitized = sanitize_device_payload(translated)
     return {
-        "device_id": _bounded_text(
-            by_key.get("device_id"),
-            "unknown_phone_device",
-            MAX_DEVICE_ID_LENGTH,
-        ),
-        "battery_level": battery_level,
-        "battery_state": _choice(
-            by_key.get("battery_state"),
-            ALLOWED_BATTERY_STATES,
-            "unknown",
-        ),
-        "manual_mode": _choice(
-            by_key.get("manual_mode"),
-            ALLOWED_MANUAL_MODES,
-            "unknown",
-        ),
-        "shortcut_version": _bounded_text(
-            by_key.get("shortcut_version"),
-            "unknown",
-            MAX_VERSION_LENGTH,
-        ),
-        "operator_note": _bounded_text(
-            by_key.get("operator_note"),
-            "",
-            MAX_OPERATOR_NOTE_LENGTH,
-        ),
-        "client_recorded_at": _bounded_text(
-            by_key.get("recorded_at"),
-            "unknown",
-            64,
-        ),
+        "device_id": sanitized["device_id"],
+        "battery_level": sanitized["battery_level"],
+        "battery_state": sanitized["battery_state"],
+        "manual_mode": sanitized["manual_mode"],
+        "shortcut_version": sanitized["client_version"],
+        "operator_note": sanitized["operator_note"],
+        "client_recorded_at": sanitized["client_recorded_at"],
     }
 
 
-class PhoneShortcutSensor(Sensor):
-    """A bounded sensor adapter for operator-approved iPhone Shortcut data.
+class PhoneShortcutSensor(DeviceTelemetrySensor):
+    """Phone-specific wrapper around the generic device telemetry sensor."""
 
-    This sensor observes only the latest explicitly supplied payload or an
-    injected payload provider. It does not access the phone directly.
-    """
-
-    def __init__(
-        self,
-        sensor_id: str = "alex-iphone-shortcut",
-        scope: str = "operator:alex:iphone",
-        payload_provider: Optional[Callable[[], Mapping[str, Any]]] = None,
-    ):
-        super().__init__(
-            sensor_id=sensor_id,
-            domain="personal_device_telemetry",
-            scope=scope,
-        )
-        self._payload_provider = payload_provider
-        self._latest_payload: Optional[Mapping[str, Any]] = None
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("sensor_id", "alex-iphone-shortcut")
+        kwargs.setdefault("scope", "operator:alex:iphone")
+        super().__init__(*args, **kwargs)
 
     def update_payload(self, payload: Mapping[str, Any]) -> Dict[str, Any]:
-        """Store a sanitized latest payload and return the sanitized copy."""
-        sanitized = sanitize_phone_payload(payload)
-        self._latest_payload = sanitized
-        return sanitized
-
-    def observe(self) -> List[Measurement]:
-        """Return one Measurement for the current phone payload, if available."""
-        try:
-            payload = self._payload_provider() if self._payload_provider else self._latest_payload
-            if payload is None:
-                self._last_error = "no_phone_payload_available"
-                return []
-
-            sanitized = sanitize_phone_payload(payload)
-            now = datetime.now(timezone.utc)
-            measurement = Measurement(
-                value=sanitized,
-                uncertainty=0.35,
-                confidence_interval=(0.0, 1.0),
-                sample_size=1,
-                confounders=[
-                    "operator_controlled_shortcut",
-                    "manual_mode_self_reported",
-                    "phone_shortcut_may_fail_or_be_stale",
-                ],
-                missing=[
-                    "no_precise_location",
-                    "no_health_data",
-                    "no_contacts",
-                    "no_messages",
-                    "no_audio",
-                    "no_camera",
-                    "no_notification_content",
-                ],
-                source="iphone_shortcuts",
-                methodology="operator_initiated_phone_heartbeat",
-                temporal_range=("instant", "instant"),
-                scope=self.scope,
-                recorded_at=now,
-            )
-            self._last_observation = now
-            self._observation_count += 1
-            self._last_error = None
-            return [measurement]
-        except Exception as exc:
-            self._error_count += 1
-            self._last_error = str(exc)
-            return []
+        """Store a sanitized latest phone payload and return phone-shaped data."""
+        phone_sanitized = sanitize_phone_payload(payload)
+        device_payload = {
+            "device_id": phone_sanitized["device_id"],
+            "device_kind": "phone",
+            "device_label": "Alex iPhone",
+            "battery_level": phone_sanitized["battery_level"],
+            "battery_state": phone_sanitized["battery_state"],
+            "manual_mode": phone_sanitized["manual_mode"],
+            "client_version": phone_sanitized["shortcut_version"],
+            "operator_note": phone_sanitized["operator_note"],
+            "recorded_at": phone_sanitized["client_recorded_at"],
+        }
+        self._latest_payload = device_payload
+        return phone_sanitized
