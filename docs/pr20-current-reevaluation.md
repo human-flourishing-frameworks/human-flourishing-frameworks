@@ -17,8 +17,9 @@ Checked with `gh` on 2026-05-09:
 
 ```text
 PR: #20 Add bio-threat registry and runtime safety gates
-state: open
-stage: draft
+state: closed as superseded
+closed_at: 2026-05-09T16:28:44Z
+previous_stage: draft
 head: codex/read-only-bio-threat-source-registry
 base: master
 only open repo issue: #18 dual-use engine risk
@@ -116,11 +117,10 @@ only through fresh, narrow branches.
 Current decision:
 
 ```text
-keep PR #20 open as draft only if it is useful as historical review inventory
-do not mark PR #20 ready
-do not merge PR #20 as-is
+PR #20 is closed as superseded
+do not reopen or merge PR #20 as-is
 do not use PR #20 branch state as the source of truth for current master
-prefer closing PR #20 as superseded once successor mapping is accepted
+use PR #20 only as historical inventory for scoped successor branches
 ```
 
 Safest next action:
@@ -171,4 +171,3 @@ claims live health without fresh endpoint or deployment-log evidence
 | PR #20 remains useful as inventory | 0.82 |
 | Successor branches should start from current master | 0.97 |
 | Issue #18 should remain open during successor work | 0.94 |
-
