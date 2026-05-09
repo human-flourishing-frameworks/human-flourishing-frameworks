@@ -41,6 +41,7 @@ ALLOWED_DEVICE_TELEMETRY_FIELDS = frozenset({
     "client_version",
     "operator_note",
     "recorded_at",
+    "client_recorded_at",
 })
 
 BLOCKED_DEVICE_TELEMETRY_FRAGMENTS = (
@@ -148,6 +149,7 @@ def sanitize_device_payload(payload: Mapping[str, Any]) -> Dict[str, Any]:
     device_kind = choice(by_key.get("device_kind"), DEVICE_KINDS, "unknown")
     battery_state = choice(by_key.get("battery_state"), ALLOWED_BATTERY_STATES, "unknown")
     power_state = choice(by_key.get("power_state"), ALLOWED_POWER_STATES, battery_state)
+    recorded_at = by_key.get("recorded_at", by_key.get("client_recorded_at"))
 
     return {
         "device_id": bounded_text(
@@ -185,7 +187,7 @@ def sanitize_device_payload(payload: Mapping[str, Any]) -> Dict[str, Any]:
             MAX_OPERATOR_NOTE_LENGTH,
         ),
         "client_recorded_at": bounded_text(
-            by_key.get("recorded_at"),
+            recorded_at,
             "unknown",
             64,
         ),
