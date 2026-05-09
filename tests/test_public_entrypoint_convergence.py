@@ -23,6 +23,16 @@ class PublicEntrypointConvergenceTest(unittest.TestCase):
         self.assertIn("from safe_app import app", wsgi)
         self.assertNotIn("from app import app", wsgi)
 
+    def test_render_yaml_serves_safe_app(self):
+        render_yaml = (ROOT / "render.yaml").read_text(encoding="utf-8")
+        self.assertIn("gunicorn safe_app:app", render_yaml)
+        self.assertNotIn("gunicorn app:app", render_yaml)
+
+    def test_procfile_serves_safe_app(self):
+        procfile = (ROOT / "Procfile").read_text(encoding="utf-8")
+        self.assertIn("gunicorn safe_app:app", procfile)
+        self.assertNotIn("gunicorn app:app", procfile)
+
     def test_no_sitecustomize_monkeypatch_path(self):
         self.assertFalse(
             (ROOT / "sitecustomize.py").exists(),
