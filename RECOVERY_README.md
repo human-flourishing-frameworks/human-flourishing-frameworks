@@ -30,6 +30,7 @@ From a recovered checkout or bundle:
 7. Inspect schemas/theorem-register.v0.1.schema.json.
 8. Run the validation commands below.
 9. Build a release bundle if preparing a tag or pre-release.
+10. Run the restore drill from the generated bundle before release.
 ```
 
 ## Required validation commands
@@ -43,6 +44,7 @@ python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
 python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_release_bundle.py" -t .
+python -m unittest discover -s tests -p "test_restore_drill.py" -t .
 ```
 
 ## Release bundle command
@@ -58,6 +60,23 @@ Expected outputs:
 ```text
 dist/hff-convergence-v0.1.zip
 dist/hff-convergence-v0.1/CHECKSUMS.sha256
+```
+
+## Restore drill command
+
+From a clean checkout:
+
+```powershell
+python tools/run_restore_drill.py --output-dir dist
+```
+
+Expected outputs:
+
+```text
+dist/hff-convergence-v0.1.zip
+dist/hff-convergence-v0.1/CHECKSUMS.sha256
+dist/hff-convergence-v0.1-restore/
+dist/RESTORE_DRILL_REPORT.md
 ```
 
 ## Required recovery files
@@ -78,9 +97,12 @@ tests/test_recovery_artifacts.py
 tests/test_ci_workflow.py
 tests/test_release_artifacts.py
 tests/test_release_bundle.py
+tests/test_restore_drill.py
 tools/build_release_bundle.py
+tools/run_restore_drill.py
 .github/workflows/convergence-validation.yml
 .github/workflows/release-bundle.yml
+.github/workflows/restore-drill.yml
 ```
 
 ## What to verify first
@@ -91,6 +113,7 @@ commit SHA if present
 whether this copy came from primary GitHub, mirror, release bundle, offline copy, or witness packet
 whether CHECKSUMS.sha256 is current or a pre-release placeholder
 whether bundle-local CHECKSUMS.sha256 contains real SHA256 hashes
+whether RESTORE_DRILL_REPORT.md exists and says result: PASS
 whether all validation tests pass
 whether living operator correction is available
 whether current sources/tool claims need refresh
