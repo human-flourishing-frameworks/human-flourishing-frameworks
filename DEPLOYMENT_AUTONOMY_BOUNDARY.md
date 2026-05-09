@@ -1,9 +1,9 @@
-# Deployment Autonomy Boundary
+# Deployment Autonomy Boundary and Operatorless Path
 
 Status: docs/data-contract policy.
 
-This document defines the boundary between helpful deployment assistance and an
-unsafe self-repairing deployment system.
+This document defines the boundary between helpful deployment assistance, unsafe
+hidden self-repair, and a possible future operatorless deployment system.
 
 It is intentionally docs-only. It adds no deploy hooks, secrets access,
 credentials, endpoints, polling, infrastructure automation, rollback automation,
@@ -11,9 +11,9 @@ or autonomous recovery behavior.
 
 ## Core boundary
 
-HFF is not a self-repairing deployment system.
+HFF is not currently a self-repairing deployment system.
 
-Operators still control:
+Today, operators still control:
 
 ```text
 deploys
@@ -27,7 +27,32 @@ incident command
 public release validation
 ```
 
-The system may assist operators, but it must not silently become the operator.
+This is not the final philosophical goal. It is the current safety boundary.
+
+The long-term goal is not permanent human babysitting. The long-term goal is a
+system that can safely operate with less direct operator intervention because it
+has explicit governance, bounded authority, auditability, reversibility, and
+fail-safe behavior.
+
+The system may eventually replace many operator actions. It must not silently
+become an operator before those controls exist.
+
+## Maturity model
+
+| Stage | Name | What the system may do | Required gate |
+|---:|---|---|---|
+| 0 | Manual | Humans deploy, recover, and validate | Current baseline |
+| 1 | Advisory | System suggests diagnostics, commands, and recovery plans | Human executes |
+| 2 | Supervised automation | System can run bounded non-destructive checks | Explicit human approval |
+| 3 | Constrained remediation | System can perform narrow reversible fixes | Policy, audit, rollback, rate limits |
+| 4 | Governed self-repair | System can repair bounded failures without a live operator | Formal safety case, simulation, approvals, kill switch |
+| 5 | Operatorless operation | System can maintain itself under constitutional/governance constraints | Independent governance, external audit, fail-safe shutdown, challenge path |
+
+Current authorized stage:
+
+```text
+Stage 1: Advisory
+```
 
 ## Why this matters
 
@@ -44,9 +69,9 @@ auto-deploy -> unreviewed code reaching production
 ```
 
 The safety goal is not zero automation. The safety goal is bounded, observable,
-operator-controlled automation.
+governed automation.
 
-## Allowed assistance
+## Allowed assistance today
 
 HFF may help with deployment and recovery by producing:
 
@@ -63,9 +88,9 @@ HFF may help with deployment and recovery by producing:
 
 Allowed assistance remains advisory unless an operator explicitly executes it.
 
-## Forbidden autonomous behavior
+## Forbidden autonomous behavior today
 
-HFF must not autonomously:
+At the current maturity stage, HFF must not autonomously:
 
 - deploy to production;
 - push, merge, or force-push deployment branches without explicit operator approval;
@@ -85,6 +110,57 @@ HFF must not autonomously:
 - self-escalate permissions;
 - mark itself release-validated.
 
+These are not necessarily forbidden forever. They are forbidden until the system
+has a reviewed maturity-stage upgrade and the controls for that stage are in
+place.
+
+## Operatorless design requirement
+
+If there is no operator, the system needs a replacement for operator judgment.
+That replacement cannot be an LLM's confidence or a silent background loop.
+
+An operatorless HFF deployment would require at minimum:
+
+```text
+explicit governance charter
+bounded authority model
+least-privilege credentials
+separation of duties between diagnosis and action
+signed/traceable actions
+complete audit log
+rate limits
+rollback guarantees
+simulation or dry-run validation
+canarying before broad action
+external health checks
+independent challenge/review path
+fail-safe shutdown mode
+secret isolation
+break-glass human or governance recovery path
+```
+
+## Autonomy upgrade gates
+
+Before moving to a higher maturity stage, a PR must answer:
+
+1. What new autonomous action is allowed?
+2. What failure mode does it address?
+3. What is the worst plausible harm if it is wrong?
+4. What state can it read?
+5. What state can it write?
+6. What credentials can it use?
+7. Can it touch secrets?
+8. Can it affect production?
+9. Can it be undone?
+10. What dry run or simulation proves it?
+11. What logs are produced?
+12. What rate limits apply?
+13. What external signal can stop it?
+14. What challenge path exists after it acts?
+15. What maturity stage authorizes it?
+
+No stage upgrade may happen implicitly through a bug fix or convenience PR.
+
 ## Allowed reliance levels
 
 Deployment facts should use the source reliance ladder from
@@ -92,15 +168,15 @@ Deployment facts should use the source reliance ladder from
 
 Examples:
 
-| Claim | Maximum reliance without operator validation |
+| Claim | Maximum reliance at current stage |
 |---|---:|
 | Local tests passed | 3 Corroborated claim |
 | GitHub Actions passed | 3 Corroborated claim |
 | A PR is mergeable | 3 Corroborated claim |
 | Local node started | 3 Corroborated claim |
 | Public service health is good | 2 Source-backed claim until checked against deployed SHA |
-| Production release is validated | 5 High-impact fact requiring operator review |
-| Recovery is complete | 5 High-impact fact requiring operator review |
+| Production release is validated | 5 High-impact fact requiring stage-appropriate governance |
+| Recovery is complete | 5 High-impact fact requiring stage-appropriate governance |
 
 ## Required release validation
 
@@ -123,15 +199,18 @@ deployed commit SHA recorded
 /api/status verified on deployed service
 relevant safety endpoints checked
 runtime flags audited
-operator confirms deploy target and environment
+stage authorization confirmed
 ```
+
+At current Stage 1, operator confirmation is required. At a future operatorless
+stage, an explicit governance mechanism must replace that confirmation.
 
 ## Recovery boundary
 
-During an incident, HFF may recommend a recovery sequence but must not execute it
-without the operator.
+During an incident today, HFF may recommend a recovery sequence but must not
+execute it without the operator.
 
-Preferred flow:
+Preferred current flow:
 
 ```text
 detect signal
@@ -143,24 +222,41 @@ ask operator to execute
 record what happened
 ```
 
-Forbidden flow:
+Future operatorless flow must be deliberately designed, not accidentally created:
 
 ```text
 detect signal
-autonomously change production
-autonomously change secrets
-autonomously restore data
-autonomously suppress alert
-declare incident resolved
+classify severity
+prove action is authorized for the current stage
+dry-run or simulate when possible
+choose bounded reversible action
+execute with least privilege
+log action and evidence
+monitor external health signal
+roll back or fail safe if needed
+open challenge/review record
+```
+
+Forbidden at every stage:
+
+```text
+unbounded self-escalation
+secret exfiltration
+silent production mutation
+irreversible destructive action without governance authority
+suppressed alerts
+unlogged recovery
+self-declared success without external evidence
 ```
 
 ## Secret boundary
 
-Secrets are operator-controlled.
+Secrets are never an informal recovery tool.
 
-HFF should not request, store, print, infer, rotate, or transmit secrets. If a
-future integration requires secrets, it must use scoped platform mechanisms and
-human approval before any runtime change.
+HFF should not request, store, print, infer, rotate, or transmit secrets at the
+current stage. If future autonomy requires secret-related operations, they must
+use scoped platform mechanisms, least privilege, audit logging, separation of
+duties, and stage-specific approval.
 
 ## Configuration boundary
 
@@ -173,11 +269,12 @@ ENABLE_AUTONOMOUS_ESCALATION_EXECUTOR=false unless approved
 HFF_ALLOW_PUBLIC_WRITES=false unless approved
 ```
 
-No recovery flow may silently flip these flags.
+No recovery flow may silently flip these flags. A future operatorless stage would
+need an explicit policy engine for any flag transition.
 
-## Human operator authority
+## Human operator authority today
 
-The operator has final authority over:
+At current Stage 1, the operator has final authority over:
 
 ```text
 whether to deploy
@@ -188,28 +285,23 @@ whether to mark release validated
 whether to close an incident
 ```
 
-HFF may disagree, warn, or recommend, but it must not override.
+HFF may disagree, warn, or recommend, but it must not override at this stage.
 
-## Future work gate
+## Future operatorless authority
 
-Before adding any deployment or recovery automation, a PR must answer:
+At future Stage 5, direct operator authority may no longer be required for every
+routine action. But authority must still exist. It should come from explicit
+constitutional, governance, safety-case, and external-audit mechanisms rather
+than from model confidence or hidden loops.
 
-1. What exact action can the system take?
-2. What permission does it require?
-3. What state can it read?
-4. What state can it write?
-5. Can it touch secrets?
-6. Can it affect production?
-7. Can it be undone?
-8. What logs are produced?
-9. What operator approval is required?
-10. How is the automation disabled?
+Operatorless does not mean authority-less.
 
-Default posture:
+## Default posture
 
 ```text
-assist operators
-prepare evidence
-recommend actions
-never self-repair production
+now: assist operators and prepare evidence
+next: supervised, reversible, non-destructive automation
+later: governed self-repair for narrow failure modes
+only with proof: operatorless operation under explicit governance
+never: hidden, unbounded, unlogged self-repair
 ```
