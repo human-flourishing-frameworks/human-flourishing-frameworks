@@ -16,6 +16,8 @@ REQUIRED_RELEASE_ARTIFACTS = [
     REPO_ROOT / "RESTORE_DRILL_CHECKLIST.md",
     REPO_ROOT / "FALSE_TRUTHS_REGISTER.md",
     REPO_ROOT / "CHECKSUMS.sha256",
+    REPO_ROOT / "tools" / "build_release_bundle.py",
+    REPO_ROOT / ".github" / "workflows" / "release-bundle.yml",
 ]
 
 REQUIRED_TESTS = [
@@ -24,6 +26,7 @@ REQUIRED_TESTS = [
     "test_recovery_artifacts.py",
     "test_ci_workflow.py",
     "test_release_artifacts.py",
+    "test_release_bundle.py",
 ]
 
 REQUIRED_CHECKSUM_TARGETS = [
@@ -36,28 +39,33 @@ REQUIRED_CHECKSUM_TARGETS = [
     "data/theorem-register.v0.1.json",
     "schemas/theorem-register.v0.1.schema.json",
     "tests/test_release_artifacts.py",
+    "tests/test_release_bundle.py",
+    "tools/build_release_bundle.py",
+    ".github/workflows/release-bundle.yml",
 ]
 
 
 class ReleaseArtifactsValidationTest(unittest.TestCase):
     def test_required_release_artifacts_exist(self):
         for path in REQUIRED_RELEASE_ARTIFACTS:
-            with self.subTest(path=path.name):
+            with self.subTest(path=path.as_posix()):
                 self.assertTrue(path.exists(), f"missing release artifact: {path}")
                 self.assertGreater(path.stat().st_size, 100)
 
     def test_manifest_lists_required_files_and_gates(self):
         text = (REPO_ROOT / "RELEASE_MANIFEST.md").read_text(encoding="utf-8")
         lowered = text.lower()
-        for filename in [path.name for path in REQUIRED_RELEASE_ARTIFACTS]:
-            with self.subTest(filename=filename):
-                self.assertIn(filename, text)
+        for path in REQUIRED_RELEASE_ARTIFACTS:
+            expected = path.relative_to(REPO_ROOT).as_posix()
+            with self.subTest(expected=expected):
+                self.assertIn(expected, text)
         for phrase in [
             "all validation commands pass",
             "restore drill checklist",
             "false truths register",
             "known limitations",
             "not yet tagged",
+            "manual release-bundle workflow",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, lowered)
@@ -71,6 +79,7 @@ class ReleaseArtifactsValidationTest(unittest.TestCase):
             "the repo is durable doctrine, not consciousness",
             "memory is a hint, not proof",
             "release artifacts preserve project state, not human survival",
+            "test_release_bundle.py",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, lowered)
