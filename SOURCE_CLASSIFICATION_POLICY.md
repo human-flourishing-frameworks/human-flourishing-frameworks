@@ -10,12 +10,41 @@ consensus behavior, mesh sync, deployment config, or autonomous action.
 
 ## Core rule
 
-No source becomes truth by being available.
+The practical question is not whether a source makes something "true." The
+practical question is what level of reliance HFF is allowed to place on it.
 
 Every source must be classified before use:
 
 ```text
-source -> class -> allowed uses -> forbidden uses -> confidence posture
+source -> class -> allowed uses -> forbidden uses -> reliance level -> confidence posture
+```
+
+A source can support a claim without making that claim operationally safe.
+
+## Reliance levels
+
+| Level | Label | Human-readable meaning | Allowed system use |
+|---:|---|---|---|
+| 0 | Noise / draft | An idea, generated output, or ungrounded lead | Brainstorm only; do not store as evidence |
+| 1 | Unverified claim | Someone or something asserted it | Store, label, compare, challenge |
+| 2 | Source-backed claim | At least one cited source supports it | Display with source, confidence, and limits |
+| 3 | Corroborated claim | Multiple independent sources support it | Use as stronger evidence, still challengeable |
+| 4 | Operational fact | Reliable enough for low-risk system behavior | Use in low-impact logic with logs and rollback |
+| 5 | High-impact fact | Could affect beings, safety, deployment, bio/cyber, or public authority | Requires human review, audit trail, and challenge path |
+
+Public UI should prefer:
+
+```text
+What we think
+Why we think it
+How sure we are
+What could change it
+```
+
+over abstract phrases like:
+
+```text
+source-backed with confidence
 ```
 
 ## Source classes
@@ -56,6 +85,7 @@ claims_supported
 limitations
 allowed_uses
 forbidden_uses
+reliance_level
 freshness_policy
 review_notes
 ```
@@ -143,6 +173,7 @@ Default posture:
 ```text
 classification required
 claim decomposition required
+reliance level visible
 uncertainty visible
 human review for high-impact use
 no autonomous action from unreviewed sources
