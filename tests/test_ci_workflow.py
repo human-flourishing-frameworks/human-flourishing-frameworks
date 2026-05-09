@@ -14,6 +14,7 @@ REQUIRED_TEST_COMMANDS = [
     'python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .',
     'python -m unittest discover -s tests -p "test_ci_workflow.py" -t .',
     'python -m unittest discover -s tests -p "test_release_artifacts.py" -t .',
+    'python -m unittest discover -s tests -p "test_release_bundle.py" -t .',
 ]
 
 
