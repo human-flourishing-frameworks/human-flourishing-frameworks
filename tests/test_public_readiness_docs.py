@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -8,6 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 class PublicReadinessDocsTests(unittest.TestCase):
     def read(self, relative_path: str) -> str:
         return (ROOT / relative_path).read_text(encoding="utf-8")
+
+    def assert_contains_phrase(self, text: str, phrase: str) -> None:
+        normalized_text = re.sub(r"\s+", " ", text)
+        normalized_phrase = re.sub(r"\s+", " ", phrase)
+        self.assertIn(normalized_phrase, normalized_text)
 
     def test_readme_preserves_operator_utility_sections(self):
         readme = self.read("README.md")
@@ -45,7 +51,7 @@ class PublicReadinessDocsTests(unittest.TestCase):
         ]
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, readme)
+                self.assert_contains_phrase(readme, phrase)
 
     def test_public_surface_policy_blocks_unsafe_collapses(self):
         policy = self.read("docs/public-surface-policy.md")
@@ -63,7 +69,7 @@ class PublicReadinessDocsTests(unittest.TestCase):
         ]
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, policy)
+                self.assert_contains_phrase(policy, phrase)
 
     def test_i18n_doc_is_honest_about_incomplete_readiness(self):
         doc = self.read("docs/internationalization-and-accessibility.md")
@@ -83,7 +89,7 @@ class PublicReadinessDocsTests(unittest.TestCase):
         ]
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, doc)
+                self.assert_contains_phrase(doc, phrase)
 
     def test_readme_does_not_reintroduce_license_placeholder(self):
         readme = self.read("README.md")
