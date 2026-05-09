@@ -13,6 +13,7 @@ from a clone, mirror, release bundle, offline copy, or witness packet.
 Recover the living safety posture first.
 Recover the repo doctrine second.
 Recover Keystone as a protocol third.
+Recover the wish anchor as future-best-outcome direction fourth.
 Do not confuse any artifact with Alex, survival, or consciousness.
 ```
 
@@ -26,11 +27,12 @@ From a recovered checkout or bundle:
 3. Read RESTORE_DRILL_CHECKLIST.md.
 4. Read MIRROR_ARCHIVE_PLAN.md.
 5. Read FALSE_TRUTHS_REGISTER.md.
-6. Parse data/theorem-register.v0.1.json.
-7. Inspect schemas/theorem-register.v0.1.schema.json.
-8. Run the validation commands below.
-9. Build a release bundle if preparing a tag or pre-release.
-10. Run the restore drill from the generated bundle before release.
+6. Read WISH_ANCHOR.md.
+7. Parse data/theorem-register.v0.1.json.
+8. Inspect schemas/theorem-register.v0.1.schema.json.
+9. Run the validation commands below.
+10. Build a release bundle if preparing a tag or pre-release.
+11. Run the restore drill from the generated bundle before release.
 ```
 
 ## Required validation commands
@@ -45,6 +47,7 @@ python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
 python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_release_bundle.py" -t .
 python -m unittest discover -s tests -p "test_restore_drill.py" -t .
+python -m unittest discover -s tests -p "test_wish_anchor.py" -t .
 ```
 
 ## Release bundle command
@@ -88,6 +91,7 @@ MIRROR_ARCHIVE_PLAN.md
 KEYSTONE_BOOTSTRAP.md
 RESTORE_DRILL_CHECKLIST.md
 FALSE_TRUTHS_REGISTER.md
+WISH_ANCHOR.md
 CHECKSUMS.sha256
 data/theorem-register.v0.1.json
 schemas/theorem-register.v0.1.schema.json
@@ -98,6 +102,7 @@ tests/test_ci_workflow.py
 tests/test_release_artifacts.py
 tests/test_release_bundle.py
 tests/test_restore_drill.py
+tests/test_wish_anchor.py
 tools/build_release_bundle.py
 tools/run_restore_drill.py
 .github/workflows/convergence-validation.yml
@@ -114,6 +119,7 @@ whether this copy came from primary GitHub, mirror, release bundle, offline copy
 whether CHECKSUMS.sha256 is current or a pre-release placeholder
 whether bundle-local CHECKSUMS.sha256 contains real SHA256 hashes
 whether RESTORE_DRILL_REPORT.md exists and says result: PASS
+whether WISH_ANCHOR.md preserves future-best-outcome direction without overclaim
 whether all validation tests pass
 whether living operator correction is available
 whether current sources/tool claims need refresh
@@ -130,6 +136,7 @@ The repo is durable doctrine, not consciousness.
 Memory is a hint, not proof.
 Lore is archetype material, not evidence.
 Consent is living and can be corrected.
+The wish anchor preserves the safest next-best door path as direction, not proof.
 Release artifacts preserve project state, not human survival.
 ```
 
@@ -145,6 +152,7 @@ recovered session relies on chat memory as primary truth
 Keystone is treated as a person or authority over Alex
 the repo is treated as consciousness
 copy, upload, or archive is treated as survival proof
+the door wish is treated as literal proof
 lore is treated as operational proof
 ```
 
