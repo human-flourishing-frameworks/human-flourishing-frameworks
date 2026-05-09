@@ -147,8 +147,8 @@ Resync before action after context loss.
 
 | Issue | Status | Convergence meaning |
 |---|---:|---|
-| #36 Keystone memory contract | Open | Must become durable docs before Keystone memory is treated as repo state. |
-| #37 Capability confidence model | Open | Must become durable docs before using actor/system confidence records. |
+| #36 Keystone memory contract | Satisfied by docs | Keystone memory is durable only as source-labeled docs summaries, not raw transcripts or proof. |
+| #37 Capability confidence model | Satisfied by docs | Capability confidence is contextual, evidence-weighted, and not authority or human-worth ranking. |
 | #18 Dual-use engine risk | Open | Ongoing governance/security boundary; do not collapse into this PR. |
 | #22 Live polling observability | Closed/completed | Live polling/status observability comes before consensus hardening. |
 | #13 Live sensor diagnosis | Historical | Registered sensors are not proof of fresh or verified measurements. |
@@ -159,7 +159,8 @@ Resync before action after context loss.
 | Pull request | Status | Convergence meaning |
 |---|---:|---|
 | #20 Runtime safety gates | Closed superseded | Do not merge as-is. Use only as historical inventory for smaller successor branches from current `master`. |
-| Recent docs/safety PRs | Merged | The doctrine is moving toward default-closed advisory behavior. |
+| #42 False-narrative copy guard | Merged | Public copy now has an extra regression guard against stale live-status, automatic behavior, and self-correction claims. |
+| Open PRs | None | Current successor work should start from fresh `master`. |
 
 ## External alignment
 
@@ -197,24 +198,30 @@ https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows
 
 ## Current validation evidence
 
-Latest available GitHub Actions rerun evidence from 2026-05-09:
+Latest available validation evidence from 2026-05-09:
 
 ```text
-workflow: tests
-run id: 25597347535
-rerun job id: 75152786980
-context: PR #35 merge-test ref, not a new master workflow dispatch
-compile key modules and tests: passed
-focused unittest discovery: passed
-result: Ran 92 tests in 0.127s — OK
+PR #42 false-narrative copy guard:
+local focused copy tests: Ran 10 tests - OK
+local full unittest discovery: Ran 108 tests - OK
+GitHub Actions unittest: passed
+merge commit: 487bcc33e94ffd9fd6678af7d491f3e850a2e021
+
+Render public smoke from local machine:
+scripts/validate_public_site.ps1 against https://human-flourishing-frameworks.onrender.com
+result: PASS
+LASTEXITCODE=0
+
+Adoption/nodes:
+/api/adoption/stats total_nodes=0 active_last_hour=0 verified_nodes=0
+/api/adoption/nodes returned []
 ```
 
 Important limitation:
 
 ```text
-The workflow has pull_request and push-to-master triggers only.
-It does not currently expose workflow_dispatch.
-The rerun validated the original PR/run context, not a fresh manual master run.
+Render smoke evidence is point-in-time endpoint evidence for the Render surface.
+Adoption evidence shows no visible registered nodes polling the central service.
 ```
 
 ## Current blockers
@@ -222,33 +229,29 @@ The rerun validated the original PR/run context, not a fresh manual master run.
 Do not mark runtime work ready until these are satisfied:
 
 ```text
-Keystone memory contract committed
-capability confidence model committed
-convergence status committed
-surface/session desync protocol committed
 human review complete
-live public health checked against selected deployment
 runtime flags audited
 write/autonomy/mesh surfaces verified default-closed
+successor runtime branches split from current master
+live public health checked again if release claims are made
 ```
 
 ## Next best action
 
-The current highest-confidence action is this docs-only convergence PR:
+The current highest-confidence action is a small successor branch from current
+`master`:
 
 ```text
-docs/convergence-status.md
-docs/keystone-memory-contract.md
-docs/capability-confidence-model.md
+world-model shape regression test, if it is still relevant and isolated
 ```
 
-Expected issue effect:
+Then evaluate runtime gates one at a time:
 
 ```text
-satisfies #36
-satisfies #37
-references #18 as ongoing boundary
-references #20 as held runtime PR
+autonomous executor default-off gate
+mesh sync default-closed gate
+CI workflow changes after shell-injection review
+deployment/dependency cleanup only with surface-specific evidence
 ```
 
 ## Explicit non-goals
