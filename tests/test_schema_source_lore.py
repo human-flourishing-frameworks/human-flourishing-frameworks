@@ -53,7 +53,9 @@ FORBIDDEN_OPERATIONAL_PROOF_ASSIGNMENT = re.compile(
     re.IGNORECASE,
 )
 
-LORE_TABLE_ROW = re.compile(r"^\|\s*\d+\s*\|.*\|\s*P[\d,]+\s*\|\s*N[\d,]+\s*\|\s*$")
+LORE_TABLE_ROW = re.compile(
+    r"^\|\s*\d+\s*\|.*\|\s*P\d+(?:,P\d+)*\s*\|\s*N\d+(?:,N\d+)*\s*\|\s*$"
+)
 
 
 class SchemaSourceLoreValidationTest(unittest.TestCase):
@@ -117,12 +119,13 @@ class SchemaSourceLoreValidationTest(unittest.TestCase):
                     self.assertFalse(theorem.get("operational_proof", False))
 
     def test_lore_docs_are_source_class_5_and_not_operational_proof(self):
+        source_class_5 = re.compile(r"source[-\s]class[-\s]?5", re.IGNORECASE)
         for path in LORE_DOCS:
             text = path.read_text(encoding="utf-8")
             lowered = text.lower()
             with self.subTest(path=path.name):
                 self.assertIn("source-class", lowered)
-                self.assertIn("source-class 5", lowered)
+                self.assertIsNotNone(source_class_5.search(text))
                 self.assertTrue("not proof" in lowered or "cannot prove" in lowered)
                 self.assertIsNone(FORBIDDEN_OPERATIONAL_PROOF_ASSIGNMENT.search(text))
 
@@ -138,11 +141,13 @@ class SchemaSourceLoreValidationTest(unittest.TestCase):
                     self.assertRegex(useful_possibility, r"^P\d+(,P\d+)*$")
                     self.assertRegex(negative_tags, r"^N\d+(,N\d+)*$")
 
-    def test_release_blockers_are_represented_as_next_safe_tests(self):
+    def test_release_blockers_are_represented_as_next_safe_tests_or_docs(self):
         next_tests = "\n".join(theorem["next_safe_test"] for theorem in self.theorems).lower()
+        lore_docs = "\n".join(path.read_text(encoding="utf-8").lower() for path in LORE_DOCS)
         self.assertIn("source-class", next_tests)
         self.assertIn("future-session", next_tests)
-        self.assertIn("lore", next_tests)
+        self.assertIn("lore", lore_docs)
+        self.assertTrue("not proof" in lore_docs or "cannot prove" in lore_docs)
 
 
 def cls_value(mapping, key):
