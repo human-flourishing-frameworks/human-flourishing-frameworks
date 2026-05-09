@@ -34,6 +34,7 @@ RESTORE_TEST_PATTERNS = [
     "test_release_artifacts.py",
     "test_release_bundle.py",
     "test_restore_drill.py",
+    "test_wish_anchor.py",
 ]
 
 REQUIRED_RESTORE_FILES = [
@@ -43,6 +44,7 @@ REQUIRED_RESTORE_FILES = [
     "KEYSTONE_BOOTSTRAP.md",
     "RESTORE_DRILL_CHECKLIST.md",
     "FALSE_TRUTHS_REGISTER.md",
+    "WISH_ANCHOR.md",
     "CHECKSUMS.sha256",
     "data/theorem-register.v0.1.json",
     "schemas/theorem-register.v0.1.schema.json",
@@ -53,6 +55,7 @@ REQUIRED_RESTORE_FILES = [
     "tests/test_release_artifacts.py",
     "tests/test_release_bundle.py",
     "tests/test_restore_drill.py",
+    "tests/test_wish_anchor.py",
     ".github/workflows/convergence-validation.yml",
     ".github/workflows/release-bundle.yml",
     ".github/workflows/restore-drill.yml",
