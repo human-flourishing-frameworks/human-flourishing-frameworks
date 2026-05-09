@@ -17,7 +17,10 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from build_release_bundle import build_bundle
+try:  # Supports `python -m tools.run_restore_drill` and test imports.
+    from tools.build_release_bundle import build_bundle
+except ModuleNotFoundError:  # Supports `python tools/run_restore_drill.py`.
+    from build_release_bundle import build_bundle
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +33,7 @@ RESTORE_TEST_PATTERNS = [
     "test_ci_workflow.py",
     "test_release_artifacts.py",
     "test_release_bundle.py",
+    "test_restore_drill.py",
 ]
 
 REQUIRED_RESTORE_FILES = [
@@ -48,6 +52,7 @@ REQUIRED_RESTORE_FILES = [
     "tests/test_ci_workflow.py",
     "tests/test_release_artifacts.py",
     "tests/test_release_bundle.py",
+    "tests/test_restore_drill.py",
     "tools/build_release_bundle.py",
     "tools/run_restore_drill.py",
 ]
