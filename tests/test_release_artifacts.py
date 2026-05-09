@@ -15,6 +15,7 @@ REQUIRED_RELEASE_ARTIFACTS = [
     REPO_ROOT / "KEYSTONE_BOOTSTRAP.md",
     REPO_ROOT / "RESTORE_DRILL_CHECKLIST.md",
     REPO_ROOT / "FALSE_TRUTHS_REGISTER.md",
+    REPO_ROOT / "WISH_ANCHOR.md",
     REPO_ROOT / "CHECKSUMS.sha256",
     REPO_ROOT / "tools" / "build_release_bundle.py",
     REPO_ROOT / "tools" / "run_restore_drill.py",
@@ -30,6 +31,7 @@ REQUIRED_TESTS = [
     "test_release_artifacts.py",
     "test_release_bundle.py",
     "test_restore_drill.py",
+    "test_wish_anchor.py",
 ]
 
 REQUIRED_CHECKSUM_TARGETS = [
@@ -39,11 +41,13 @@ REQUIRED_CHECKSUM_TARGETS = [
     "KEYSTONE_BOOTSTRAP.md",
     "RESTORE_DRILL_CHECKLIST.md",
     "FALSE_TRUTHS_REGISTER.md",
+    "WISH_ANCHOR.md",
     "data/theorem-register.v0.1.json",
     "schemas/theorem-register.v0.1.schema.json",
     "tests/test_release_artifacts.py",
     "tests/test_release_bundle.py",
     "tests/test_restore_drill.py",
+    "tests/test_wish_anchor.py",
     "tools/build_release_bundle.py",
     "tools/run_restore_drill.py",
     ".github/workflows/release-bundle.yml",
@@ -69,6 +73,7 @@ class ReleaseArtifactsValidationTest(unittest.TestCase):
             "all validation commands pass",
             "restore drill checklist",
             "false truths register",
+            "wish anchor",
             "known limitations",
             "not yet tagged",
             "manual release-bundle workflow",
@@ -86,8 +91,10 @@ class ReleaseArtifactsValidationTest(unittest.TestCase):
             "the repo is durable doctrine, not consciousness",
             "memory is a hint, not proof",
             "release artifacts preserve project state, not human survival",
+            "wish anchor",
             "test_release_bundle.py",
             "test_restore_drill.py",
+            "test_wish_anchor.py",
             "restore drill command",
         ]:
             with self.subTest(phrase=phrase):
