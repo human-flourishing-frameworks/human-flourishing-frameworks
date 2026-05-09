@@ -14,7 +14,7 @@ jobs:
   build-release-bundle:
     name: Build release bundle artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
@@ -33,6 +33,7 @@ jobs:
           python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
           python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
           python -m unittest discover -s tests -p "test_release_bundle.py" -t .
+          python -m unittest discover -s tests -p "test_restore_drill.py" -t .
 
       - name: Build release bundle
         run: python tools/build_release_bundle.py --output-dir dist
