@@ -558,7 +558,7 @@ HTML_TEMPLATE = """
         <!-- ============================================================ -->
         <h2 style="color: #ff8800;">
             <span class="collapsible-header" onclick="toggleSection('governance-section', this)">
-                <span class="arrow">&#9660;</span> Autonomous Governance
+                <span class="arrow">&#9660;</span> Autonomous-Agent Research Status
                 <span style="font-size: 13px; font-weight: normal; color: #888;">
                     &mdash; <span id="agent-count">7</span> agents,
                     <span id="audit-entries">0</span> audit entries

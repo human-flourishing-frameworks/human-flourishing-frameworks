@@ -2,13 +2,23 @@
 
 This document defines the highest-confidence next step after PR #19: a read-only source registry and outbreak narrative classifier.
 
-## Chosen model
+## Original registry model
 
 ```text
 ReadOnlySourceRegistryFirst
 ```
 
 This model is preferred because it reduces downstream harm without activating runtime behavior.
+
+## Current PR review model
+
+```text
+HumanReviewAndLiveHealthGate
+```
+
+PR #20 now also includes runtime-safety gates around autonomous escalation
+execution and mesh sync. Review the PR as a runtime-safety hardening draft,
+while keeping this registry data-only and read-only.
 
 ## Safety boundary
 
@@ -108,17 +118,17 @@ High-dual-use categories prohibit operational details.
 Tests verify read-only safety and narrative classification constraints.
 ```
 
-## Current confidence
+## Registry confidence
 
 ```text
-0.96 — ReadOnlySourceRegistryFirst is the safest and highest-confidence next model
+0.96 — ReadOnlySourceRegistryFirst remains the safest registry-sequencing model
 0.94 — outbreak narrative/source classification should precede threat-specific dashboards
 0.92 — read-only source registry reduces downstream risk without activating runtime behavior
 0.91 — AMR/fungal resistance and H5N1 should be early monitored domains after source classification
 0.89 — vaccine coverage and WASH sensors are high-confidence low-dual-use monitoring domains
 0.86 — AI-bio controls remain important but should be governance/screening/provenance-only and not first implementation
 0.82 — public dashboard design should wait until source classifications and uncertainty fields are stable
-0.70 — ready for data-only draft PR review
-0.30 — runtime protection confidence unchanged until hooks exist
+0.70 — registry portion is ready for data-only draft PR review
+0.30 — release confidence still requires runtime gate review and live health validation
 0.18 — autonomous correction remains blocked
 ```

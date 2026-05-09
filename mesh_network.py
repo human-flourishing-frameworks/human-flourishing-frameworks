@@ -2,7 +2,7 @@
 """
 Peer-to-Peer Mesh Networking
 Direct node-to-node communication without central server
-Automatic peer discovery and data sync
+Opt-in configured peer sync
 """
 
 import sqlite3

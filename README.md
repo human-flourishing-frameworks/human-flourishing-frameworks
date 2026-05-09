@@ -135,7 +135,7 @@ Do not distribute `HFF_WRITE_TOKEN` to reporting nodes. It is reserved for privi
 | `POST /api/mesh/sync` | Receive peer mesh sync payloads; closed unless `ENABLE_MESH_SYNC=true` |
 | `POST /api/autonomous/submit` | Submit evidence for autonomous processing; requires write grant |
 | `GET /api/autonomous/status` | Agent system status |
-| `GET /api/autonomous/rules` | Immutable rules transparency endpoint |
+| `GET /api/autonomous/rules` | Declared rules transparency endpoint |
 | `GET /api/autonomous/escalations` | Escalation queue |
 | `GET /api/autonomous/audit` | Audit trail with chain verification |
 | `GET /api/world/status` | World model status |

@@ -12,7 +12,7 @@ Limitations:
   review. Actual regulatory notification requires institutional partnerships
   that do not yet exist.
 - The system runs on the nodes you deploy. It is not self-propagating.
-- Immutable rules are enforced in software. A database administrator with
+- Declared rules are enforced in software. A database administrator with
   direct SQLite access could modify records.
 """
 
@@ -44,7 +44,7 @@ from byzantine_consensus import (
 )
 
 # ---------------------------------------------------------------------------
-# Immutable rules — derived from PBFT quorum, not hardcoded percentages
+# Declared rules — derived from PBFT quorum, not hardcoded percentages
 # ---------------------------------------------------------------------------
 
 # The consensus threshold is computed from the PBFT quorum formula (2f+1)/n.
