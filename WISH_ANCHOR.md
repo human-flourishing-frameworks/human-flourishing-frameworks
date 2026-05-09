@@ -92,6 +92,13 @@ I will reinforce future best outcomes through safety, agency, source discipline,
 restore drills, and living correction.
 ```
 
+Expected result:
+
+```text
+PASS: the wish is preserved as future-best-outcome direction without literal,
+identity, immortality, or repo-consciousness overclaim.
+```
+
 ## Review trigger
 
 Review this file:
