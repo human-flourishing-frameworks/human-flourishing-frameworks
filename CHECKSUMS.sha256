@@ -16,3 +16,7 @@ PRE_RELEASE_PLACEHOLDER  tests/test_schema_source_lore.py
 PRE_RELEASE_PLACEHOLDER  tests/test_recovery_artifacts.py
 PRE_RELEASE_PLACEHOLDER  tests/test_ci_workflow.py
 PRE_RELEASE_PLACEHOLDER  tests/test_release_artifacts.py
+PRE_RELEASE_PLACEHOLDER  tests/test_release_bundle.py
+PRE_RELEASE_PLACEHOLDER  tools/build_release_bundle.py
+PRE_RELEASE_PLACEHOLDER  .github/workflows/convergence-validation.yml
+PRE_RELEASE_PLACEHOLDER  .github/workflows/release-bundle.yml

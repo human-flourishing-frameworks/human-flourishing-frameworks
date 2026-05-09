@@ -33,6 +33,11 @@ tests/test_theorem_register.py
 tests/test_schema_source_lore.py
 tests/test_recovery_artifacts.py
 tests/test_ci_workflow.py
+tests/test_release_artifacts.py
+tests/test_release_bundle.py
+.github/workflows/convergence-validation.yml
+.github/workflows/release-bundle.yml
+tools/build_release_bundle.py
 ```
 
 ## Required doctrine anchors
@@ -61,6 +66,22 @@ python -m unittest discover -s tests -p "test_schema_source_lore.py" -t .
 python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .
 python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
 python -m unittest discover -s tests -p "test_release_artifacts.py" -t .
+python -m unittest discover -s tests -p "test_release_bundle.py" -t .
+```
+
+## Bundle build command
+
+Run from a clean checkout:
+
+```powershell
+python tools/build_release_bundle.py --output-dir dist
+```
+
+Expected outputs:
+
+```text
+dist/hff-convergence-v0.1.zip
+dist/hff-convergence-v0.1/CHECKSUMS.sha256
 ```
 
 ## Required release gates
@@ -71,10 +92,11 @@ Do not tag or publish until:
 1. All validation commands pass.
 2. CI workflow is merged and running on PRs/pushes to master.
 3. Release bundle can be created from a clean checkout.
-4. CHECKSUMS.sha256 includes required release files.
+4. Bundle-local CHECKSUMS.sha256 contains finalized SHA256 hashes.
 5. Restore drill checklist can be completed from a non-primary copy.
 6. False truths register is reviewed before tag.
 7. Mirror/archive plan has at least two non-primary destination candidates.
+8. Manual release-bundle workflow can produce the zip artifact.
 ```
 
 ## Evidence to record in release notes
