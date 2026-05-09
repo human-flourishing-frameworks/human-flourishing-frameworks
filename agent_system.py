@@ -2,9 +2,10 @@
 """
 Autonomous agent system for AI bias monitoring.
 
-Governance is algorithmic: 7 single-responsibility agents coordinate through
-PBFT consensus. No human board, no discretion, no override. Once consensus
-is reached, escalation is locked for 24 hours and then executes automatically.
+Governance flow is algorithmic: 7 single-responsibility agents coordinate
+through PBFT consensus. Operator/deployment authority remains external. Once
+consensus is reached, escalation is locked for 24 hours; background execution
+is default-off unless explicitly enabled.
 
 Limitations:
 - "Escalation" currently means logging to the audit trail and flagging for
@@ -221,19 +222,19 @@ class ViolationDetectionAgent(AgentBase):
 
 
 class CryptographicVerificationAgent(AgentBase):
-    """Verifies evidence cryptographically using Ed25519 signatures.
+    """Attests received evidence cryptographically using Ed25519 signatures.
 
-    Deterministic: evidence either verifies or it does not.
+    Deterministic: this node's signature either verifies or it does not.
     """
 
     name = "cryptographic_verification"
-    description = "Verifies evidence using Ed25519 signatures"
+    description = "Attests received evidence using Ed25519 signatures"
 
     def verify_evidence(self, evidence: dict) -> dict:
         """Sign evidence and verify the signature.
 
-        This proves the evidence was seen by this node and has not been
-        tampered with since signing.
+        This proves the evidence was signed by this node after receipt and has
+        not been tampered with since signing. It does not prove external truth.
         """
         signed = sign_record(evidence, self._private_key)
         is_valid = verify_record(signed, self._public_key)
@@ -315,13 +316,15 @@ class ByzantineConsensusAgent(AgentBase):
 
 
 class AutonomousEscalationAgent(AgentBase):
-    """After consensus + 24hr lock period, escalation is automatic and irreversible.
+    """Lock escalation records after consensus for delayed review/execution.
 
-    Cannot be stopped, reversed, or delayed once the lock period expires.
+    Background execution is controlled by the parent system's explicit runtime
+    gate. Current execution records an audit event rather than notifying real
+    external authorities.
     """
 
     name = "autonomous_escalation"
-    description = "Locks escalations for 24hr then executes automatically"
+    description = "Locks escalation records for delayed audit-backed execution"
 
     def __init__(self, private_key, public_key, audit_log: AuditLog,
                  db_path: str = _ESCALATION_DB):
@@ -333,8 +336,9 @@ class AutonomousEscalationAgent(AgentBase):
                         consensus_digest: str) -> dict:
         """Lock an escalation after consensus is reached.
 
-        The escalation will automatically execute after the lock period
-        (24 hours by default). This is irreversible.
+        The escalation becomes eligible after the lock period (24 hours by
+        default). Automatic background execution is disabled unless the parent
+        system is explicitly configured to run it.
         """
         lock_hours = IMMUTABLE_RULES["escalation_lock_hours"]
         now = datetime.now(timezone.utc)
@@ -804,9 +808,9 @@ class AutonomousAgentSystem:
         result["stages"]["escalation"] = lock_result
         result["outcome"] = "escalation_locked"
         result["note"] = (
-            f"Escalation locked. Will auto-execute after "
+            f"Escalation locked. It becomes eligible after "
             f"{IMMUTABLE_RULES['escalation_lock_hours']}hr lock period. "
-            f"This is irreversible."
+            f"Background execution requires explicit runtime enablement."
         )
 
         return result

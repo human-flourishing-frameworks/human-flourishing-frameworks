@@ -500,8 +500,8 @@ HTML_TEMPLATE = """
             <h1>Human Flourishing Frameworks</h1>
             <p class="subtitle">Observe outcomes. Model causes. Optimize for flourishing.</p>
             <div class="status-badge" id="status-badge">
-                ONLINE &mdash; <span id="wm-belief-count-header">0</span> beliefs
-                &mdash; <span id="wm-sensor-count-header">0</span> live sensors
+                STATUS &mdash; <span id="wm-belief-count-header">0</span> beliefs
+                &mdash; <span id="wm-sensor-count-header">0</span> registered live sensors
                 &mdash; <span id="wm-domains-header">0</span> domains
             </div>
         </header>
@@ -512,8 +512,8 @@ HTML_TEMPLATE = """
         <h2 style="color: #00ff88;">What the Model Knows</h2>
         <div class="section-banner banner-green">
             Every score carries uncertainty. A score of 56% &plusmn; 16% means
-            flourishing could plausibly be 40%&ndash;72%. The model updates
-            these as new data arrives from live sensors.
+            flourishing could plausibly be 40%&ndash;72%. The model can update
+            these when new measurements arrive.
         </div>
         <div class="stats" id="flourishing-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
             <!-- populated by JS -->
@@ -526,7 +526,7 @@ HTML_TEMPLATE = """
         <div class="section-banner banner-green">
             Each bar shows the model's posterior probability (0&ndash;1) for that
             measurement. The faded region is the confidence interval. Every belief
-            traces to a published source.
+            includes provenance from seed data, live sensors, or submitted observations.
         </div>
         <div id="beliefs-container">
             <p style="color: #888;">Loading beliefs...</p>
@@ -537,8 +537,9 @@ HTML_TEMPLATE = """
         <!-- ============================================================ -->
         <h2 style="color: #00ff88;">Live Sensors</h2>
         <div class="section-banner banner-green">
-            These sensors poll real public APIs every hour. When a sensor
-            returns new data, the model runs a Bayesian update and beliefs shift.
+            When enabled, these sensors poll public APIs every hour. When a
+            sensor returns new data, the model runs a Bayesian update and
+            beliefs may shift.
         </div>
         <div id="sensors-container">
             <p style="color: #888;">Loading sensors...</p>
@@ -567,8 +568,9 @@ HTML_TEMPLATE = """
         <div id="governance-section">
             <div class="section-banner banner-orange">
                 <strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents
-                coordinate through PBFT consensus. No human board. Escalations are
-                irreversible after a 24-hour lock.
+                coordinate through PBFT-inspired consensus. Operator authority
+                remains external. Escalation records become eligible after a
+                24-hour lock, and background execution is disabled by default.
             </div>
             <div class="stats" id="agents-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
             </div>
@@ -588,7 +590,8 @@ HTML_TEMPLATE = """
         <div id="violations-section" style="display: none;">
             <div class="section-banner banner-yellow">
                 <strong>DEMO DATA</strong> &mdash; These violations are synthetic examples.
-                They do not represent real incidents. Real data lives in the world model above.
+                They do not represent real incidents. Seeded and submitted
+                observations live in the world model above.
             </div>
             <div id="violations-list"></div>
         </div>
@@ -596,7 +599,8 @@ HTML_TEMPLATE = """
         <footer>
             <p>Human Flourishing Frameworks &mdash; Research Software</p>
             <p style="margin-top: 8px;">
-                The model is always wrong somewhere. It knows this, and it keeps correcting.
+                The model is always wrong somewhere. It reports uncertainty and
+                can correct when new evidence shifts beliefs.
             </p>
         </footer>
     </div>

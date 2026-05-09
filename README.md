@@ -2,7 +2,7 @@
 
 **A research system for observing outcomes, modeling causes, and improving flourishing across people, animals, and ecosystems.**
 
-> **Status:** early development research software. The public service is live, but it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
+> **Status:** early development research software. The public service is configured for Railway, but live health must be validated after each deploy and it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
 
 ## Current deployment
 
@@ -48,7 +48,7 @@ A framework for measuring and improving outcomes across beings and systems:
 
 | Component | Status |
 |---|---|
-| Flask app + dashboard | Live on Railway |
+| Flask app + dashboard | Configured for Railway; public health must be validated after deploy |
 | Docker/gunicorn | Uses `${PORT:-5000}` for cloud/local binding |
 | Sensor framework | Built |
 | Live public API sensors | Implemented, opt-in via `ENABLE_LIVE_SENSORS` |
