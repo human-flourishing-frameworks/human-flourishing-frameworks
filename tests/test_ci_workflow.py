@@ -17,6 +17,7 @@ REQUIRED_TEST_COMMANDS = [
     'python -m unittest discover -s tests -p "test_release_artifacts.py" -t .',
     'python -m unittest discover -s tests -p "test_release_bundle.py" -t .',
     'python -m unittest discover -s tests -p "test_restore_drill.py" -t .',
+    'python -m unittest discover -s tests -p "test_wish_anchor.py" -t .',
 ]
 
 
