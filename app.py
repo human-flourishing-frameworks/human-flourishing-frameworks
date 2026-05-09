@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Human Flourishing Frameworks - Main Flask Application
 
@@ -566,9 +566,7 @@ HTML_TEMPLATE = """
         </h2>
         <div id="governance-section">
             <div class="section-banner banner-orange">
-                <strong>EXPERIMENTAL ADVISORY AGENTS</strong> &mdash; 7 autonomous agents
-                coordinate through PBFT consensus. Operator review required. Escalations are
-                irreversible after a 24-hour lock.
+                <strong>EXPERIMENTAL ADVISORY AGENTS</strong> &mdash; Research/demo agents expose advisory workflow status and audit records. They are not a human board, regulator, court, enforcement system, or autonomous authority. Escalations are review records only unless explicitly authorized by an operator.
             </div>
             <div class="stats" id="agents-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
             </div>
