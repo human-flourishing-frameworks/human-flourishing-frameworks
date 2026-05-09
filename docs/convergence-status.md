@@ -160,6 +160,7 @@ Resync before action after context loss.
 |---|---:|---|
 | #20 Runtime safety gates | Closed superseded | Do not merge as-is. Use only as historical inventory for smaller successor branches from current `master`. |
 | #42 False-narrative copy guard | Merged | Public copy now has an extra regression guard against stale live-status, automatic behavior, and self-correction claims. |
+| #43 World-model shape guard | Merged | World model has a regression guard confirming scalar belief-ledger shape and no matrix/ML overclaim. |
 | Open PRs | None | Current successor work should start from fresh `master`. |
 
 ## External alignment
@@ -207,6 +208,12 @@ local full unittest discovery: Ran 108 tests - OK
 GitHub Actions unittest: passed
 merge commit: 487bcc33e94ffd9fd6678af7d491f3e850a2e021
 
+PR #43 world-model shape guard:
+local focused world-model shape tests: Ran 6 tests - OK
+local full unittest discovery: Ran 114 tests - OK
+GitHub Actions unittest: passed
+merge commit: 195eb973fded5290e3b8510108d6cdc56950dc5e
+
 Render public smoke from local machine:
 scripts/validate_public_site.ps1 against https://human-flourishing-frameworks.onrender.com
 result: PASS
@@ -242,13 +249,12 @@ The current highest-confidence action is a small successor branch from current
 `master`:
 
 ```text
-world-model shape regression test, if it is still relevant and isolated
+autonomous executor default-off gate, scoped to agent_system.py and focused tests
 ```
 
 Then evaluate runtime gates one at a time:
 
 ```text
-autonomous executor default-off gate
 mesh sync default-closed gate
 CI workflow changes after shell-injection review
 deployment/dependency cleanup only with surface-specific evidence
