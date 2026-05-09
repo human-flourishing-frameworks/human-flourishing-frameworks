@@ -43,6 +43,19 @@ from sensors import Measurement, SensorRegistry
 
 _WORLD_DB = os.environ.get("WORLD_MODEL_DB_PATH", "./data/world_model.db")
 
+BELIEF_ACTIVE = "active_belief"
+BELIEF_STRONG = "strong_belief"
+BELIEF_ACCEPTED_FACT = "accepted_fact"
+BELIEF_CHALLENGED = "challenged_fact"
+BELIEF_CONTESTED = "contested_belief"
+BELIEF_IMMUTABLE_CONSTRAINT = "immutable_constraint"
+
+DEFAULT_CONFIDENCE_FLOOR = 0.05
+DEFAULT_HALF_LIFE_DAYS = 365.0
+ACCEPTED_FACT_CONFIDENCE = 0.999
+STRONG_BELIEF_CONFIDENCE = 0.95
+MIN_ACCEPTED_FACT_EVIDENCE = 3
+
 
 def _init_world_db(db_path: str = _WORLD_DB) -> None:
     """Create tables for beliefs and history if they do not exist."""
@@ -63,6 +76,23 @@ def _init_world_db(db_path: str = _WORLD_DB) -> None:
             history_json    TEXT NOT NULL DEFAULT '[]'
         )
     """)
+
+    migrations = {
+        "confidence": "REAL",
+        "status": "TEXT DEFAULT 'active_belief'",
+        "last_reinforced": "TEXT",
+        "last_challenged": "TEXT",
+        "reinforcement_count": "INTEGER DEFAULT 0",
+        "contradiction_count": "INTEGER DEFAULT 0",
+        "half_life_days": "REAL DEFAULT 365.0",
+        "immutable": "INTEGER DEFAULT 0",
+        "confirming_nodes_json": "TEXT NOT NULL DEFAULT '[]'",
+    }
+    for column, definition in migrations.items():
+        try:
+            c.execute(f"ALTER TABLE beliefs ADD COLUMN {column} {definition}")
+        except sqlite3.OperationalError:
+            pass
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS corrections (
@@ -128,6 +158,13 @@ class Belief:
     """How uncertain we are about this belief. 0=certain (never true
     in practice), 1=no idea."""
 
+    confidence: float = 0.5
+    """How much live support this belief currently has. Confidence can
+    increase with independent reinforcement and erode with time or challenge."""
+
+    status: str = BELIEF_ACTIVE
+    """Lifecycle state: active, strong, accepted fact, challenged, or contested."""
+
     evidence: List[str] = field(default_factory=list)
     """Measurement hashes that informed this belief."""
 
@@ -141,6 +178,20 @@ class Belief:
     Each entry: {'posterior': float, 'uncertainty': float,
     'updated_at': str, 'evidence_hash': str}."""
 
+    last_reinforced: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    """When confidence was last reinforced by evidence or admitted nodes."""
+
+    last_challenged: Optional[datetime] = None
+    """When the belief was last challenged or contradicted."""
+
+    reinforcement_count: int = 0
+    contradiction_count: int = 0
+    half_life_days: float = DEFAULT_HALF_LIFE_DAYS
+    immutable: bool = False
+    confirming_nodes: List[str] = field(default_factory=list)
+
     def to_dict(self) -> dict:
         return {
             "entity": self.entity,
@@ -149,8 +200,21 @@ class Belief:
             "prior": self.prior,
             "posterior": self.posterior,
             "uncertainty": self.uncertainty,
+            "confidence": self.confidence,
+            "status": self.status,
             "evidence": self.evidence,
             "last_updated": self.last_updated.isoformat(),
+            "last_reinforced": self.last_reinforced.isoformat(),
+            "last_challenged": (
+                self.last_challenged.isoformat()
+                if self.last_challenged
+                else None
+            ),
+            "reinforcement_count": self.reinforcement_count,
+            "contradiction_count": self.contradiction_count,
+            "half_life_days": self.half_life_days,
+            "immutable": self.immutable,
+            "confirming_nodes": self.confirming_nodes,
             "history": self.history,
         }
 
@@ -161,6 +225,16 @@ class Belief:
             updated = datetime.fromisoformat(updated)
         elif updated is None:
             updated = datetime.now(timezone.utc)
+        reinforced = d.get("last_reinforced")
+        if isinstance(reinforced, str):
+            reinforced = datetime.fromisoformat(reinforced)
+        elif reinforced is None:
+            reinforced = updated
+        challenged = d.get("last_challenged")
+        if isinstance(challenged, str):
+            challenged = datetime.fromisoformat(challenged)
+        elif challenged is None:
+            challenged = None
         return cls(
             entity=d["entity"],
             domain=d["domain"],
@@ -168,9 +242,18 @@ class Belief:
             prior=d["prior"],
             posterior=d["posterior"],
             uncertainty=d["uncertainty"],
+            confidence=d.get("confidence", round(1.0 - d["uncertainty"], 4)),
+            status=d.get("status", BELIEF_ACTIVE),
             evidence=d.get("evidence", []),
             last_updated=updated,
             history=d.get("history", []),
+            last_reinforced=reinforced,
+            last_challenged=challenged,
+            reinforcement_count=d.get("reinforcement_count", 0),
+            contradiction_count=d.get("contradiction_count", 0),
+            half_life_days=d.get("half_life_days", DEFAULT_HALF_LIFE_DAYS),
+            immutable=d.get("immutable", False),
+            confirming_nodes=d.get("confirming_nodes", []),
         )
 
 
@@ -483,12 +566,20 @@ class WorldModel:
         self,
         sensors: Optional[SensorRegistry] = None,
         db_path: str = _WORLD_DB,
+        required_confirming_nodes: Optional[List[str]] = None,
     ):
         self._db_path = db_path
         self.sensors = sensors or SensorRegistry()
         self.beliefs: Dict[str, Belief] = {}
         self.correction_log: List[dict] = []
         self._flourishing_metrics: Dict[str, FlourishingMetric] = {}
+        if required_confirming_nodes is None:
+            required_confirming_nodes = [
+                n.strip()
+                for n in os.environ.get("HFF_REQUIRED_CONFIRMING_NODES", "").split(",")
+                if n.strip()
+            ]
+        self.required_confirming_nodes = sorted(set(required_confirming_nodes))
 
         _init_world_db(db_path)
         self._load_beliefs()
@@ -504,11 +595,17 @@ class WorldModel:
             c = conn.cursor()
             c.execute(
                 "SELECT entity, domain, scope, prior, posterior, uncertainty, "
-                "evidence_json, last_updated, history_json FROM beliefs"
+                "evidence_json, last_updated, history_json, confidence, "
+                "status, last_reinforced, last_challenged, reinforcement_count, "
+                "contradiction_count, half_life_days, immutable, "
+                "confirming_nodes_json FROM beliefs"
             )
             for row in c.fetchall():
                 entity, domain, scope, prior, posterior, uncertainty, \
-                    evidence_json, last_updated, history_json = row
+                    evidence_json, last_updated, history_json, confidence, \
+                    status, last_reinforced, last_challenged, \
+                    reinforcement_count, contradiction_count, half_life_days, \
+                    immutable, confirming_nodes_json = row
                 self.beliefs[entity] = Belief(
                     entity=entity,
                     domain=domain,
@@ -516,9 +613,30 @@ class WorldModel:
                     prior=prior,
                     posterior=posterior,
                     uncertainty=uncertainty,
+                    confidence=(
+                        confidence
+                        if confidence is not None
+                        else round(1.0 - uncertainty, 4)
+                    ),
+                    status=status or BELIEF_ACTIVE,
                     evidence=json.loads(evidence_json),
                     last_updated=datetime.fromisoformat(last_updated),
                     history=json.loads(history_json),
+                    last_reinforced=(
+                        datetime.fromisoformat(last_reinforced)
+                        if last_reinforced
+                        else datetime.fromisoformat(last_updated)
+                    ),
+                    last_challenged=(
+                        datetime.fromisoformat(last_challenged)
+                        if last_challenged
+                        else None
+                    ),
+                    reinforcement_count=reinforcement_count or 0,
+                    contradiction_count=contradiction_count or 0,
+                    half_life_days=half_life_days or DEFAULT_HALF_LIFE_DAYS,
+                    immutable=bool(immutable),
+                    confirming_nodes=json.loads(confirming_nodes_json or "[]"),
                 )
             conn.close()
         except Exception:
@@ -532,8 +650,11 @@ class WorldModel:
             c.execute(
                 """INSERT OR REPLACE INTO beliefs
                    (entity, domain, scope, prior, posterior, uncertainty,
-                    evidence_json, last_updated, history_json)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    evidence_json, last_updated, history_json, confidence,
+                    status, last_reinforced, last_challenged,
+                    reinforcement_count, contradiction_count, half_life_days,
+                    immutable, confirming_nodes_json)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     belief.entity,
                     belief.domain,
@@ -544,6 +665,19 @@ class WorldModel:
                     json.dumps(belief.evidence),
                     belief.last_updated.isoformat(),
                     json.dumps(belief.history),
+                    belief.confidence,
+                    belief.status,
+                    belief.last_reinforced.isoformat(),
+                    (
+                        belief.last_challenged.isoformat()
+                        if belief.last_challenged
+                        else None
+                    ),
+                    belief.reinforcement_count,
+                    belief.contradiction_count,
+                    belief.half_life_days,
+                    1 if belief.immutable else 0,
+                    json.dumps(belief.confirming_nodes),
                 ),
             )
             conn.commit()
@@ -636,6 +770,176 @@ class WorldModel:
         except Exception:
             pass
 
+    # -- confidence lifecycle --------------------------------------------------
+
+    def _required_nodes_confirmed(self, belief: Belief) -> bool:
+        if not self.required_confirming_nodes:
+            return False
+        confirmed = set(belief.confirming_nodes)
+        return set(self.required_confirming_nodes).issubset(confirmed)
+
+    def _refresh_belief_status(self, belief: Belief) -> None:
+        if belief.immutable:
+            belief.status = BELIEF_IMMUTABLE_CONSTRAINT
+            belief.confidence = max(belief.confidence, ACCEPTED_FACT_CONFIDENCE)
+            belief.uncertainty = min(belief.uncertainty, 1.0 - belief.confidence)
+            return
+
+        if belief.contradiction_count > 0:
+            belief.status = (
+                BELIEF_CONTESTED
+                if belief.contradiction_count > 1
+                else BELIEF_CHALLENGED
+            )
+            return
+
+        can_be_fact = (
+            belief.confidence >= ACCEPTED_FACT_CONFIDENCE
+            and len(belief.evidence) >= MIN_ACCEPTED_FACT_EVIDENCE
+            and self._required_nodes_confirmed(belief)
+        )
+        if can_be_fact:
+            belief.status = BELIEF_ACCEPTED_FACT
+        elif belief.confidence >= STRONG_BELIEF_CONFIDENCE:
+            belief.status = BELIEF_STRONG
+        else:
+            belief.status = BELIEF_ACTIVE
+
+    def apply_confidence_decay(
+        self,
+        entity: str,
+        now: Optional[datetime] = None,
+    ) -> Optional[Belief]:
+        """Decay confidence over time unless a belief is immutable.
+
+        Stale beliefs become less action-worthy. The posterior is left alone;
+        only confidence/uncertainty/status change.
+        """
+        belief = self.beliefs.get(entity)
+        if belief is None:
+            return None
+        if belief.immutable:
+            return belief
+
+        now = now or datetime.now(timezone.utc)
+        elapsed_days = max(
+            0.0,
+            (now - belief.last_reinforced).total_seconds() / 86400.0,
+        )
+        half_life = max(float(belief.half_life_days), 0.001)
+        decay_factor = math.exp(-elapsed_days / half_life)
+        decayed = DEFAULT_CONFIDENCE_FLOOR + (
+            belief.confidence - DEFAULT_CONFIDENCE_FLOOR
+        ) * decay_factor
+        belief.confidence = round(max(DEFAULT_CONFIDENCE_FLOOR, min(0.999999, decayed)), 6)
+        belief.uncertainty = round(max(0.000001, min(1.0, 1.0 - belief.confidence)), 6)
+        self._refresh_belief_status(belief)
+        self._save_belief(belief)
+        return belief
+
+    def reinforce_belief(
+        self,
+        entity: str,
+        weight: float,
+        node_id: Optional[str] = None,
+        now: Optional[datetime] = None,
+    ) -> Optional[Belief]:
+        """Increase confidence from new evidence or an admitted node.
+
+        Reinforcement approaches 1.0 asymptotically; it never sets certainty.
+        """
+        belief = self.beliefs.get(entity)
+        if belief is None:
+            return None
+
+        now = now or datetime.now(timezone.utc)
+        weight = max(0.0, min(1.0, float(weight)))
+        gain = weight * (1.0 - belief.confidence)
+        belief.confidence = round(min(0.999999, belief.confidence + gain), 6)
+        belief.uncertainty = round(max(0.000001, 1.0 - belief.confidence), 6)
+        belief.reinforcement_count += 1
+        belief.last_reinforced = now
+        if node_id and node_id not in belief.confirming_nodes:
+            belief.confirming_nodes.append(node_id)
+            belief.confirming_nodes.sort()
+        self._refresh_belief_status(belief)
+        self._save_belief(belief)
+        return belief
+
+    def add_immutable_constraint(
+        self,
+        constraint_id: str,
+        statement: str,
+        domain: str = "ethics",
+        scope: str = "constitutional",
+    ) -> Belief:
+        """Add a non-agent-editable operating constraint.
+
+        Immutable constraints are not empirical facts. They are constitutional
+        rules for the system's behavior and do not decay or get overturned by
+        ordinary node polling.
+        """
+        now = datetime.now(timezone.utc)
+        entity = f"constraint:{constraint_id}"
+        belief = Belief(
+            entity=entity,
+            domain=domain,
+            scope=scope,
+            prior=1.0,
+            posterior=1.0,
+            uncertainty=0.000001,
+            confidence=0.999999,
+            status=BELIEF_IMMUTABLE_CONSTRAINT,
+            evidence=[hashlib.sha256(statement.encode("utf-8")).hexdigest()],
+            last_updated=now,
+            last_reinforced=now,
+            reinforcement_count=1,
+            half_life_days=36500.0,
+            immutable=True,
+            history=[{
+                "statement": statement,
+                "updated_at": now.isoformat(),
+                "note": "constitutional_constraint_not_empirical_fact",
+            }],
+        )
+        self.beliefs[entity] = belief
+        self._save_belief(belief)
+        return belief
+
+    def challenge_belief(
+        self,
+        entity: str,
+        weight: float,
+        reason: str,
+        now: Optional[datetime] = None,
+    ) -> Optional[Belief]:
+        """Lower confidence and mark a belief as challenged or contested."""
+        belief = self.beliefs.get(entity)
+        if belief is None:
+            return None
+        if belief.immutable:
+            return belief
+
+        now = now or datetime.now(timezone.utc)
+        weight = max(0.0, min(1.0, float(weight)))
+        loss = weight * belief.confidence
+        belief.confidence = round(max(DEFAULT_CONFIDENCE_FLOOR, belief.confidence - loss), 6)
+        belief.uncertainty = round(max(0.000001, min(1.0, 1.0 - belief.confidence)), 6)
+        belief.contradiction_count += 1
+        belief.last_challenged = now
+        belief.history.append({
+            "posterior": belief.posterior,
+            "uncertainty": belief.uncertainty,
+            "confidence": belief.confidence,
+            "updated_at": now.isoformat(),
+            "challenge_reason": reason,
+        })
+        if len(belief.history) > 100:
+            belief.history = belief.history[-100:]
+        self._refresh_belief_status(belief)
+        self._save_belief(belief)
+        return belief
+
     # -- Bayesian update -------------------------------------------------------
 
     def update(self, measurements: List[Measurement]) -> List[dict]:
@@ -671,6 +975,7 @@ class WorldModel:
 
             if entity_key in self.beliefs:
                 belief = self.beliefs[entity_key]
+                self.apply_confidence_decay(entity_key)
                 old_posterior = belief.posterior
 
                 # Simplified Bayesian update:
@@ -687,6 +992,7 @@ class WorldModel:
 
                 # Record correction if the shift was significant
                 shift = abs(new_posterior - old_posterior)
+                now = datetime.now(timezone.utc)
                 if shift > 0.05:
                     correction = {
                         "entity": entity_key,
@@ -694,15 +1000,20 @@ class WorldModel:
                         "new_posterior": new_posterior,
                         "reason": f"measurement_shift_{shift:.4f}_from_{m.source}",
                         "measurement_hash": m.measurement_hash,
-                        "corrected_at": datetime.now(timezone.utc).isoformat(),
+                        "corrected_at": now.isoformat(),
                     }
                     self.correction_log.insert(0, correction)
                     self._save_correction(correction)
+
+                if shift > 0.35 and trust > 0.4:
+                    belief.contradiction_count += 1
+                    belief.last_challenged = now
 
                 # Save history
                 belief.history.append({
                     "posterior": old_posterior,
                     "uncertainty": belief.uncertainty,
+                    "confidence": belief.confidence,
                     "updated_at": belief.last_updated.isoformat(),
                     "evidence_hash": m.measurement_hash,
                 })
@@ -712,13 +1023,26 @@ class WorldModel:
 
                 belief.posterior = new_posterior
                 belief.uncertainty = new_uncertainty
+                confidence_gain = trust * (1.0 - belief.confidence) * 0.5
+                belief.confidence = round(
+                    min(0.999999, belief.confidence + confidence_gain),
+                    6,
+                )
+                belief.uncertainty = round(
+                    max(0.000001, min(belief.uncertainty, 1.0 - belief.confidence)),
+                    6,
+                )
+                belief.reinforcement_count += 1
+                belief.last_reinforced = now
                 belief.evidence.append(m.measurement_hash)
-                belief.last_updated = datetime.now(timezone.utc)
+                belief.last_updated = now
 
             else:
                 # New belief: prior is 0.5 (maximum entropy / no information)
                 new_posterior = 0.5 * (1.0 - trust) + observed * trust
                 new_posterior = round(max(0.0, min(1.0, new_posterior)), 6)
+                initial_uncertainty = round(max(0.1, m.uncertainty), 4)
+                now = datetime.now(timezone.utc)
 
                 belief = Belief(
                     entity=entity_key,
@@ -726,18 +1050,24 @@ class WorldModel:
                     scope=m.scope,
                     prior=0.5,
                     posterior=new_posterior,
-                    uncertainty=round(max(0.1, m.uncertainty), 4),
+                    uncertainty=initial_uncertainty,
+                    confidence=round(max(DEFAULT_CONFIDENCE_FLOOR, 1.0 - initial_uncertainty), 6),
                     evidence=[m.measurement_hash],
                     history=[],
+                    last_reinforced=now,
+                    reinforcement_count=1,
                 )
 
             self.beliefs[entity_key] = belief
+            self._refresh_belief_status(belief)
             self._save_belief(belief)
 
             updates.append({
                 "entity": entity_key,
                 "posterior": belief.posterior,
                 "uncertainty": belief.uncertainty,
+                "confidence": belief.confidence,
+                "status": belief.status,
                 "evidence_count": len(belief.evidence),
                 "measurement_hash": m.measurement_hash,
             })
@@ -1135,6 +1465,16 @@ class WorldModel:
             if belief_count > 0
             else 1.0
         )
+        avg_confidence = (
+            sum(b.confidence for b in self.beliefs.values()) / belief_count
+            if belief_count > 0
+            else 0.0
+        )
+        belief_status_counts: Dict[str, int] = {}
+        for belief in self.beliefs.values():
+            belief_status_counts[belief.status] = (
+                belief_status_counts.get(belief.status, 0) + 1
+            )
 
         last_update = None
         if self.beliefs:
@@ -1177,6 +1517,9 @@ class WorldModel:
             "domains": domains,
             "scopes": scopes,
             "average_uncertainty": round(avg_uncertainty, 4),
+            "average_confidence": round(avg_confidence, 4),
+            "belief_status_counts": belief_status_counts,
+            "required_confirming_nodes": self.required_confirming_nodes,
             "last_update": last_update,
             "corrections_count": len(self.correction_log),
             "flourishing_scores": flourishing_scores,
