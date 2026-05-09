@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Human Flourishing Frameworks - Main Flask Application
 
@@ -133,14 +133,14 @@ DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', '')
 NODE_PUBLIC_KEY = os.environ.get('NODE_PUBLIC_KEY', '')
 
 # ---------------------------------------------------------------------------
-# Background threads — only heartbeat + mesh sync (no propagation)
+# Background threads â€” only heartbeat + mesh sync (no propagation)
 # ---------------------------------------------------------------------------
 if ENABLE_MESH_SYNC:
     mesh_sync_thread = threading.Thread(target=sync_with_mesh, daemon=True)
     mesh_sync_thread.start()
 
 # ---------------------------------------------------------------------------
-# Autonomous agent system — node keypair + initialization
+# Autonomous agent system â€” node keypair + initialization
 # ---------------------------------------------------------------------------
 _NODE_KEY_DIR = os.path.join(os.path.dirname(__file__), "data")
 _NODE_KEY_PRIV = os.path.join(_NODE_KEY_DIR, "node_key.pem")
@@ -173,7 +173,7 @@ autonomous_system = AutonomousAgentSystem(
 )
 
 # ---------------------------------------------------------------------------
-# World model — Bayesian belief tracking + sensor framework
+# World model â€” Bayesian belief tracking + sensor framework
 # ---------------------------------------------------------------------------
 _world_sensor_registry = SensorRegistry()
 world_model = WorldModel(
@@ -182,11 +182,11 @@ world_model = WorldModel(
 )
 
 # ---------------------------------------------------------------------------
-# Bootstrap — seed the world model with REAL data only
+# Bootstrap â€” seed the world model with REAL data only
 # ---------------------------------------------------------------------------
 # The world model starts empty. Without initial observations it has no beliefs
 # and nothing to show. This bootstrap feeds published, cited, real-world
-# findings into the sensor→world_model pipeline so the system has something
+# findings into the sensorâ†’world_model pipeline so the system has something
 # true to reason about from the moment it starts.
 #
 # NO mock data enters the world model. Mock violations stay in the demo UI
@@ -224,7 +224,7 @@ def _bootstrap_world_model() -> None:
 _bootstrap_world_model()
 
 # ---------------------------------------------------------------------------
-# Live sensors — poll real public APIs on a background thread
+# Live sensors â€” poll real public APIs on a background thread
 # ---------------------------------------------------------------------------
 # Register live sensors (World Bank, WHO) that continuously observe the world.
 # The observation loop runs every hour (data sources update at most daily).
@@ -238,7 +238,7 @@ if ENABLE_LIVE_SENSORS:
         _world_sensor_registry.register(_sensor)
     print(f"[SENSORS] Registered {len(_live_sensors)} live sensors")
 
-# Background observation thread — polls APIs and feeds world_model.update()
+# Background observation thread â€” polls APIs and feeds world_model.update()
     _observation_thread = threading.Thread(
         target=run_observation_loop,
         args=(_world_sensor_registry, world_model),
@@ -507,7 +507,7 @@ HTML_TEMPLATE = """
         </header>
 
         <!-- ============================================================ -->
-        <!-- FLOURISHING SCORES — the headline -->
+        <!-- FLOURISHING SCORES â€” the headline -->
         <!-- ============================================================ -->
         <h2 style="color: #00ff88;">What the Model Knows</h2>
         <div class="section-banner banner-green">
@@ -520,7 +520,7 @@ HTML_TEMPLATE = """
         </div>
 
         <!-- ============================================================ -->
-        <!-- BELIEFS — grouped by scope, with bars -->
+        <!-- BELIEFS â€” grouped by scope, with bars -->
         <!-- ============================================================ -->
         <h2 style="color: #00ff88;">All Beliefs</h2>
         <div class="section-banner banner-green">
@@ -553,11 +553,11 @@ HTML_TEMPLATE = """
         </div>
 
         <!-- ============================================================ -->
-        <!-- AUTONOMOUS GOVERNANCE (collapsed by default) -->
+        <!-- ADVISORY AGENT STATUS (collapsed by default) -->
         <!-- ============================================================ -->
         <h2 style="color: #ff8800;">
             <span class="collapsible-header" onclick="toggleSection('governance-section', this)">
-                <span class="arrow">&#9660;</span> Autonomous Governance
+                <span class="arrow">&#9660;</span> Advisory Agent Status
                 <span style="font-size: 13px; font-weight: normal; color: #888;">
                     &mdash; <span id="agent-count">7</span> agents,
                     <span id="audit-entries">0</span> audit entries
@@ -566,8 +566,8 @@ HTML_TEMPLATE = """
         </h2>
         <div id="governance-section">
             <div class="section-banner banner-orange">
-                <strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents
-                coordinate through PBFT consensus. No human board. Escalations are
+                <strong>EXPERIMENTAL ADVISORY AGENTS</strong> &mdash; 7 autonomous agents
+                coordinate through PBFT consensus. Operator review required. Escalations are
                 irreversible after a 24-hour lock.
             </div>
             <div class="stats" id="agents-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
@@ -940,7 +940,7 @@ HTML_TEMPLATE = """
             })
             .catch(() => {});
 
-        // ---- AUTONOMOUS GOVERNANCE ----
+        // ---- ADVISORY AGENT STATUS ----
         fetch('/api/autonomous/status')
             .then(r => r.json())
             .then(data => {
@@ -1014,7 +1014,7 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def index():
-    """Main dashboard — renders the HTML template with node identity."""
+    """Main dashboard â€” renders the HTML template with node identity."""
     return render_template_string(
         HTML_TEMPLATE,
         node_id=NODE_ID,
@@ -1035,7 +1035,7 @@ def health():
 
 @app.route('/api/status')
 def api_status():
-    """Honest system status — no fabricated numbers."""
+    """Honest system status â€” no fabricated numbers."""
     try:
         adoption = get_adoption_stats()
     except Exception:
@@ -1600,12 +1600,13 @@ if __name__ == '__main__':
                         region=REGION, operator_type=OPERATOR_TYPE,
                         deployment_type=DEPLOYMENT_TYPE,
                         node_public_key=NODE_PUBLIC_KEY)
-        print("[OK] Heartbeat started — syncing every 60 seconds")
+        print("[OK] Heartbeat started â€” syncing every 60 seconds")
     except Exception as e:
         print(f"\n[WARNING] Could not register node: {e}")
 
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
 
 
