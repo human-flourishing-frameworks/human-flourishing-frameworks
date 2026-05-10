@@ -35,6 +35,23 @@ _SKIP_LINK_CSS = """
         .skip-link:focus { top: 12px; }
 """
 
+_HEALTHZ_SENSOR_STATUS_JS = """
+        // Public runtime sensor state comes from /healthz, not from the
+        // world-model registry count. This keeps sensor definitions separate
+        // from live observation.
+        fetch('/healthz')
+            .then(r => r.json())
+            .then(data => {
+                const el = document.getElementById('wm-live-sensors-header');
+                if (!el) return;
+                el.textContent = data.live_sensors_enabled ? 'enabled' : 'disabled';
+            })
+            .catch(() => {
+                const el = document.getElementById('wm-live-sensors-header');
+                if (el) el.textContent = 'check /healthz';
+            });
+"""
+
 
 def _sanitize_public_template() -> None:
     """Replace misleading governance copy with bounded advisory language."""
@@ -113,8 +130,49 @@ def _apply_public_ui_baseline() -> None:
     _app_module.HTML_TEMPLATE = template
 
 
+def _clarify_public_sensor_status() -> None:
+    """Separate live sensor state from sensor-definition counts in public copy.
+
+    The public page can show both runtime state and known sensor definitions, but
+    must not make a `0 live sensors` value look inconsistent with a separate
+    `9 sensor definitions` section.
+    """
+    template = getattr(_app_module, "HTML_TEMPLATE", "")
+    if not isinstance(template, str):
+        return
+
+    template = template.replace(
+        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors',
+        '&mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
+        1,
+    )
+    template = template.replace(
+        "document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;",
+        "// Live sensor header is populated from /healthz below.",
+        1,
+    )
+    template = template.replace(
+        '<div class="stat-label">Registered Sensors</div>',
+        '<div class="stat-label">Runtime Sensor Sources</div>',
+    )
+    template = template.replace(
+        "sensors registered. Waiting for first observation cycle...",
+        "sensor definitions available. Live observation remains disabled unless explicitly enabled.",
+    )
+
+    if "wm-live-sensors-header" in template and "/healthz" in template and "Public runtime sensor state comes from /healthz" not in template:
+        template = template.replace(
+            "        // ---- WORLD MODEL STATUS ----",
+            _HEALTHZ_SENSOR_STATUS_JS + "\n        // ---- WORLD MODEL STATUS ----",
+            1,
+        )
+
+    _app_module.HTML_TEMPLATE = template
+
+
 _sanitize_public_template()
 _apply_public_ui_baseline()
+_clarify_public_sensor_status()
 
 app = _app_module.app
 
