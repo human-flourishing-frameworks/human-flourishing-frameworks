@@ -501,7 +501,7 @@ HTML_TEMPLATE = """
             <p class="subtitle">Observe outcomes. Model causes. Optimize for flourishing.</p>
             <div class="status-badge" id="status-badge">
                 STATUS &mdash; <span id="wm-belief-count-header">0</span> beliefs
-                &mdash; <span id="wm-sensor-count-header">0</span> live sensors
+                &mdash; <span id="wm-sensor-count-header">0</span> registered sensors
                 &mdash; <span id="wm-domains-header">0</span> domains
             </div>
         </header>
@@ -513,7 +513,7 @@ HTML_TEMPLATE = """
         <div class="section-banner banner-green">
             Every score carries uncertainty. A score of 56% &plusmn; 16% means
             flourishing could plausibly be 40%&ndash;72%. The model updates
-            these as new data arrives from live sensors.
+            these as new verified or best-effort observations arrive.
         </div>
         <div class="stats" id="flourishing-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
             <!-- populated by JS -->
@@ -535,10 +535,11 @@ HTML_TEMPLATE = """
         <!-- ============================================================ -->
         <!-- LIVE SENSORS -->
         <!-- ============================================================ -->
-        <h2 style="color: #00ff88;">Live Sensors</h2>
+        <h2 style="color: #00ff88;">Sensor Registry</h2>
         <div class="section-banner banner-green">
-            Live sensors are optional and default off. When explicitly enabled,
-            sensor data can update the model and shift beliefs.
+            Sensors are registered first and only update the model when live
+            sensors are explicitly enabled. Registry presence is not proof of
+            live observation; see the public health endpoint for runtime state.
         </div>
         <div id="sensors-container">
             <p style="color: #888;">Loading sensors...</p>
@@ -627,6 +628,14 @@ HTML_TEMPLATE = """
             return src.substring(0, 50);
         }
 
+        // Visible degraded-state fallback for failed safe-read fetches.
+        // Replaces silent catches so the public dashboard fails honestly.
+        function showDashboardDegraded(sectionId) {
+            const el = document.getElementById(sectionId);
+            if (!el) return;
+            el.innerHTML = '<div class="section-banner banner-yellow">Some dashboard data is temporarily unavailable. This page is advisory research software; verify deployment health with the public health endpoint before relying on current status.</div>';
+        }
+
         // ---- WORLD MODEL STATUS ----
         fetch('/api/world/status')
             .then(r => r.json())
@@ -675,7 +684,7 @@ HTML_TEMPLATE = """
                     </div>
                     <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
                         <div class="stat-number" style="color: #00ff88;">${data.sensor_count || 0}</div>
-                        <div class="stat-label">Live Sensors</div>
+                        <div class="stat-label">Registered Sensors</div>
                     </div>
                     <div class="stat-box" style="border-color: rgba(0,255,136,0.3);">
                         <div class="stat-number" style="color: #00ff88;">${
@@ -702,7 +711,7 @@ HTML_TEMPLATE = """
                 summaryRow.innerHTML = summaryHtml;
                 grid.parentNode.insertBefore(summaryRow, grid.nextSibling);
             })
-            .catch(() => {});
+            .catch(() => showDashboardDegraded('flourishing-grid'));
 
         // ---- ALL BELIEFS ----
         fetch('/api/world/beliefs?per_page=200')
@@ -811,7 +820,7 @@ HTML_TEMPLATE = """
                     container.appendChild(groupDiv);
                 });
             })
-            .catch(() => {});
+            .catch(() => showDashboardDegraded('beliefs-container'));
 
         // ---- LIVE SENSORS ----
         fetch('/api/world/status')
@@ -820,7 +829,7 @@ HTML_TEMPLATE = """
                 // Sensor health comes from the registry
                 return fetch('/api/world/status');
             })
-            .catch(() => {});
+            .catch(() => showDashboardDegraded('sensors-container'));
 
         // Use a dedicated endpoint or embed sensor health in status
         // For now, we'll show what we know from the world status
@@ -891,7 +900,7 @@ HTML_TEMPLATE = """
                     container.appendChild(card);
                 });
             })
-            .catch(() => {});
+            .catch(() => showDashboardDegraded('sensors-container'));
 
         // ---- DISCOVERIES ----
         fetch('/api/world/discover')
@@ -917,7 +926,7 @@ HTML_TEMPLATE = """
                     container.appendChild(card);
                 });
             })
-            .catch(() => {});
+            .catch(() => showDashboardDegraded('discoveries-container'));
 
         // ---- ADVISORY AGENT STATUS ----
         fetch('/api/autonomous/status')
@@ -942,7 +951,7 @@ HTML_TEMPLATE = """
                     grid.appendChild(box);
                 });
             })
-            .catch(() => {});
+            .catch(() => showDashboardDegraded('agents-grid'));
 
         // Register this browser as a node
         fetch('/api/adoption/register', {
@@ -986,6 +995,23 @@ def index():
 def health():
     """Health check (e.g. for Heroku)."""
     return jsonify({"status": "ok"}), 200
+
+
+@app.route('/healthz')
+def healthz():
+    """Lightweight readiness probe with explicit toggle visibility.
+
+    Reports the runtime state of the public-write/sensor/mesh toggles so
+    deployment platforms and operators can see capability state without
+    reading dashboard copy.
+    """
+    return jsonify({
+        "status": "ok",
+        "service": "human-flourishing-frameworks",
+        "live_sensors_enabled": ENABLE_LIVE_SENSORS,
+        "mesh_sync_enabled": ENABLE_MESH_SYNC,
+        "public_writes_enabled": ALLOW_PUBLIC_WRITES,
+    }), 200
 
 
 @app.route('/api/status')
