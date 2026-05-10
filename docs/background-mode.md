@@ -29,7 +29,6 @@ Allowed behavior:
 ```text
 in-memory heartbeat tick
 visible /background/status state
-visible /healthz background state
 safe shutdown on process exit
 ```
 
@@ -54,7 +53,6 @@ agent autonomy
 
 ```text
 GET /background/status
-GET /healthz
 ```
 
 Pass condition:
@@ -68,6 +66,8 @@ background_mode.side_effects.public_writes=false
 background_mode.side_effects.personal_data=false
 background_mode.side_effects.device_or_actuator_control=false
 ```
+
+`/healthz` remains the health proof for existing deployment toggles such as live sensors, mesh sync, and public writes. `/background/status` is the proof surface for background mode.
 
 ## Expansion rule
 
