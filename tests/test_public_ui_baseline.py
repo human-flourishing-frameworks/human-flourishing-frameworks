@@ -40,6 +40,20 @@ class PublicUiBaselineTests(unittest.TestCase):
         self.assertNotIn("ALGORITHMIC GOVERNANCE", text)
         self.assertNotIn("irreversible after a 24-hour lock", text)
 
+    def test_public_sensor_copy_separates_live_state_from_definitions(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn('live sensors: <span id="wm-live-sensors-header">checking</span>', text)
+        self.assertIn("Public runtime sensor state comes from /healthz", text)
+        self.assertIn("Runtime Sensor Sources", text)
+        self.assertIn(
+            "sensor definitions available. Live observation remains disabled unless explicitly enabled.",
+            text,
+        )
+        self.assertNotIn('id="wm-sensor-count-header"', text)
+        self.assertNotIn("sensors registered. Waiting for first observation cycle", text)
+
 
 if __name__ == "__main__":
     unittest.main()
