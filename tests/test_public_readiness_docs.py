@@ -71,6 +71,28 @@ class PublicReadinessDocsTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_contains_phrase(policy, phrase)
 
+    def test_public_surface_policy_protects_minor_device_pilots(self):
+        policy = self.read("docs/public-surface-policy.md")
+        required_phrases = [
+            "Protected minor device/sensor pilot",
+            "PROTECTED_MINOR_SENSITIVE_DEVICE_PILOT",
+            "highest-sensitivity pilot class",
+            "Parent/guardian permission",
+            "Child assent",
+            "No public surface",
+            "No training use",
+            "No hidden telemetry",
+            "No high-risk sensors by default",
+            "GPS/location, camera, mic, contacts, messages, photos, health, school, biometrics, and financial data are blocked",
+            "child can stop immediately",
+            "parent permission = unlimited child data collection",
+            "child assent = adult-style alpha testing",
+            "child device = ordinary adult device",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(policy, phrase)
+
     def test_i18n_doc_is_honest_about_incomplete_readiness(self):
         doc = self.read("docs/internationalization-and-accessibility.md")
         required_phrases = [
