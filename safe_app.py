@@ -15,6 +15,7 @@ from flask import jsonify
 
 import app as _app_module
 from background_mode import create_background_controller_from_env
+from deploy_identity import deployment_identity
 
 
 _ADVISORY_BANNER = (
@@ -157,6 +158,12 @@ background_controller.start()
 def background_status():
     """Visible status for the opt-in heartbeat-only background mode."""
     return jsonify({"background_mode": background_controller.snapshot()})
+
+
+@app.route("/deployment/identity")
+def deployment_identity_status():
+    """Visible non-secret deployment identity for live freshness smoke."""
+    return jsonify({"deployment": deployment_identity()})
 
 
 @app.after_request
