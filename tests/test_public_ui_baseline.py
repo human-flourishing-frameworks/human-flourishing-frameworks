@@ -54,6 +54,13 @@ class PublicUiBaselineTests(unittest.TestCase):
         self.assertNotIn('id="wm-sensor-count-header"', text)
         self.assertNotIn("sensors registered. Waiting for first observation cycle", text)
 
+    def test_public_dashboard_is_not_cached(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+        self.assertEqual(response.headers.get("Pragma"), "no-cache")
+        self.assertEqual(response.headers.get("Expires"), "0")
+
 
 if __name__ == "__main__":
     unittest.main()

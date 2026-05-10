@@ -52,63 +52,48 @@ _HEALTHZ_SENSOR_STATUS_JS = """
             });
 """
 
+_PUBLIC_COPY_REPLACEMENTS = (
+    (
+        "<!-- AUTONOMOUS GOVERNANCE (collapsed by default) -->",
+        "<!-- ADVISORY AGENT STATUS (collapsed by default) -->",
+    ),
+    ("Autonomous Governance", "Advisory Agent Status"),
+    (
+        "<strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents\n"
+        "                coordinate through PBFT consensus. No human board. Escalations are\n"
+        "                irreversible after a 24-hour lock.",
+        _ADVISORY_BANNER,
+    ),
+    ("<strong>ALGORITHMIC GOVERNANCE</strong>", "<strong>EXPERIMENTAL ADVISORY AGENTS</strong>"),
+    ("No human board.", "Operator review required."),
+    (
+        "Escalations are irreversible after a 24-hour lock.",
+        "Escalations are review records only unless explicitly authorized by an operator.",
+    ),
+    (
+        "irreversible after a 24-hour lock.",
+        "not executable unless explicitly authorized by an operator.",
+    ),
+    (
+        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors',
+        '&mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
+    ),
+    (
+        "document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;",
+        "// Live sensor header is populated from /healthz below.",
+    ),
+    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
+    (
+        "sensors registered. Waiting for first observation cycle...",
+        "sensor definitions available. Live observation remains disabled unless explicitly enabled.",
+    ),
+)
 
-def _sanitize_public_template() -> None:
-    """Replace misleading governance copy with bounded advisory language."""
-    template = getattr(_app_module, "HTML_TEMPLATE", "")
-    if not isinstance(template, str):
-        return
 
-    replacements = (
-        (
-            "<!-- AUTONOMOUS GOVERNANCE (collapsed by default) -->",
-            "<!-- ADVISORY AGENT STATUS (collapsed by default) -->",
-        ),
-        (
-            "Autonomous Governance",
-            "Advisory Agent Status",
-        ),
-        (
-            "<strong>ALGORITHMIC GOVERNANCE</strong> &mdash; 7 autonomous agents\n"
-            "                coordinate through PBFT consensus. No human board. Escalations are\n"
-            "                irreversible after a 24-hour lock.",
-            _ADVISORY_BANNER,
-        ),
-        (
-            "<strong>ALGORITHMIC GOVERNANCE</strong>",
-            "<strong>EXPERIMENTAL ADVISORY AGENTS</strong>",
-        ),
-        (
-            "No human board.",
-            "Operator review required.",
-        ),
-        (
-            "Escalations are irreversible after a 24-hour lock.",
-            "Escalations are review records only unless explicitly authorized by an operator.",
-        ),
-        (
-            "irreversible after a 24-hour lock.",
-            "not executable unless explicitly authorized by an operator.",
-        ),
-    )
-
-    for old, new in replacements:
+def _rewrite_public_html(template: str) -> str:
+    """Apply public-copy convergence to a rendered or template HTML string."""
+    for old, new in _PUBLIC_COPY_REPLACEMENTS:
         template = template.replace(old, new)
-
-    _app_module.HTML_TEMPLATE = template
-
-
-def _apply_public_ui_baseline() -> None:
-    """Apply minimal language and landmark markup to the safe public template.
-
-    The current dashboard is English-only. Declaring language/direction and
-    adding a skip link + main landmark improves browser, keyboard, and assistive
-    technology behavior without adding translation services, personalization, or
-    any new data collection.
-    """
-    template = getattr(_app_module, "HTML_TEMPLATE", "")
-    if not isinstance(template, str):
-        return
 
     template = template.replace("<html>", '<html lang="en" dir="ltr">', 1)
 
@@ -127,54 +112,70 @@ def _apply_public_ui_baseline() -> None:
             1,
         )
 
-    _app_module.HTML_TEMPLATE = template
-
-
-def _clarify_public_sensor_status() -> None:
-    """Separate live sensor state from sensor-definition counts in public copy.
-
-    The public page can show both runtime state and known sensor definitions, but
-    must not make a `0 live sensors` value look inconsistent with a separate
-    `9 sensor definitions` section.
-    """
-    template = getattr(_app_module, "HTML_TEMPLATE", "")
-    if not isinstance(template, str):
-        return
-
-    template = template.replace(
-        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors',
-        '&mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
-        1,
-    )
-    template = template.replace(
-        "document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;",
-        "// Live sensor header is populated from /healthz below.",
-        1,
-    )
-    template = template.replace(
-        '<div class="stat-label">Registered Sensors</div>',
-        '<div class="stat-label">Runtime Sensor Sources</div>',
-    )
-    template = template.replace(
-        "sensors registered. Waiting for first observation cycle...",
-        "sensor definitions available. Live observation remains disabled unless explicitly enabled.",
-    )
-
-    if "wm-live-sensors-header" in template and "/healthz" in template and "Public runtime sensor state comes from /healthz" not in template:
+    if (
+        "wm-live-sensors-header" in template
+        and "/healthz" in template
+        and "Public runtime sensor state comes from /healthz" not in template
+    ):
         template = template.replace(
             "        // ---- WORLD MODEL STATUS ----",
             _HEALTHZ_SENSOR_STATUS_JS + "\n        // ---- WORLD MODEL STATUS ----",
             1,
         )
 
-    _app_module.HTML_TEMPLATE = template
+    return template
+
+
+def _sanitize_public_template() -> None:
+    """Replace misleading public copy in the module-level template."""
+    template = getattr(_app_module, "HTML_TEMPLATE", "")
+    if isinstance(template, str):
+        _app_module.HTML_TEMPLATE = _rewrite_public_html(template)
+
+
+def _apply_public_ui_baseline() -> None:
+    """Kept for compatibility with older tests/imports; handled by rewrite."""
+    _sanitize_public_template()
+
+
+def _clarify_public_sensor_status() -> None:
+    """Kept for compatibility with older tests/imports; handled by rewrite."""
+    _sanitize_public_template()
 
 
 _sanitize_public_template()
-_apply_public_ui_baseline()
-_clarify_public_sensor_status()
 
 app = _app_module.app
+
+
+@app.after_request
+def _enforce_safe_public_response(response):
+    """Prevent stale public dashboard copy from surviving template drift or cache.
+
+    This response-level guard is intentionally presentation-only. It does not add
+    routes, writes, sensors, mesh sync, agents, secrets, databases, or deployment
+    authority. It gives the public HTML the same claim/guard language even if the
+    imported template changes before app.py is corrected directly.
+    """
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
+    content_type = response.headers.get("Content-Type", "")
+    if response.direct_passthrough or "text/html" not in content_type.lower():
+        return response
+
+    try:
+        html = response.get_data(as_text=True)
+        rewritten = _rewrite_public_html(html)
+        if rewritten != html:
+            response.set_data(rewritten)
+            response.headers["Content-Length"] = str(len(response.get_data()))
+    except Exception:
+        return response
+
+    return response
+
 
 if __name__ == "__main__":
     app.run()
