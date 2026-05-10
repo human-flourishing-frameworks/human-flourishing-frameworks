@@ -1,10 +1,8 @@
+import unittest
 from unittest.mock import patch
-
-import pytest
 
 from health_probe import (
     DEFAULT_HEALTH_PATHS,
-    ProbeResult,
     probe_health,
     probe_endpoint,
 )
@@ -44,7 +42,7 @@ def test_probe_endpoint_handles_network_error(mock_urlopen):
 
 
 def test_probe_requires_allowlisted_path():
-    with pytest.raises(ValueError):
+    with unittest.TestCase().assertRaises(ValueError):
         probe_endpoint(
             "https://example.com",
             "/admin/reset-all",
