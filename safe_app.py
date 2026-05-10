@@ -11,7 +11,10 @@ work. This file is a public-copy and presentation guard for the live service.
 
 from __future__ import annotations
 
+from flask import jsonify
+
 import app as _app_module
+from background_mode import create_background_controller_from_env
 
 
 _ADVISORY_BANNER = (
@@ -146,6 +149,14 @@ def _clarify_public_sensor_status() -> None:
 _sanitize_public_template()
 
 app = _app_module.app
+background_controller = create_background_controller_from_env()
+background_controller.start()
+
+
+@app.route("/background/status")
+def background_status():
+    """Visible status for the opt-in heartbeat-only background mode."""
+    return jsonify({"background_mode": background_controller.snapshot()})
 
 
 @app.after_request
@@ -153,7 +164,7 @@ def _enforce_safe_public_response(response):
     """Prevent stale public dashboard copy from surviving template drift or cache.
 
     This response-level guard is intentionally presentation-only. It does not add
-    routes, writes, sensors, mesh sync, agents, secrets, databases, or deployment
+    writes, sensors, mesh sync, agents, secrets, databases, or deployment
     authority. It gives the public HTML the same claim/guard language even if the
     imported template changes before app.py is corrected directly.
     """
