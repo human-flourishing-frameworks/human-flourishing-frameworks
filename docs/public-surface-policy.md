@@ -43,6 +43,7 @@ not mean permanent. A signal does not equal the person.
 | SDKs | Public read + token-safe helpers | Allowed later | Must default to read-only and protect tokens. |
 | APKs/mobile apps | Disabled by default | Not public yet | Require privacy review, permission audit, and no background surveillance by default. |
 | Personal safety pathways | Private / operator-controlled | Manual opt-in only | A sensor is a bounded signal pathway, not a person/device/object. |
+| Protected minor device/sensor pilot | Private / highest-sensitivity pilot | Blocked until checklist/tests pass | Requires parent/guardian permission, child assent, no public surface, no hidden telemetry, and local/no-data defaults. |
 | Vehicle telemetry | Private / high-risk signal | Disabled by default | Location/status are sensitive; control is not allowed. |
 | Vehicle control | Not allowed | Blocked | Steering, braking, throttle, immobilization, rerouting, ignition, or lock control are high-risk actuator functions. |
 | Release bundles/checksums | Public or pre-release after gates | Allowed after restore/mirror evidence | Bundles preserve doctrine/artifacts, not people or continuity proof. |
@@ -64,18 +65,63 @@ Before broadening public visibility, production should pass:
 
 ## Personal-device and multi-person rule
 
-People do not "have sensors" as objects attached to them. A consenting person may
+People do not "have sensors" as objects attached to them. A consenting adult may
 enable one or more bounded signal pathways on a device they control.
 
-For Alex, Courtney Blasioli, Gage Place, or anyone else:
+For adults such as Alex, Courtney, Shelby, or any other consenting adult:
 
 | Requirement | Rule |
 |---|---|
-| Consent | The person personally opts in. |
-| Cadence | The person chooses or accepts the cadence. |
-| Visibility | Private by default unless the person explicitly shares. |
+| Consent | The adult personally opts in. |
+| Cadence | The adult chooses or accepts the cadence. |
+| Visibility | Private by default unless the adult explicitly shares. |
 | Revocation | Pause/delete/revoke must be easy and respected. |
 | No enrollment by others | Relationship, proximity, or device possession does not grant consent. |
+
+## Protected minor device/sensor pilot
+
+A child or protected minor, including Gage, is not covered by the adult-style
+multi-person rule. A minor device/sensor pathway is the highest-sensitivity
+pilot class and must start with no-data/local-first assumptions.
+
+```text
+PROTECTED_MINOR_SENSITIVE_DEVICE_PILOT
+```
+
+Parent/guardian permission plus child assent may permit a tightly bounded,
+supervised, no-public, no-hidden-telemetry Lantern pilot. It does not authorize
+broad sensor collection, background monitoring, public exposure, autonomy, model
+training, or adult-style alpha testing.
+
+| Requirement | Rule |
+|---|---|
+| Parent/guardian permission | Explicit, current, revocable, and privately documented. |
+| Child assent | Child-friendly explanation; the child can stop immediately without explanation. |
+| Purpose limitation | One narrow purpose at a time, such as supervised Lantern play/co-design or a no-data safety check-in. |
+| Data minimization | Collect no personal data unless strictly required for the narrow purpose. |
+| Local-first | Prefer local/on-device processing and no cloud upload. |
+| No public surface | No public dashboards, screenshots, logs, testimonials, or issue comments containing child data. |
+| No training use | Child data must not be used for model training, examples, demos, or benchmarks. |
+| No hidden telemetry | No background collection, silent heartbeat, passive monitoring, or third-party enrollment. |
+| No high-risk sensors by default | GPS/location, camera, mic, contacts, messages, photos, health, school, biometrics, and financial data are blocked unless a separate reviewed gate exists. |
+| No responsibility transfer | A child is never responsible for an adult's safety, project success, emergencies, or validation. |
+| Adult override | Parent/guardian can pause/delete/revoke; the child can also stop. |
+| Review before expansion | Any move beyond supervised no-data/local play requires privacy/legal/safety review and tests. |
+
+Allowed first pilot shape:
+
+```text
+supervised child-safe Lantern session
+no account if avoidable
+no persistent identifier if avoidable
+no public log
+no location/camera/mic/contact/message/photo/health/school data
+no automated decisions
+no emergency role
+short session
+adult present
+child can stop immediately
+```
 
 ## Not allowed by default
 
@@ -87,6 +133,10 @@ raw health-record ingestion
 financial account scraping
 background surveillance
 public personal-status visibility
+child public-status visibility
+child model-training data use
+child persistent identifiers without separate review
+child emergency/safety responsibility
 vehicle steering/braking/throttle/immobilization/rerouting
 sensor pathway treated as actuator permission
 sensor signal treated as proof of a person's inner state
@@ -103,6 +153,9 @@ token-gated = sufficient
 sensor = person
 signal = proof
 consent once = consent forever
+parent permission = unlimited child data collection
+child assent = adult-style alpha testing
+child device = ordinary adult device
 safety goal = surveillance permission
 vehicle = ordinary device
 advisory status = governance legitimacy
