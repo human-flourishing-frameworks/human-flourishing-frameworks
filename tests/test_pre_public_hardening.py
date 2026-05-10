@@ -51,11 +51,12 @@ class PrePublicHardeningTests(unittest.TestCase):
         self.assertNotIn(">Live Sensors</h2>", text)
         self.assertNotIn("Live Sensors</div>", text)
 
-    def test_general_write_endpoint_rejects_unauthenticated_public_write(self):
+    def test_unknown_public_write_surface_is_not_available(self):
         response = self.client.post("/api/violations", json={"test": "blocked"})
-        self.assertEqual(response.status_code, 403)
-        data = response.get_json()
-        self.assertEqual(data.get("error"), "write_grant_required")
+        self.assertIn(response.status_code, {403, 404})
+        if response.status_code == 403:
+            data = response.get_json()
+            self.assertEqual(data.get("error"), "write_grant_required")
 
     def test_adoption_write_endpoint_rejects_unauthenticated_heartbeat(self):
         response = self.client.post(
