@@ -1,14 +1,18 @@
-# Quiet Access Router
+# Better Next
 
 Status: private-release access model.
 
 ## Anchor
 
 ```text
-Move toward the perfect adjacent outcome with the least pressure.
+Move toward the best reachable next state with the least pressure.
 ```
 
 ## Purpose
+
+Better Next is the people-facing name for the perfect-adjacent-outcome principle:
+help each consenting person or group move toward a safer, freer, happier, more
+capable next state without making money, shame, or crisis the center.
 
 The ideal world is the perfect adjacent outcome for as many people as possible:
 not only crisis repair, and not only blocked services, but better capability,
@@ -24,6 +28,16 @@ What access or capability is less than ideal?
 What is the least-pressure next improvement?
 What happiness door stays open?
 ```
+
+## Name stack
+
+| Layer | Name |
+|---|---|
+| Public name | Better Next |
+| Technical principle | perfect adjacent outcome |
+| Private tool | Quiet Access Router |
+| Safety rule | doors with return paths |
+| Hard boundary | life first, home base protected |
 
 ## Access and capability map
 
