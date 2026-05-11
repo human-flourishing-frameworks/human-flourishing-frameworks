@@ -48,8 +48,8 @@ class BetterSafeHardeningThresholdTests(unittest.TestCase):
         required_phrases = [
             "Operator hardening action",
             "Convert an identified risk into a human-performed readiness action.",
-            "evidence receipt",
-            "stop/rollback rule",
+            "Evidence receipt",
+            "Stop/rollback path",
             "Tests that preserve human control.",
         ]
         for phrase in required_phrases:
