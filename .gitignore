@@ -12,3 +12,4 @@ data/*.pem
 sandbox_out*.txt
 network_status.txt
 node_network_config.json
+apps/lantern-local-chat/runtime-state.generated.js
