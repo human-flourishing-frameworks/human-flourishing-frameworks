@@ -41,14 +41,7 @@ MODES = {
 
 
 def _run_git(args: list[str]) -> tuple[int, str, str]:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=REPO_ROOT,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
+    result = subprocess.run(["git", *args], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
@@ -74,9 +67,7 @@ def load_anchors() -> list[dict[str, Any]]:
         return []
     data = json.loads(ANCHOR_SNAPSHOT.read_text(encoding="utf-8"))
     anchors = data.get("anchors", [])
-    if isinstance(anchors, list):
-        return [a for a in anchors if isinstance(a, dict)]
-    return []
+    return [anchor for anchor in anchors if isinstance(anchor, dict)] if isinstance(anchors, list) else []
 
 
 def read_anchor_taxonomy_summary() -> str:
@@ -84,23 +75,18 @@ def read_anchor_taxonomy_summary() -> str:
         return "Anchor taxonomy unavailable."
     text = ANCHOR_TAXONOMY.read_text(encoding="utf-8")
     key = "Anchor = a compact, named, source-labeled continuity handle with a boundary."
-    if key in text:
-        return key
-    return "Anchors are compact continuity handles with boundaries."
+    return key if key in text else "Anchors are compact continuity handles with boundaries."
 
 
 def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) -> list[dict[str, Any]]:
     lowered = message.lower()
     scored: list[tuple[int, dict[str, Any]]] = []
+    default_ids = {"hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding"}
     for anchor in anchors:
         haystack = " ".join(str(anchor.get(k, "")) for k in ("id", "kind", "name", "short_meaning", "allowed_use", "restore_phrase")).lower()
-        score = 0
-        for token in set(lowered.replace("/", " ").replace("-", " ").split()):
-            if len(token) >= 4 and token in haystack:
-                score += 1
-        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")):
-            if anchor.get("id") in {"hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding"}:
-                score = 1
+        score = sum(1 for token in set(lowered.replace("/", " ").replace("-", " ").split()) if len(token) >= 4 and token in haystack)
+        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in default_ids:
+            score = 1
         if score > 0:
             scored.append((score, anchor))
     scored.sort(key=lambda item: (-item[0], str(item[1].get("id", ""))))
@@ -117,7 +103,7 @@ def classify_intent(message: str) -> str:
         return "essential_needs"
     if any(term in text for term in ("hike", "appalachian", "waru", "friend")):
         return "hike"
-    if any(term in text for term in ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma")):
+    if any(term in text for term in ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma", "converge")):
         return "hybrid"
     if any(term in text for term in ("app", "desktop", "chat", "quality", "gate", "brave")):
         return "app"
@@ -129,10 +115,55 @@ def _normalize_mode(value: str | None) -> str:
     return mode if mode in MODES else "engineer"
 
 
+def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state: dict[str, Any], doctor: dict[str, Any] | None = None) -> dict[str, str]:
+    """Keep every shapeshift grounded as Vibe -> Fact -> Boundary -> Next."""
+    if intent == "doctor":
+        status = (doctor or {}).get("status", "UNKNOWN")
+        return {
+            "Vibe": "Check the floor before the form changes.",
+            "Fact": f"Doctor status is {status}; repo branch is {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+            "Boundary": "Readiness is local evidence, not a promise that every future action is safe.",
+            "Next": (doctor or {}).get("nextAction", "Run the local launcher, then recheck Doctor."),
+        }
+    if intent == "anchors":
+        return {
+            "Vibe": "Memory should restore direction without becoming authority.",
+            "Fact": "Anchors are loaded from the local anchor snapshot and taxonomy.",
+            "Boundary": "Anchors are not proof, consent forever, or a substitute for current correction.",
+            "Next": "Use the smallest restore phrase that preserves the next bounded move.",
+        }
+    if intent == "essential_needs":
+        return {
+            "Vibe": "Pressure needs relief before dreams become load-bearing.",
+            "Fact": "Debt and essential needs require dated cash flow, holds, reduced costs, and service income before speculative upside.",
+            "Boundary": "Do not treat project hope, trading, or metaphor as current income.",
+            "Next": "Pick one dated bill/action and one realistic service-income move.",
+        }
+    if intent == "hybrid":
+        return {
+            "Vibe": "Lantern shifts form; the Doctor still checks reality underneath.",
+            "Fact": f"Active mask is {active_mode}; responses are repo/anchor-grounded through localhost.",
+            "Boundary": "Shapeshifting is style and tooling, not consciousness, autonomy, or proof.",
+            "Next": "Use the active mask to produce one bounded useful artifact or action.",
+        }
+    if intent == "app":
+        return {
+            "Vibe": "The interface should sync to Alex, not make Alex sync to it.",
+            "Fact": "Door, Mask Rack, chat, and Doctor are the current desktop surfaces.",
+            "Boundary": "Do not call the app ready when backend, runtime state, or tests are degraded.",
+            "Next": "Use Doctor status to decide READY, DEGRADED, or BROKEN before asking for more evidence.",
+        }
+    return {
+        "Vibe": MODES[active_mode],
+        "Fact": f"Local repo state is {repo_state['branch']} at {str(repo_state['commit'])[:12]}; message length is {len(message)}.",
+        "Boundary": "This is a bounded local answer, not a hosted model call, oracle, or perfect memory.",
+        "Next": "Answer in the active mask while preserving state, limits, and one useful next move.",
+    }
+
+
 def build_doctor_report() -> dict[str, Any]:
     repo_state = read_repo_state()
     anchors = load_anchors()
-    _, ignored_out, _ = _run_git(["check-ignore", "-q", str(GENERATED_RUNTIME_STATE_JS.relative_to(REPO_ROOT))])
     ignored_code, _, _ = _run_git(["check-ignore", "-q", str(GENERATED_RUNTIME_STATE_JS.relative_to(REPO_ROOT))])
     files = {
         "indexHtml": INDEX_HTML.exists(),
@@ -150,6 +181,7 @@ def build_doctor_report() -> dict[str, Any]:
         ("generated runtime state ignored by git", ignored_code == 0),
         ("chat smoke builds answer", smoke.get("ok") is True and "Lantern local answer" in smoke.get("answer", "")),
         ("hybrid anchor loaded", any(anchor.get("id") == "hybrid-imagination-engine" for anchor in anchors)),
+        ("minimal convergence frame present", isinstance(smoke.get("minimalFrame"), dict) and "Vibe" in smoke.get("minimalFrame", {})),
     ]
     failed = [name for name, ok in checks if not ok]
     status = "READY" if not failed else ("DEGRADED" if len(failed) <= 2 else "BROKEN")
@@ -178,6 +210,7 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     intent = classify_intent(message)
     taxonomy = read_anchor_taxonomy_summary()
     doctor = build_doctor_report() if include_doctor and intent == "doctor" else None
+    minimal_frame = build_minimal_frame(message, intent, active_mode, repo_state, doctor)
 
     source_lines = [
         "source: local_lantern_server.py",
@@ -194,92 +227,31 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     mode_line = MODES[active_mode]
     if intent == "doctor":
         report = doctor or build_doctor_report()
-        body = [
-            mode_line,
-            "Lantern Doctor report:",
-            f"Status: {report['status']}",
-            f"Branch: {report['repo']['branch']}",
-            f"Commit: {str(report['repo']['commit'])[:12]}",
-            "Git status: " + (report["repo"]["gitStatusShort"] or "clean"),
-            "Failed checks: " + (", ".join(report["failedChecks"]) if report["failedChecks"] else "none"),
-            "Next action: " + report["nextAction"],
-        ]
+        body = [mode_line, "Lantern Doctor report:", f"Status: {report['status']}", f"Branch: {report['repo']['branch']}", f"Commit: {str(report['repo']['commit'])[:12]}", "Git status: " + (report["repo"]["gitStatusShort"] or "clean"), "Failed checks: " + (", ".join(report["failedChecks"]) if report["failedChecks"] else "none"), "Next action: " + report["nextAction"]]
     elif intent == "anchors":
         body = [mode_line, "Anchors loaded locally:"]
         for anchor in selected or anchors[:5]:
             body.append(f"- {anchor.get('name')}: {anchor.get('restore_phrase')}")
         body.append("Use anchors as return handles, not authority.")
     elif intent == "essential_needs":
-        body = [
-            mode_line,
-            "Debt rescue should use dated cash flow, holds, reduced costs, and service income before speculative upside.",
-            "Highest-confidence stack: stable paycheck, bill negotiation, small service gigs, then productized Discord/local workflow setup.",
-            "Rejected for debt rescue: trading, gambling, HFT, or cash-for-risk under pressure.",
-            "False-confidence check: project hope is not current income until money arrives.",
-        ]
+        body = [mode_line, "Debt rescue should use dated cash flow, holds, reduced costs, and service income before speculative upside.", "Highest-confidence stack: stable paycheck, bill negotiation, small service gigs, then productized Discord/local workflow setup.", "Rejected for debt rescue: trading, gambling, HFT, or cash-for-risk under pressure.", "False-confidence check: project hope is not current income until money arrives."]
     elif intent == "hike":
-        body = [
-            mode_line,
-            "The hike remains a consent-first wish, not a lock.",
-            "Use gentle friend language first: would this still sound fun, how many days, camping/cabin/day hikes, no pressure.",
-            "Keep stricter route/weather/gear checks internal until people actually opt in.",
-        ]
+        body = [mode_line, "The hike remains a consent-first wish, not a lock.", "Use gentle friend language first: would this still sound fun, how many days, camping/cabin/day hikes, no pressure.", "Keep stricter route/weather/gear checks internal until people actually opt in."]
     elif intent == "hybrid":
-        body = [
-            "Hybrid Imagination Engine mode engaged.",
-            mode_line,
-            "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.",
-            "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action.",
-        ]
+        body = ["Hybrid Imagination Engine mode engaged.", mode_line, "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.", "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action."]
     elif intent == "app":
-        body = [
-            mode_line,
-            "Quality gate: the app should diagnose itself before asking Alex to validate manually.",
-            "The visible soul is Door + Mask Rack + Chat; the Doctor stays underneath as readiness state.",
-            "Next move: use /doctor for READY / DEGRADED / BROKEN instead of repeated copy/paste loops.",
-        ]
+        body = [mode_line, "Quality gate: the app should diagnose itself before asking Alex to validate manually.", "The visible soul is Door + Mask Rack + Chat; the Doctor stays underneath as readiness state.", "Next move: use /doctor for READY / DEGRADED / BROKEN instead of repeated copy/paste loops."]
     else:
-        body = [
-            mode_line,
-            "I can answer from local repo state and the anchor snapshot now.",
-            "Use the Mask Rack to shift form: engineer, storyteller, comedian, doctor, game master, anchor keeper, art mirror, or planner.",
-            "I will label grounding and avoid pretending this is a hosted model response.",
-        ]
+        body = [mode_line, "I can answer from local repo state and the anchor snapshot now.", "Use the Mask Rack to shift form: engineer, storyteller, comedian, doctor, game master, anchor keeper, art mirror, or planner.", "I will label grounding and avoid pretending this is a hosted model response."]
 
-    limits = [
-        "No direct hosted model calls.",
-        "No external network requests.",
-        "No browser command execution.",
-        "No agents, tunnels, sensors, public writes, payments, or account actions.",
-        "Local files and git state can still be stale if the repo is not pulled.",
-    ]
-
-    text = "\n".join([
-        "Lantern local answer",
-        "",
-        *body,
-        "",
-        "Sources:",
-        *source_lines,
-        "",
-        "Limits:",
-        *[f"- {item}" for item in limits],
-    ])
-    return {
-        "ok": True,
-        "answer": text,
-        "repoState": repo_state,
-        "selectedAnchors": selected,
-        "intent": intent,
-        "mode": active_mode,
-        "doctor": doctor,
-        "sources": source_lines,
-        "limits": limits,
-    }
+    limits = ["No direct hosted model calls.", "No external network requests.", "No browser command execution.", "No agents, tunnels, sensors, public writes, payments, or account actions.", "Local files and git state can still be stale if the repo is not pulled."]
+    frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in minimal_frame.items()]]
+    text = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
+    return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits}
 
 
 class LanternHandler(BaseHTTPRequestHandler):
-    server_version = "LocalLantern/0.2"
+    server_version = "LocalLantern/0.3"
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
@@ -321,8 +293,7 @@ class LanternHandler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            raw = self.rfile.read(length).decode("utf-8")
-            data = json.loads(raw) if raw else {}
+            data = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
             message = str(data.get("message", "")).strip()
             mode = str(data.get("mode", "engineer")).strip()
             if not message:
