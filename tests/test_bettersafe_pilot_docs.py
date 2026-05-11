@@ -68,12 +68,17 @@ class BetterSafePilotDocsTests(unittest.TestCase):
     def test_scorecard_blocks_expansion_until_evidenced(self):
         doc = self.read("docs/bettersafe-pilot-scorecard.md")
         required_phrases = [
-            "Decision: DO NOT BROADEN YET",
+            "Decision: GO — CONTROLLED LIMITED PILOT ONLY",
+            "Expansion: BLOCKED until a new scorecard records PASS evidence for the expanded slice.",
             "All required gates must be PASS or explicitly NOT_APPLICABLE with evidence.",
-            "Any UNKNOWN_OR_BLOCKED, PENDING, or FAIL status blocks expansion.",
-            "Full tests pass, or known unrelated failures are logged with owner and follow-up issue.",
-            "No raw transcript storage by default; no hidden profiling or surveillance.",
-            "Medical/legal/financial/minor/caregiver/crisis-adjacent surfaces block or downgrade.",
+            "Any UNKNOWN_OR_BLOCKED, PENDING, FAIL, or PASS_PENDING_CURRENT_PR status blocks merge or expansion until resolved.",
+            "The current GO decision applies only after the launch-control PR passes tests and convergence-validation.",
+            "Raw transcript storage by default: BLOCKED",
+            "Hidden profiling: BLOCKED",
+            "Surveillance/scoring: BLOCKED",
+            "Live sensors by default: BLOCKED",
+            "Public writes by default: BLOCKED",
+            "Payments/emergency/physical control: BLOCKED",
         ]
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
