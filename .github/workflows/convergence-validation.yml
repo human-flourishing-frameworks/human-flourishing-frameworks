@@ -56,3 +56,6 @@ jobs:
 
       - name: Validate public-readiness documentation guardrails
         run: python -m unittest discover -s tests -p "test_public_readiness_docs.py" -t .
+
+      - name: Validate seven-anchors self-correction guardrails
+        run: python -m unittest discover -s tests -p "test_seven_anchors_self_correction.py" -t .
