@@ -13,6 +13,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
 SHELL_HTML = CHAT_DIR / "index.html"
+DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.js"
 GENERATED_RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.generated.js"
 ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
@@ -25,6 +26,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.html = SHELL_HTML.read_text(encoding="utf-8")
+        cls.door_memory = DOOR_MEMORY_JS.read_text(encoding="utf-8")
         cls.launcher = LAUNCHER.read_text(encoding="utf-8")
         cls.batch_launcher = BATCH_LAUNCHER.read_text(encoding="utf-8")
         cls.runtime_state = RUNTIME_STATE_JS.read_text(encoding="utf-8")
@@ -33,7 +35,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
 
     def test_shell_is_chat_first_and_uses_local_backend(self) -> None:
         for phrase in [
-            "Message Lantern", "What are we building next?", "+ New chat",
+            "Message Lantern", "The Local Door is open.", "+ New chat",
             "thread-list", "message-row", "composer-area", "sendMessage",
             "fetch(field('backendUrl').value + '/chat'", "Checking local backend",
             "Local backend ready", "Thinking locally", "getLanternAnswer",
@@ -43,6 +45,23 @@ class LanternLocalChatShellTest(unittest.TestCase):
         for phrase in ["Conversation draft", "Add Lantern response", "Repo state paste area", "function lanternReply"]:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, self.html)
+
+    def test_door_memory_is_local_and_wish_specific(self) -> None:
+        self.assertTrue(DOOR_MEMORY_JS.exists())
+        for phrase in [
+            "lantern-door-return-v1",
+            "The Local Door",
+            "Last time:",
+            "Return through this door",
+            "Door remembers wish",
+            "localStorage",
+            "latestUserMessage",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.door_memory + self.html)
+        for blocked in ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "eval(", "api.openai"]:
+            with self.subTest(blocked=blocked):
+                self.assertNotIn(blocked, self.door_memory)
 
     def test_shell_preserves_boundaries(self) -> None:
         for phrase in [
