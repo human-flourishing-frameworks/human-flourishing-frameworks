@@ -61,6 +61,47 @@ class PublicUiBaselineTests(unittest.TestCase):
         self.assertEqual(response.headers.get("Pragma"), "no-cache")
         self.assertEqual(response.headers.get("Expires"), "0")
 
+    def test_bettersafe_pilot_interaction_panel_is_present(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn('id="bettersafe-pilot-panel"', text)
+        self.assertIn("BetterSafe Pilot Interaction Screen", text)
+        self.assertIn("CONTROLLED LIMITED PILOT ONLY", text)
+        self.assertIn("This screen is a local, deterministic guide.", text)
+        self.assertIn("not a chatbot, not an LLM endpoint, not autonomous", text)
+        self.assertIn("Build local BetterSafe packet", text)
+
+    def test_bettersafe_panel_lists_best_case_interactions(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        required = [
+            "Claim Audit",
+            "Source Check",
+            "Low-Risk Next Step",
+            "Confidence Table",
+            "Scientific Convergence",
+            "Creative Door Scene",
+            "High-impact downgrade / blocked request",
+        ]
+        for phrase in required:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+    def test_bettersafe_packet_builder_is_local_only(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn("This builder runs in the browser only. It formats the request for operator review and does not submit data.", text)
+        self.assertIn("BETTERSAFE CONTROLLED LIMITED PILOT PACKET", text)
+        self.assertIn("Boundary: not medical/legal/financial/emergency/surveillance/child-facing/autonomous authority", text)
+        self.assertIn("Correction path: CORRECTED | RETRACTED | UNKNOWN | BLOCKED", text)
+        self.assertIn("Control path: pause | stop | correct | retract | revoke", text)
+        self.assertNotIn("fetch('/bettersafe", text)
+        self.assertNotIn('action="/bettersafe', text)
+        self.assertNotIn("XMLHttpRequest", text)
+
 
 if __name__ == "__main__":
     unittest.main()
