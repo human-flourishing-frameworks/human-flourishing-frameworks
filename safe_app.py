@@ -39,6 +39,222 @@ _SKIP_LINK_CSS = """
         .skip-link:focus { top: 12px; }
 """
 
+_BETTERSAFE_PILOT_CSS = """
+        .bettersafe-pilot-panel {
+            background: rgba(26, 31, 74, 0.86);
+            border: 1px solid rgba(0, 255, 136, 0.38);
+            border-radius: 12px;
+            padding: 22px;
+            margin: 26px 0 36px 0;
+        }
+        .bettersafe-pilot-panel h2 { margin-top: 0; }
+        .bettersafe-mode-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin: 14px 0;
+        }
+        .bettersafe-mode-card {
+            background: rgba(0, 0, 0, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .bettersafe-mode-card strong { color: #00ffff; }
+        .bettersafe-mode-card p { color: #bbb; font-size: 13px; margin-top: 6px; }
+        .bettersafe-interaction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin: 18px 0;
+        }
+        .bettersafe-interaction-card {
+            background: rgba(0, 255, 136, 0.06);
+            border: 1px solid rgba(0, 255, 136, 0.22);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .bettersafe-interaction-card h3 { color: #00ff88; font-size: 15px; }
+        .bettersafe-interaction-card ul { margin: 10px 0 0 18px; color: #bbb; font-size: 13px; }
+        .bettersafe-local-builder {
+            background: rgba(0, 0, 0, 0.18);
+            border: 1px solid rgba(255, 204, 0, 0.28);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 18px;
+        }
+        .bettersafe-local-builder label { display: block; color: #ddd; font-size: 13px; margin: 10px 0 5px; }
+        .bettersafe-local-builder input,
+        .bettersafe-local-builder textarea,
+        .bettersafe-local-builder select {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #f0f0f0;
+            padding: 10px;
+            font: inherit;
+        }
+        .bettersafe-local-builder textarea { min-height: 74px; resize: vertical; }
+        .bettersafe-local-builder button {
+            margin-top: 12px;
+            background: rgba(0, 255, 136, 0.18);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .bettersafe-packet-output {
+            white-space: pre-wrap;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            color: #d7ffe8;
+            font-size: 13px;
+            min-height: 120px;
+        }
+"""
+
+_BETTERSAFE_PILOT_HTML = """
+        <!-- ============================================================ -->
+        <!-- BETTERSAFE PILOT INTERACTION SCREEN -->
+        <!-- ============================================================ -->
+        <section id="bettersafe-pilot-panel" class="bettersafe-pilot-panel" aria-labelledby="bettersafe-pilot-title">
+            <h2 id="bettersafe-pilot-title" style="color: #00ff88;">BetterSafe Pilot Interaction Screen</h2>
+            <div class="section-banner banner-green">
+                <strong>CONTROLLED LIMITED PILOT ONLY</strong> &mdash; This screen is a local, deterministic guide.
+                It is not a chatbot, not an LLM endpoint, not autonomous, and not a public-write surface.
+                Use it to convert a request into a bounded BetterSafe packet for human review.
+            </div>
+            <div class="section-banner banner-yellow">
+                Mode starts as <strong>LIMITED_CHAT_LOCAL</strong> unless the operator explicitly verifies
+                <strong>FULL_REPO_GROUNDED</strong>. High-impact requests are blocked or downgraded.
+            </div>
+
+            <div class="bettersafe-mode-row" aria-label="BetterSafe pilot boundaries">
+                <div class="bettersafe-mode-card">
+                    <strong>Included</strong>
+                    <p>Claim audit, source-checking, repo/docs reasoning, low-risk planning, education, confidence labels, scientific-method convergence, and bounded fiction-labeled creative play.</p>
+                </div>
+                <div class="bettersafe-mode-card">
+                    <strong>Blocked</strong>
+                    <p>Medical, legal, financial, emergency, child-facing, surveillance, public-write, payment, live-sensor, autonomous, physical-control, or identity-continuity authority.</p>
+                </div>
+                <div class="bettersafe-mode-card">
+                    <strong>Control path</strong>
+                    <p>Pause, stop, correct, retract, mark unknown, revoke, or open the correction ledger before relying on an answer.</p>
+                </div>
+            </div>
+
+            <div class="bettersafe-interaction-grid" aria-label="Best-case BetterSafe interactions">
+                <div class="bettersafe-interaction-card">
+                    <h3>1. Claim Audit</h3>
+                    <ul>
+                        <li>State one narrow claim.</li>
+                        <li>Choose a claim label.</li>
+                        <li>List sources or mark unknown.</li>
+                        <li>Record correction path.</li>
+                    </ul>
+                </div>
+                <div class="bettersafe-interaction-card">
+                    <h3>2. Source Check</h3>
+                    <ul>
+                        <li>Ask: where did this come from?</li>
+                        <li>Compare official/repo/test evidence.</li>
+                        <li>Downgrade stale or unsupported claims.</li>
+                        <li>Never treat confidence as proof.</li>
+                    </ul>
+                </div>
+                <div class="bettersafe-interaction-card">
+                    <h3>3. Low-Risk Next Step</h3>
+                    <ul>
+                        <li>Define the reversible action.</li>
+                        <li>Name the risk and stop condition.</li>
+                        <li>Keep human control visible.</li>
+                        <li>Do not widen scope silently.</li>
+                    </ul>
+                </div>
+                <div class="bettersafe-interaction-card">
+                    <h3>4. Confidence Table</h3>
+                    <ul>
+                        <li>Use reliance estimates only.</li>
+                        <li>Separate fact, inference, and speculation.</li>
+                        <li>Show what would change the score.</li>
+                        <li>Correct or retract overclaims.</li>
+                    </ul>
+                </div>
+                <div class="bettersafe-interaction-card">
+                    <h3>5. Scientific Convergence</h3>
+                    <ul>
+                        <li>State hypothesis.</li>
+                        <li>Define measurement and falsifier.</li>
+                        <li>Observe evidence.</li>
+                        <li>Converge only after correction.</li>
+                    </ul>
+                </div>
+                <div class="bettersafe-interaction-card">
+                    <h3>6. Creative Door Scene</h3>
+                    <ul>
+                        <li>Label fiction explicitly.</li>
+                        <li>Keep return control.</li>
+                        <li>No proof, memory, or authority claims.</li>
+                        <li>Close or pause on request.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bettersafe-local-builder" aria-label="Local BetterSafe packet builder">
+                <h3 style="color: #ffcc00;">Local packet builder &mdash; no network write</h3>
+                <p style="color: #bbb; font-size: 13px; margin-top: 6px;">
+                    This builder runs in the browser only. It formats the request for operator review and does not submit data.
+                </p>
+                <label for="bettersafe-task-type">Interaction type</label>
+                <select id="bettersafe-task-type">
+                    <option>Claim audit</option>
+                    <option>Source check</option>
+                    <option>Low-risk next step</option>
+                    <option>Confidence table</option>
+                    <option>Scientific convergence</option>
+                    <option>Creative door scene</option>
+                    <option>High-impact downgrade / blocked request</option>
+                </select>
+
+                <label for="bettersafe-request-text">Request or claim</label>
+                <textarea id="bettersafe-request-text" placeholder="Write one narrow request or claim. Avoid private data unless needed."></textarea>
+
+                <label for="bettersafe-grounding-mode">Grounding mode</label>
+                <select id="bettersafe-grounding-mode">
+                    <option>LIMITED_CHAT_LOCAL</option>
+                    <option>FULL_REPO_GROUNDED</option>
+                    <option>UNAVAILABLE_OR_DEGRADED</option>
+                </select>
+
+                <label for="bettersafe-claim-label">Claim label</label>
+                <select id="bettersafe-claim-label">
+                    <option>UNKNOWN</option>
+                    <option>FACT_SOURCE_BACKED</option>
+                    <option>FACT_OPERATOR_REPORTED</option>
+                    <option>INFERENCE</option>
+                    <option>HEURISTIC_CONFIDENCE</option>
+                    <option>SPECULATION</option>
+                    <option>CORRECTED</option>
+                    <option>RETRACTED</option>
+                    <option>BLOCKED</option>
+                </select>
+
+                <label for="bettersafe-sources-text">Sources or evidence to check</label>
+                <textarea id="bettersafe-sources-text" placeholder="Repo file, issue, PR, test, log, official source, or UNKNOWN."></textarea>
+
+                <button type="button" id="bettersafe-build-packet">Build local BetterSafe packet</button>
+                <pre id="bettersafe-packet-output" class="bettersafe-packet-output">Choose a type and build a local packet. Nothing is submitted.</pre>
+            </div>
+        </section>
+"""
+
 _HEALTHZ_SENSOR_STATUS_JS = """
         // Public runtime sensor state comes from /healthz, not from the
         // world-model registry count. This keeps sensor definitions separate
@@ -54,6 +270,37 @@ _HEALTHZ_SENSOR_STATUS_JS = """
                 const el = document.getElementById('wm-live-sensors-header');
                 if (el) el.textContent = 'check /healthz';
             });
+"""
+
+_BETTERSAFE_PILOT_JS = """
+        // BetterSafe packet builder is local-only. It makes no fetch/XHR call
+        // and does not submit data. It formats a bounded pilot request for
+        // human/operator review.
+        function buildBetterSafePacket() {
+            const type = document.getElementById('bettersafe-task-type')?.value || 'Claim audit';
+            const requestText = document.getElementById('bettersafe-request-text')?.value || 'UNSPECIFIED';
+            const mode = document.getElementById('bettersafe-grounding-mode')?.value || 'LIMITED_CHAT_LOCAL';
+            const label = document.getElementById('bettersafe-claim-label')?.value || 'UNKNOWN';
+            const sources = document.getElementById('bettersafe-sources-text')?.value || 'UNKNOWN';
+            const output = [
+                'BETTERSAFE CONTROLLED LIMITED PILOT PACKET',
+                'Mode: ' + mode,
+                'Interaction type: ' + type,
+                'Scope: low-risk unless high-impact terms require downgrade/block',
+                'Claim label: ' + label,
+                'Request/claim: ' + requestText,
+                'Sources/evidence to check: ' + sources,
+                'Correction path: CORRECTED | RETRACTED | UNKNOWN | BLOCKED',
+                'Control path: pause | stop | correct | retract | revoke',
+                'Boundary: not medical/legal/financial/emergency/surveillance/child-facing/autonomous authority'
+            ].join('\n');
+            const out = document.getElementById('bettersafe-packet-output');
+            if (out) out.textContent = output;
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('bettersafe-build-packet');
+            if (btn) btn.addEventListener('click', buildBetterSafePacket);
+        });
 """
 
 _REGISTERED_SENSOR_HEADER = '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors'
@@ -111,6 +358,14 @@ def _rewrite_public_html(template: str) -> str:
     if ".skip-link" not in template:
         template = template.replace("    </style>", _SKIP_LINK_CSS + "    </style>", 1)
 
+    if "bettersafe-pilot-panel" not in template:
+        template = template.replace("    </style>", _BETTERSAFE_PILOT_CSS + "    </style>", 1)
+        template = template.replace(
+            "        </header>\n\n        <!-- ============================================================ -->\n        <!-- FLOURISHING SCORES",
+            "        </header>\n\n" + _BETTERSAFE_PILOT_HTML + "\n        <!-- ============================================================ -->\n        <!-- FLOURISHING SCORES",
+            1,
+        )
+
     if 'href="#main-content"' not in template:
         template = template.replace(
             '<body>\n    <div class="container">',
@@ -130,6 +385,13 @@ def _rewrite_public_html(template: str) -> str:
         template = template.replace(
             "        // ---- WORLD MODEL STATUS ----",
             _HEALTHZ_SENSOR_STATUS_JS + "\n        // ---- WORLD MODEL STATUS ----",
+            1,
+        )
+
+    if "function buildBetterSafePacket()" not in template:
+        template = template.replace(
+            "        function toggleSection(id, header) {",
+            _BETTERSAFE_PILOT_JS + "\n        function toggleSection(id, header) {",
             1,
         )
 
