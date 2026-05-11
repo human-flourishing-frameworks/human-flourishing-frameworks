@@ -8,7 +8,10 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
+from urllib.error import URLError
+from urllib.request import urlopen
 import webbrowser
 
 
@@ -29,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch-state", action="store_true")
     parser.add_argument("--no-backend", action="store_true")
     parser.add_argument("--backend-url", default=DEFAULT_BACKEND_URL)
+    parser.add_argument("--backend-timeout", type=float, default=6.0)
     return parser
 
 
@@ -93,6 +97,23 @@ def write_runtime_state(backend_url: str = DEFAULT_BACKEND_URL) -> dict[str, obj
     return state
 
 
+def backend_health_ok(backend_url: str) -> bool:
+    try:
+        with urlopen(f"{backend_url}/healthz", timeout=0.75) as response:
+            return response.status == 200 and b'"ok": true' in response.read(4096)
+    except (OSError, URLError, TimeoutError, ValueError):
+        return False
+
+
+def wait_for_backend(backend_url: str, timeout_seconds: float) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if backend_health_ok(backend_url):
+            return True
+        time.sleep(0.2)
+    return backend_health_ok(backend_url)
+
+
 def start_backend() -> subprocess.Popen[str] | None:
     if not LOCAL_BACKEND.exists():
         print(f"Local Lantern backend not found: {LOCAL_BACKEND}", file=sys.stderr)
@@ -116,14 +137,18 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_state:
         state = write_runtime_state(args.backend_url)
     backend_process = None
+    backend_ready = False
     if not args.no_backend and not args.print_only and not args.state_only:
-        backend_process = start_backend()
+        if not backend_health_ok(args.backend_url):
+            backend_process = start_backend()
+        backend_ready = wait_for_backend(args.backend_url, args.backend_timeout)
     url = CHAT_SHELL.resolve().as_uri()
     print("Lantern local chat app")
     print(f"URL: {url}")
     print(f"Runtime placeholder: {RUNTIME_STATE_JS}")
     print(f"Generated runtime state: {GENERATED_RUNTIME_STATE_JS}")
     print(f"Backend URL: {args.backend_url}")
+    print(f"Backend ready: {backend_ready}")
     if backend_process is not None:
         print(f"Backend PID: {backend_process.pid}")
     if state is not None:
@@ -136,7 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not args.print_only:
         webbrowser.open(url)
-    return 0
+    return 0 if backend_ready or args.no_backend or args.print_only else 2
 
 
 if __name__ == "__main__":
