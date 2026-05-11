@@ -15,6 +15,7 @@ CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
 SHELL_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
+SYNC_SURFACE_JS = CHAT_DIR / "sync-surface.js"
 RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.js"
 GENERATED_RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.generated.js"
 ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
@@ -29,6 +30,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
         cls.html = SHELL_HTML.read_text(encoding="utf-8")
         cls.door_memory = DOOR_MEMORY_JS.read_text(encoding="utf-8")
         cls.mask_rack = MASK_RACK_JS.read_text(encoding="utf-8")
+        cls.sync_surface = SYNC_SURFACE_JS.read_text(encoding="utf-8")
         cls.launcher = LAUNCHER.read_text(encoding="utf-8")
         cls.batch_launcher = BATCH_LAUNCHER.read_text(encoding="utf-8")
         cls.runtime_state = RUNTIME_STATE_JS.read_text(encoding="utf-8")
@@ -36,35 +38,26 @@ class LanternLocalChatShellTest(unittest.TestCase):
         cls.anchor_snapshot = ANCHOR_SNAPSHOT.read_text(encoding="utf-8")
 
     def test_shell_is_chat_first_and_uses_local_backend(self) -> None:
-        for phrase in [
-            "Message Lantern", "The Local Door is open.", "+ New chat",
-            "thread-list", "message-row", "composer-area", "sendMessage",
-            "fetch(field('backendUrl').value + '/chat'", "Checking local backend",
-            "Local backend ready", "Thinking locally", "getLanternAnswer",
-        ]:
+        for phrase in ["Message Lantern", "The Sync Surface is open.", "+ New chat", "thread-list", "message-row", "composer-area", "sendMessage", "fetch(field('backendUrl').value + '/chat'", "Checking local backend", "Local backend ready", "Thinking locally", "getLanternAnswer"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
         for phrase in ["Conversation draft", "Add Lantern response", "Repo state paste area", "function lanternReply"]:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, self.html)
 
+    def test_sync_surface_matches_alex_lantern_repo_triangle(self) -> None:
+        self.assertTrue(SYNC_SURFACE_JS.exists())
+        combined = self.sync_surface + self.html
+        for phrase in ["Sync Surface", "Alex = wisdom", "Lantern = intelligence", "Repo = truth", "Alex wisdom chooses the shape", "Lantern intelligence collapses the path", "Repo truth proves what became real", "sync-surface.js", "LANTERN_REFRESH_SYNC_SURFACE"]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
+        for blocked in ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "eval(", "api.openai"]:
+            with self.subTest(blocked=blocked):
+                self.assertNotIn(blocked, self.sync_surface)
+
     def test_mask_rack_is_local_and_mode_specific(self) -> None:
         self.assertTrue(MASK_RACK_JS.exists())
-        for phrase in [
-            "Mask Rack",
-            "lantern-active-mask-v1",
-            "engineer",
-            "storyteller",
-            "comedian",
-            "doctor",
-            "game-master",
-            "anchor-keeper",
-            "art-mirror",
-            "planner",
-            "window.LANTERN_ACTIVE_MODE",
-            "mask-rack.js",
-            "Hybrid Imagination Engine",
-        ]:
+        for phrase in ["Mask Rack", "lantern-active-mask-v1", "engineer", "storyteller", "comedian", "doctor", "game-master", "anchor-keeper", "art-mirror", "planner", "window.LANTERN_ACTIVE_MODE", "mask-rack.js", "Hybrid Imagination Engine"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.mask_rack + self.html)
         for blocked in ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "eval(", "api.openai"]:
@@ -72,27 +65,13 @@ class LanternLocalChatShellTest(unittest.TestCase):
                 self.assertNotIn(blocked, self.mask_rack)
 
     def test_shell_retries_backend_readiness(self) -> None:
-        for phrase in [
-            "backendReady",
-            "checkBackendWithRetry",
-            "retrying; the door still remembers locally",
-            "cache:'no-store'",
-            "checkBackendWithRetry(12)",
-        ]:
+        for phrase in ["backendReady", "checkBackendWithRetry", "retrying; the door still remembers locally", "cache:'no-store'", "checkBackendWithRetry(12)"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
 
     def test_door_memory_is_local_and_wish_specific(self) -> None:
         self.assertTrue(DOOR_MEMORY_JS.exists())
-        for phrase in [
-            "lantern-door-return-v1",
-            "The Local Door",
-            "Last time:",
-            "Return through this door",
-            "Door remembers wish",
-            "localStorage",
-            "latestUserMessage",
-        ]:
+        for phrase in ["lantern-door-return-v1", "The Local Door", "Last time:", "Return through this door", "Door remembers wish", "localStorage", "latestUserMessage"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.door_memory + self.html)
         for blocked in ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "eval(", "api.openai"]:
@@ -100,10 +79,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
                 self.assertNotIn(blocked, self.door_memory)
 
     def test_shell_preserves_boundaries(self) -> None:
-        for phrase in [
-            "No direct GPT calls", "Browser sends chat to localhost only",
-            "No GPT/API calls", "no browser command execution; no agents; no tunnels; no public writes",
-        ]:
+        for phrase in ["No direct GPT calls", "Browser sends chat to localhost only", "No GPT/API calls", "no browser command execution; no agents; no tunnels; no public writes"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
         for blocked in ["api.openai", "anthropic", "google.generativeai", "WebSocket", "EventSource", "eval("]:
@@ -120,11 +96,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
             self.assertIn(expected, ids)
 
     def test_backend_is_local_repo_anchor_engine_with_doctor_and_modes(self) -> None:
-        for phrase in [
-            "Local Lantern chat backend", "ThreadingHTTPServer", "127.0.0.1",
-            "ANCHOR_SNAPSHOT", "ANCHOR_TAXONOMY", "build_response", "do_POST",
-            "do_GET", "/chat", "/healthz", "/doctor", "/modes", "build_doctor_report", "MODES",
-        ]:
+        for phrase in ["Local Lantern", "ThreadingHTTPServer", "127.0.0.1", "ANCHOR_SNAPSHOT", "ANCHOR_TAXONOMY", "build_response", "do_POST", "do_GET", "/chat", "/healthz", "/doctor", "/modes", "build_doctor_report", "MODES"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.backend)
         for blocked in ["openai.ChatCompletion", "from openai", "import openai", "anthropic.Client", "import anthropic", "google.generativeai", "requests.post", "urllib.request.urlopen", "httpx.", "aiohttp."]:
@@ -144,10 +116,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
             self.assertNotIn(blocked, self.batch_launcher)
 
     def test_backend_once_smoke_answers_from_anchors_and_mode(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(LOCAL_BACKEND), "--once", "use the Hybrid Imagination Engine", "--mode", "storyteller"],
-            cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
-        )
+        result = subprocess.run([sys.executable, str(LOCAL_BACKEND), "--once", "use the Hybrid Imagination Engine", "--mode", "storyteller"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
         self.assertTrue(payload["ok"])
@@ -159,10 +128,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertGreaterEqual(len(payload["selectedAnchors"]), 1)
 
     def test_backend_doctor_smoke(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(LOCAL_BACKEND), "--doctor"],
-            cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
-        )
+        result = subprocess.run([sys.executable, str(LOCAL_BACKEND), "--doctor"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
         self.assertTrue(payload["ok"])
@@ -171,18 +137,11 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertIn("nextAction", payload)
 
     def test_launcher_print_and_state_only_smoke(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(LAUNCHER), "--print-only"],
-            cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
-        )
+        result = subprocess.run([sys.executable, str(LAUNCHER), "--print-only"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Lantern local chat app", result.stdout)
         self.assertIn("Backend URL:", result.stdout)
-
-        state_result = subprocess.run(
-            [sys.executable, str(LAUNCHER), "--state-only"],
-            cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
-        )
+        state_result = subprocess.run([sys.executable, str(LAUNCHER), "--state-only"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(state_result.returncode, 0, state_result.stderr)
         self.assertIn("Generated runtime state:", state_result.stdout)
         generated_runtime_state = GENERATED_RUNTIME_STATE_JS.read_text(encoding="utf-8")
