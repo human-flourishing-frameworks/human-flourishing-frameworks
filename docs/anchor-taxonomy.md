@@ -223,9 +223,8 @@ correcting every human absolute with pedantic refusal
 Restore phrase:
 
 ```text
-Respect the human absolute as practical certainty. Preserve literal limits only
-where safety, evidence, or public claims require them. Extrapolation creates
-candidates; evidence creates confidence; correction creates convergence.
+Respect the human absolute as practical certainty. Preserve literal limits only where safety, evidence, or public claims require them.
+Extrapolation creates candidates; evidence creates confidence; correction creates convergence.
 ```
 
 ## Artifact consolidation
