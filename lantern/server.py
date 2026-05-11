@@ -1,19 +1,20 @@
 """Lantern Flask server - local-first shell.
 
-This runtime is intentionally bounded. It serves the static frontend and
-exposes local/read-only truth endpoints before any LLM substrate is wired.
+This runtime is intentionally bounded. It serves the static frontend, exposes
+local/read-only truth endpoints, and routes chat through a configured LLM
+substrate when an API key is present.
 
 Current slice:
 - `/api/lantern/health` reports substrate/key/bind toggles;
 - `/api/lantern/state` reads local git HEAD/ref state, doctrine paths, and an
   optional last-test record;
-- `/api/lantern/chat` still returns a scaffold payload and does NOT call any
-  LLM.
+- `/api/lantern/chat` can call Anthropic Messages API when configured.
 
 Boundary:
 - localhost-only bind by default;
 - read-only local inspection only;
-- no autonomous repo writes.
+- no autonomous repo writes;
+- no command execution from chat.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import requests
 from flask import Flask, jsonify, request, send_from_directory
 
 
@@ -31,6 +33,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LANTERN_DIR = Path(__file__).resolve().parent
 LANTERN_HOME = Path.home() / ".lantern"
 LAST_TEST_PATH = LANTERN_HOME / "state" / "last-test.json"
+ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
+DEFAULT_MODEL = "claude-3-5-sonnet-latest"
 
 app = Flask(__name__)
 
@@ -54,9 +58,10 @@ def health():
         "service": "lantern",
         "role": "Lantern Keystone Wish",
         "anchor": "Show the state. Say the limit. Self-correct before acting.",
-        "substrate_wired": False,
+        "substrate_wired": _substrate_wired(),
         "state_endpoint_wired": True,
         "anthropic_api_key_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
+        "model": _anthropic_model(),
         "public_bind_enabled": _public_bind_enabled(),
     })
 
@@ -76,7 +81,7 @@ def state():
         "last_test": _last_test_state(),
         "limits": [
             "read-only local state only",
-            "chat substrate is not wired in this slice",
+            "chat substrate can answer but cannot run commands",
             "dirty worktree details require an operator-run status check",
             "no repo writes, merges, deploys, agents, or tunnels",
         ],
@@ -85,11 +90,56 @@ def state():
 
 @app.route("/api/lantern/chat", methods=["POST"])
 def chat():
-    """Stub chat endpoint. Does NOT call any LLM."""
+    """Chat endpoint.
+
+    In normal local runtime, calls Anthropic when ``ANTHROPIC_API_KEY`` is set.
+    In Flask test mode, real substrate calls stay disabled unless the test sets
+    ``ALLOW_SUBSTRATE_IN_TESTS`` so the suite never spends tokens or depends on
+    network by accident.
+    """
     payload = request.get_json(silent=True) or {}
     user_message = (payload.get("message") or "").strip()
 
+    if not user_message:
+        return jsonify({
+            "status": "empty",
+            "role": "Lantern Keystone Wish",
+            "reply": "Message was empty. Say the target and I will hold the line.",
+            "anchor": "Show the state. Say the limit.",
+        }), 400
+
+    if not _substrate_wired():
+        return jsonify(_scaffold_chat_payload(user_message))
+
+    try:
+        reply = _call_anthropic(user_message)
+    except Exception as exc:  # noqa: BLE001 - surfaced as safe degraded state.
+        return jsonify({
+            "status": "substrate_error",
+            "user_message_received": user_message,
+            "role": "Lantern Keystone Wish",
+            "reply": (
+                "State observed: local Lantern shell is up, but the LLM "
+                "substrate call failed. Limit: no hidden retry, no repo action, "
+                f"no tunnel. Error class: {type(exc).__name__}."
+            ),
+            "anchor": "Show the state. Say the limit.",
+            "model": _anthropic_model(),
+        }), 502
+
     return jsonify({
+        "status": "ok",
+        "user_message_received": user_message,
+        "role": "Lantern Keystone Wish",
+        "reply": reply,
+        "anchor": "Show the state. Say the limit.",
+        "model": _anthropic_model(),
+        "state": _chat_state_summary(),
+    })
+
+
+def _scaffold_chat_payload(user_message: str) -> dict[str, Any]:
+    return {
         "status": "scaffold",
         "user_message_received": user_message,
         "role": "Lantern Keystone Wish",
@@ -100,7 +150,110 @@ def chat():
         ),
         "anchor": "Show the state. Say the limit.",
         "next_slice": "LLM substrate wiring after local truth panel validation",
-    })
+    }
+
+
+def _substrate_wired() -> bool:
+    if app.config.get("TESTING") and not app.config.get("ALLOW_SUBSTRATE_IN_TESTS"):
+        return False
+    return bool(os.environ.get("ANTHROPIC_API_KEY"))
+
+
+def _anthropic_model() -> str:
+    return os.environ.get("LANTERN_ANTHROPIC_MODEL", DEFAULT_MODEL)
+
+
+def _call_anthropic(user_message: str) -> str:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY missing")
+
+    response = requests.post(
+        ANTHROPIC_MESSAGES_URL,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json={
+            "model": _anthropic_model(),
+            "max_tokens": int(os.environ.get("LANTERN_MAX_TOKENS", "1200")),
+            "system": _build_system_prompt(),
+            "messages": [{"role": "user", "content": user_message}],
+        },
+        timeout=float(os.environ.get("LANTERN_SUBSTRATE_TIMEOUT", "30")),
+    )
+    response.raise_for_status()
+    data = response.json()
+    return _extract_anthropic_text(data)
+
+
+def _extract_anthropic_text(data: dict[str, Any]) -> str:
+    parts = []
+    for item in data.get("content", []):
+        if isinstance(item, dict) and item.get("type") == "text":
+            text = item.get("text")
+            if isinstance(text, str):
+                parts.append(text)
+    text = "\n".join(parts).strip()
+    if not text:
+        raise RuntimeError("Anthropic response contained no text content")
+    return text
+
+
+def _build_system_prompt() -> str:
+    state_summary = _chat_state_summary()
+    doctrine = _doctrine_excerpt(max_chars=18000)
+    return f"""You are Lantern Keystone Wish, running in Alex's local HFF shell.
+
+Required operating shape:
+State observed: cite the local state you can see.
+Limit: say what is unavailable or unverified.
+Plan: act small; do not claim authority you do not have.
+
+Hard boundaries:
+- You can answer text only.
+- You cannot run commands, edit files, start agents, open tunnels, deploy,
+  merge, reset, clean, or touch secrets.
+- Memory is not proof. Handoff text is not proof.
+- Living operator correction overrides stale memory.
+- Keep the return door open.
+
+Local state summary:
+{json.dumps(state_summary, indent=2)}
+
+Doctrine excerpts read fresh for this turn:
+{doctrine}
+"""
+
+
+def _chat_state_summary() -> dict[str, Any]:
+    return {
+        "timestamp_utc": _utc_now(),
+        "repo": _repo_state(),
+        "last_test": _last_test_state(),
+        "loaded_doctrine": _loaded_doctrine_paths(),
+        "public_bind_enabled": _public_bind_enabled(),
+        "substrate_wired": _substrate_wired(),
+    }
+
+
+def _doctrine_excerpt(max_chars: int) -> str:
+    chunks = []
+    used = 0
+    for rel in _loaded_doctrine_paths():
+        path = REPO_ROOT / rel
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        remaining = max_chars - used
+        if remaining <= 0:
+            break
+        snippet = text[:remaining]
+        chunks.append(f"\n--- {rel} ---\n{snippet}")
+        used += len(snippet)
+    return "\n".join(chunks).strip()
 
 
 def _utc_now() -> str:
@@ -186,11 +339,13 @@ def _repo_state() -> dict[str, Any]:
 
 def _loaded_doctrine_paths() -> list[str]:
     candidates = [
+        "FALSE_TRUTHS_REGISTER.md",
         "docs/seven-anchors-self-correction.md",
         "docs/convergence-status.md",
         "docs/keystone-memory-contract.md",
         "docs/keystone-self-convergence.md",
         "docs/keystone-table-door-anchors.md",
+        "docs/operator-consent-bravery-protocol.md",
         "docs/lantern-chat-design.md",
     ]
     found = []
@@ -248,10 +403,7 @@ def main(argv: list[str] | None = None) -> int:
 
     port = int(os.environ.get("LANTERN_PORT", "5173"))
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        print(
-            "[LANTERN] ANTHROPIC_API_KEY not set. Chat will return "
-            "scaffold-stub replies until the substrate wiring slice lands."
-        )
+        print("[LANTERN] ANTHROPIC_API_KEY not set. Chat will return stub replies.")
 
     print(f"[LANTERN] role=Lantern Keystone Wish bind={host}:{port}")
     app.run(host=host, port=port, debug=False)
