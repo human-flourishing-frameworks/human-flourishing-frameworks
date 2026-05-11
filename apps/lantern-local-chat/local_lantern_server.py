@@ -2,7 +2,7 @@
 """Local Lantern chat backend.
 
 This is a localhost-only, repo-grounded response service for the Lantern desktop
-chat app. It intentionally avoids OpenAI/GPT/API calls and external network
+chat app. It intentionally avoids hosted model calls and external network
 requests. It reads local repo files and anchor snapshots, then returns bounded
 Lantern responses with source labels and limits.
 """
@@ -22,16 +22,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
 ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
 ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
-
-BLOCKED_NETWORK_TERMS = (
-    "openai",
-    "anthropic",
-    "google.generativeai",
-    "requests.",
-    "urllib.request",
-    "httpx",
-    "aiohttp",
-)
 
 
 def _run_git(args: list[str]) -> tuple[int, str, str]:
@@ -171,11 +161,11 @@ def build_response(message: str) -> dict[str, Any]:
         body = [
             "I can answer from local repo state and the anchor snapshot now.",
             "Ask for anchors, repo state, app readiness, debt plan, hike planning, or the next bounded change.",
-            "I will label grounding and avoid pretending this is a direct GPT/API response.",
+            "I will label grounding and avoid pretending this is a hosted model response.",
         ]
 
     limits = [
-        "No direct GPT/API calls.",
+        "No direct hosted model calls.",
         "No external network requests.",
         "No browser command execution.",
         "No agents, tunnels, sensors, public writes, payments, or account actions.",
@@ -250,7 +240,6 @@ class LanternHandler(BaseHTTPRequestHandler):
             self._send_json(500, {"ok": False, "error": str(exc)})
 
     def log_message(self, format: str, *args: Any) -> None:
-        # Keep the desktop app quiet unless launched directly for debugging.
         return
 
 
@@ -269,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     server = ThreadingHTTPServer((args.host, args.port), LanternHandler)
     print(f"Local Lantern backend listening on http://{args.host}:{args.port}")
-    print("Boundary: localhost only; no GPT/API calls; no external network requests.")
+    print("Boundary: localhost only; no hosted model calls; no external network requests.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
