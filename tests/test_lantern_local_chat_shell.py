@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Contract tests for the Lantern local chat shell."""
+"""Contract tests for the Lantern local chat app and local backend."""
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import unittest
@@ -12,6 +13,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SHELL_HTML = REPO_ROOT / "apps" / "lantern-local-chat" / "index.html"
 RUNTIME_STATE_JS = REPO_ROOT / "apps" / "lantern-local-chat" / "runtime-state.js"
+ANCHOR_SNAPSHOT = REPO_ROOT / "apps" / "lantern-local-chat" / "anchor-snapshot.json"
+LOCAL_BACKEND = REPO_ROOT / "apps" / "lantern-local-chat" / "local_lantern_server.py"
 LAUNCHER = REPO_ROOT / "scripts" / "start_lantern_local_chat.py"
 BATCH_LAUNCHER = REPO_ROOT / "scripts" / "start_lantern_local_chat.bat"
 
@@ -23,18 +26,13 @@ class LanternLocalChatShellTest(unittest.TestCase):
         cls.launcher = LAUNCHER.read_text(encoding="utf-8")
         cls.batch_launcher = BATCH_LAUNCHER.read_text(encoding="utf-8")
         cls.runtime_state = RUNTIME_STATE_JS.read_text(encoding="utf-8")
+        cls.backend = LOCAL_BACKEND.read_text(encoding="utf-8")
+        cls.anchor_snapshot = ANCHOR_SNAPSHOT.read_text(encoding="utf-8")
 
-    def test_shell_exists_and_declares_local_lantern_surface(self) -> None:
+    def test_shell_exists_and_is_chat_first(self) -> None:
         self.assertTrue(SHELL_HTML.exists())
-        self.assertIn("Lantern", self.html)
-        self.assertIn("Local chat", self.html)
-        self.assertIn("No direct GPT calls", self.html)
-        self.assertIn("not GPT execution", self.html)
-        self.assertIn("not a hosted LLM endpoint", self.html)
-        self.assertIn("not autonomous authority", self.html)
-
-    def test_shell_is_chat_first_not_state_panel_first(self) -> None:
         for phrase in [
+            "Lantern",
             "Message Lantern",
             "What are we building next?",
             "+ New chat",
@@ -42,7 +40,6 @@ class LanternLocalChatShellTest(unittest.TestCase):
             "message-row",
             "composer-area",
             "sendMessage",
-            "chatgpt-like-local",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
@@ -50,78 +47,95 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertNotIn("Add Lantern response", self.html)
         self.assertNotIn("Repo state paste area", self.html)
 
-    def test_shell_keeps_state_available_without_making_it_primary(self) -> None:
+    def test_shell_calls_local_backend_not_canned_reply(self) -> None:
         for phrase in [
-            "State",
-            "Local state",
-            "git status --short",
-            "Handoff packet",
-            "Grounding mode",
-            "Batch-grounded repo state",
+            "fetch(field('backendUrl').value + '/chat'",
+            "Checking local backend",
+            "Local backend ready",
+            "Thinking locally",
+            "getLanternAnswer",
+            "backend /healthz and /chat pass",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
+        self.assertNotIn("function lanternReply", self.html)
+        self.assertNotIn("draft logic in this app", self.html)
 
-    def test_shell_preserves_local_first_no_executor_boundary(self) -> None:
+    def test_shell_preserves_local_first_boundaries(self) -> None:
         for phrase in [
-            "Display + draft only",
-            "Browser does not execute commands",
-            "no direct GPT/API calls",
-            "no command execution",
-            "no agents/tunnels/sensors/public writes",
+            "No direct GPT calls",
+            "Browser sends chat to localhost only",
+            "No GPT/API calls",
             "no browser command execution; no agents; no tunnels; no public writes",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
-
-    def test_shell_uses_generated_runtime_state_without_fetching(self) -> None:
-        self.assertIn('script src="runtime-state.js"', self.html)
-        self.assertIn("window.LANTERN_LOCAL_STATE", self.html)
-        self.assertIn("FULL_REPO_GROUNDED_FROM_LOCAL_BATCH", self.html)
-        self.assertIn("Batch state loaded", self.html)
-        for phrase in ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource"]:
-            with self.subTest(phrase=phrase):
-                self.assertNotIn(phrase, self.html)
-
-    def test_shell_does_not_contain_browser_execution_primitives(self) -> None:
-        blocked = [
-            "child_process",
-            "powershell.exe",
-            "cmd.exe /c",
-            "Start-Process",
-            "exec(",
-            "eval(",
-        ]
+        blocked = ["api.openai", "anthropic", "google.generativeai", "WebSocket", "EventSource", "eval("]
         for phrase in blocked:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, self.html)
 
-    def test_shell_uses_local_storage_only_for_draft_state(self) -> None:
-        self.assertIn("localStorage", self.html)
-        self.assertIn("lantern-chatgpt-like-local-v1", self.html)
-        self.assertIn("Clear local chats", self.html)
-        self.assertNotIn("sessionStorage", self.html)
-
-    def test_launcher_exists_and_writes_read_only_state_snapshot(self) -> None:
-        self.assertTrue(LAUNCHER.exists())
-        self.assertIn("Open the Lantern local chat shell", self.launcher)
-        self.assertIn("write_runtime_state", self.launcher)
-        self.assertIn("RUNTIME_STATE_JS", self.launcher)
-        self.assertIn("git", self.launcher)
-        self.assertIn("status", self.launcher)
-        self.assertIn("branch", self.launcher)
-        self.assertIn("rev-parse", self.launcher)
-        self.assertIn("no GPT calls", self.launcher)
-        self.assertIn("no command execution, no agents, no tunnels, no public writes", self.launcher)
-        for blocked in [
-            "Flask(",
-            "app.run",
-            "requests.",
-            "http.server",
-            "openai",
-            "anthropic",
-            "google.generativeai",
+    def test_runtime_state_and_anchor_snapshot_exist(self) -> None:
+        self.assertTrue(RUNTIME_STATE_JS.exists())
+        self.assertTrue(ANCHOR_SNAPSHOT.exists())
+        self.assertIn("window.LANTERN_LOCAL_STATE", self.runtime_state)
+        self.assertIn("No GPT call", self.runtime_state)
+        anchors = json.loads(self.anchor_snapshot)["anchors"]
+        ids = {anchor["id"] for anchor in anchors}
+        for expected in [
+            "anchor-taxonomy",
+            "local-chat-shell",
+            "perfect-adjacent-lantern",
+            "degraded-grounding",
+            "resonance-convergence",
+            "essential-needs",
         ]:
+            self.assertIn(expected, ids)
+
+    def test_backend_is_local_repo_anchor_engine_not_llm_client(self) -> None:
+        self.assertTrue(LOCAL_BACKEND.exists())
+        for phrase in [
+            "Local Lantern chat backend",
+            "ThreadingHTTPServer",
+            "127.0.0.1",
+            "ANCHOR_SNAPSHOT",
+            "ANCHOR_TAXONOMY",
+            "build_response",
+            "do_POST",
+            "do_GET",
+            "/chat",
+            "/healthz",
+            "No direct GPT/API calls",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.backend)
+        for blocked in [
+            "openai.ChatCompletion",
+            "from openai",
+            "import openai",
+            "anthropic.Client",
+            "import anthropic",
+            "google.generativeai",
+            "requests.post",
+            "urllib.request.urlopen",
+            "httpx.",
+            "aiohttp.",
+        ]:
+            with self.subTest(blocked=blocked):
+                self.assertNotIn(blocked, self.backend)
+
+    def test_launcher_starts_backend_by_default(self) -> None:
+        for phrase in [
+            "LOCAL_BACKEND",
+            "start_backend",
+            "--no-backend",
+            "Backend URL:",
+            "Backend PID:",
+            "localhost repo/anchor backend",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.launcher)
+        for blocked in ["import openai", "import anthropic", "google.generativeai", "requests.", "http.server"]:
             with self.subTest(blocked=blocked):
                 self.assertNotIn(blocked, self.launcher)
 
@@ -136,14 +150,26 @@ class LanternLocalChatShellTest(unittest.TestCase):
             with self.subTest(blocked=blocked):
                 self.assertNotIn(blocked, self.batch_launcher)
 
-    def test_runtime_state_placeholder_is_non_networked(self) -> None:
-        self.assertTrue(RUNTIME_STATE_JS.exists())
-        self.assertIn("window.LANTERN_LOCAL_STATE = null", self.runtime_state)
-        self.assertIn("No GPT call", self.runtime_state)
-        self.assertNotIn("fetch(", self.runtime_state)
-        self.assertNotIn("XMLHttpRequest", self.runtime_state)
+    def test_backend_once_smoke_answers_from_anchors(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(LOCAL_BACKEND), "--once", "find anchors and summarize current repo state"],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["ok"])
+        answer = payload["answer"]
+        self.assertIn("Lantern local answer", answer)
+        self.assertIn("Sources:", answer)
+        self.assertIn("anchor rule:", answer)
+        self.assertIn("No direct GPT/API calls", answer)
+        self.assertGreaterEqual(len(payload["selectedAnchors"]), 1)
 
-    def test_launcher_print_only_smoke(self) -> None:
+    def test_launcher_print_and_state_only_smoke(self) -> None:
         result = subprocess.run(
             [sys.executable, str(LAUNCHER), "--print-only"],
             cwd=REPO_ROOT,
@@ -153,13 +179,11 @@ class LanternLocalChatShellTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Lantern local chat shell", result.stdout)
-        self.assertIn("file://", result.stdout)
-        self.assertIn("Runtime state:", result.stdout)
-        self.assertIn("no GPT calls", result.stdout)
+        self.assertIn("Lantern local chat app", result.stdout)
+        self.assertIn("Backend URL:", result.stdout)
+        self.assertIn("no GPT/API calls", result.stdout)
 
-    def test_launcher_state_only_smoke(self) -> None:
-        result = subprocess.run(
+        state_result = subprocess.run(
             [sys.executable, str(LAUNCHER), "--state-only"],
             cwd=REPO_ROOT,
             text=True,
@@ -167,12 +191,12 @@ class LanternLocalChatShellTest(unittest.TestCase):
             stderr=subprocess.PIPE,
             check=False,
         )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Runtime state:", result.stdout)
+        self.assertEqual(state_result.returncode, 0, state_result.stderr)
+        self.assertIn("Runtime state:", state_result.stdout)
         runtime_state = RUNTIME_STATE_JS.read_text(encoding="utf-8")
         self.assertIn("window.LANTERN_LOCAL_STATE =", runtime_state)
-        self.assertIn("gitStatusShort", runtime_state)
-        self.assertIn("no GPT call", runtime_state.lower())
+        self.assertIn("backendUrl", runtime_state)
+        self.assertIn("LOCAL_REPO_ANCHOR_BACKEND", runtime_state)
 
 
 if __name__ == "__main__":
