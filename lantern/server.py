@@ -77,7 +77,7 @@ def state():
         "limits": [
             "read-only local state only",
             "chat substrate is not wired in this slice",
-            "dirty worktree details require the operator to run git status",
+            "dirty worktree details require an operator-run status check",
             "no repo writes, merges, deploys, agents, or tunnels",
         ],
     })
