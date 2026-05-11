@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lantern Local Chat Shell</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111f;
+      --panel: #111c2f;
+      --line: #29405f;
+      --text: #e7f0ff;
+      --muted: #9db0c8;
+      --accent: #74f7b5;
+      --warn: #ffd166;
+      --bad: #ff7b7b;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Segoe UI, Arial, sans-serif; background: radial-gradient(circle at top, #13233d, var(--bg)); color: var(--text); }
+    header { padding: 20px; border-bottom: 1px solid var(--line); background: rgba(8, 17, 31, .88); position: sticky; top: 0; z-index: 2; }
+    h1 { margin: 0; font-size: 24px; }
+    h2 { margin: 18px 0 10px; font-size: 17px; }
+    header p, .small { color: var(--muted); font-size: 12px; }
+    main { display: grid; grid-template-columns: minmax(320px, 1fr) 360px; gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+    section, aside, .card { background: rgba(17, 28, 47, .92); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+    aside section + section { margin-top: 16px; }
+    label { display: block; margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
+    textarea, input, select { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #07101d; color: var(--text); font: inherit; }
+    textarea { min-height: 122px; resize: vertical; }
+    button { border: 1px solid var(--accent); color: #052013; background: var(--accent); border-radius: 10px; padding: 10px 12px; font-weight: 700; cursor: pointer; margin: 8px 8px 0 0; }
+    button.secondary { background: transparent; color: var(--accent); }
+    button.warn { border-color: var(--warn); color: var(--warn); background: transparent; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+    .pill { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; color: var(--muted); margin: 2px; font-size: 12px; }
+    .chat { min-height: 350px; max-height: 520px; overflow: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px; }
+    .msg { border: 1px solid var(--line); border-radius: 12px; padding: 10px; white-space: pre-wrap; }
+    .user { background: #0f2439; align-self: flex-end; max-width: 82%; }
+    .lantern { background: #132f28; align-self: flex-start; max-width: 88%; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #06101d; border: 1px solid var(--line); border-radius: 10px; padding: 10px; color: #d8ffe8; }
+    .danger { color: var(--bad); }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Lantern Local Chat Shell</h1>
+    <p>Local-first operator interface. This is Lantern-style bounded support, not GPT execution, not a hosted LLM endpoint, and not autonomous authority.</p>
+  </header>
+  <main>
+    <section aria-label="Lantern local chat">
+      <div class="grid">
+        <div class="card">
+          <strong>Grounding mode</strong>
+          <select id="groundingMode">
+            <option>LIMITED_CHAT_LOCAL</option>
+            <option>FULL_REPO_GROUNDED_AFTER_OPERATOR_PASTE</option>
+            <option>UNAVAILABLE_OR_DEGRADED</option>
+          </select>
+          <p class="small">Paste fresh repo state before claiming full grounding.</p>
+        </div>
+        <div class="card">
+          <strong>Shell default</strong>
+          <select id="shellMode">
+            <option>cmd.exe</option>
+            <option>PowerShell</option>
+            <option>Git Bash</option>
+          </select>
+          <p class="small">Commands stay copy-only. The page does not execute shell commands.</p>
+        </div>
+      </div>
+
+      <h2>Conversation draft</h2>
+      <div id="chat" class="chat" aria-live="polite"></div>
+      <label for="prompt">Operator message</label>
+      <textarea id="prompt" placeholder="Ask Lantern to plan, inspect, summarize, or prepare a bounded next step."></textarea>
+      <button id="addMessage" type="button">Add Lantern response</button>
+      <button id="copyPacket" type="button" class="secondary">Copy handoff packet</button>
+      <button id="clearLocal" type="button" class="warn">Clear local draft</button>
+
+      <h2>Latest handoff packet</h2>
+      <pre id="packet">No packet yet.</pre>
+    </section>
+
+    <aside aria-label="State and boundaries">
+      <section>
+        <h2>Repo state paste area</h2>
+        <label for="repoPath">Repo path</label>
+        <input id="repoPath" value="C:\\Users\\alexp\\Documents\\human-flourishing-frameworks">
+        <label for="branchName">Branch</label>
+        <input id="branchName" placeholder="paste branch name">
+        <label for="commitSha">Commit SHA</label>
+        <input id="commitSha" placeholder="paste current commit">
+        <label for="gitStatus">git status --short</label>
+        <textarea id="gitStatus" placeholder="paste output; blank means not inspected, not clean"></textarea>
+        <button id="buildState" type="button" class="secondary">Build state packet</button>
+      </section>
+
+      <section>
+        <h2>Anchors in force</h2>
+        <span class="pill">Show the state</span>
+        <span class="pill">Say the limit</span>
+        <span class="pill">Memory is not proof</span>
+        <span class="pill">Local state beats handoff</span>
+        <span class="pill">Dirty worktrees are high risk</span>
+        <span class="pill">Largest acceptable bounded change</span>
+        <span class="pill">Targeted validation</span>
+      </section>
+
+      <section>
+        <h2>Blocked by default</h2>
+        <p class="small danger">No command execution, no agents, no tunnels, no sensors, no public writes, no payment/account action, no private log/token movement, no branch cleanup.</p>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'lantern-local-chat-shell-v1';
+    const fields = ['groundingMode', 'shellMode', 'prompt', 'repoPath', 'branchName', 'commitSha', 'gitStatus'];
+    const chat = document.getElementById('chat');
+    const packet = document.getElementById('packet');
+    let messages = [];
+
+    function field(id) { return document.getElementById(id); }
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        fields.forEach(id => { if (saved[id] !== undefined) field(id).value = saved[id]; });
+        messages = saved.messages || [];
+      } catch { messages = []; }
+      render();
+    }
+    function saveState() {
+      const saved = { messages };
+      fields.forEach(id => saved[id] = field(id).value);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    }
+    function render() {
+      chat.innerHTML = '';
+      messages.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'msg ' + m.role;
+        div.textContent = m.text;
+        chat.appendChild(div);
+      });
+      chat.scrollTop = chat.scrollHeight;
+      packet.textContent = buildPacket();
+    }
+    function lanternReply(input) {
+      const mode = field('groundingMode').value;
+      const shell = field('shellMode').value;
+      const status = field('gitStatus').value.trim();
+      const inspected = status.length > 0;
+      return [
+        'Lantern local response draft',
+        '',
+        'State: ' + (inspected ? 'operator pasted repo status' : 'repo state not pasted yet'),
+        'Mode: ' + mode,
+        'Shell: ' + shell,
+        '',
+        'Plan:',
+        '1. Preserve local-first and operator-visible state.',
+        '2. Treat this page as a handoff/drafting surface, not an executor.',
+        '3. Convert the request into the largest acceptable bounded next action with a validation path.',
+        '',
+        'Limit:',
+        'This shell does not call GPT, run commands, start agents, move money, open tunnels, scrape responses, or write to the repo.',
+        '',
+        'Operator request:',
+        input || 'UNSPECIFIED'
+      ].join('\n');
+    }
+    function buildPacket() {
+      const status = field('gitStatus').value.trim();
+      return [
+        'LANTERN LOCAL CHAT HANDOFF PACKET',
+        'repo path: ' + field('repoPath').value,
+        'branch: ' + (field('branchName').value || 'UNKNOWN'),
+        'commit: ' + (field('commitSha').value || 'UNKNOWN'),
+        'grounding mode: ' + field('groundingMode').value,
+        'shell default: ' + field('shellMode').value,
+        'git status --short:',
+        status || 'NOT PASTED',
+        '',
+        'latest messages:',
+        messages.slice(-6).map(m => m.role.toUpperCase() + ': ' + m.text).join('\n---\n') || 'NONE',
+        '',
+        'boundaries: local draft only; no command execution; no hidden telemetry; no public writes; no autonomous action',
+        'next validation: paste state, choose one bounded change, run targeted tests externally, paste evidence back'
+      ].join('\n');
+    }
+    field('addMessage').addEventListener('click', () => {
+      const prompt = field('prompt').value.trim();
+      if (!prompt) return;
+      messages.push({ role: 'user', text: prompt });
+      messages.push({ role: 'lantern', text: lanternReply(prompt) });
+      field('prompt').value = '';
+      saveState();
+      render();
+    });
+    field('copyPacket').addEventListener('click', async () => {
+      await navigator.clipboard.writeText(buildPacket());
+    });
+    field('buildState').addEventListener('click', () => { saveState(); render(); });
+    field('clearLocal').addEventListener('click', () => {
+      if (confirm('Clear local draft from this browser?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        messages = [];
+        fields.forEach(id => { if (id !== 'repoPath') field(id).value = ''; });
+        loadState();
+      }
+    });
+    fields.forEach(id => field(id).addEventListener('change', () => { saveState(); render(); }));
+    loadState();
+  </script>
+</body>
+</html>
