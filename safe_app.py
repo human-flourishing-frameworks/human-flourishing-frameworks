@@ -80,16 +80,13 @@ _PUBLIC_COPY_REPLACEMENTS = (
     ),
     (
         '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors',
-        '&mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
+        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors'
+        ' &mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
     ),
-    (
-        "document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;",
-        "// Live sensor header is populated from /healthz below.",
-    ),
-    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
+    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Registered Sensor Sources</div>'),
     (
         "sensors registered. Waiting for first observation cycle...",
-        "sensor definitions available. Live observation remains disabled unless explicitly enabled.",
+        "registered sensor definitions available. Live observation remains disabled unless explicitly enabled.",
     ),
 )
 
