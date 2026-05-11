@@ -11,7 +11,7 @@ work. This file is a public-copy and presentation guard for the live service.
 
 from __future__ import annotations
 
-from flask import jsonify
+from flask import jsonify, Response
 
 import app as _app_module
 from background_mode import create_background_controller_from_env
@@ -25,6 +25,35 @@ _ADVISORY_BANNER = (
     "                Escalations are review records only unless explicitly authorized by an operator."
 )
 
+_PWA_MANIFEST = {
+    "name": "BetterSafe Pilot",
+    "short_name": "BetterSafe",
+    "description": "Controlled limited BetterSafe pilot dashboard. Local packet builder only; no chatbot, no LLM endpoint, no public writes.",
+    "start_url": "/?surface=bettersafe-pilot",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#0f0c29",
+    "theme_color": "#00ff88",
+    "orientation": "portrait-primary",
+    "categories": ["utilities", "productivity"],
+    "icons": [
+        {
+            "src": "/bettersafe-icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable",
+        }
+    ],
+}
+
+_BETTERSAFE_ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BetterSafe Pilot icon">
+  <rect width="512" height="512" rx="96" fill="#0f0c29"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#00ff88" stroke-width="28"/>
+  <path d="M256 110 L356 402 L256 342 L156 402 Z" fill="#00ffff" opacity="0.92"/>
+  <circle cx="256" cy="256" r="36" fill="#ffcc00"/>
+</svg>
+"""
+
 _SKIP_LINK_CSS = """
         .skip-link {
             position: absolute;
@@ -37,6 +66,17 @@ _SKIP_LINK_CSS = """
             z-index: 1000;
         }
         .skip-link:focus { top: 12px; }
+"""
+
+_IPHONE_APP_META = """
+    <meta name="theme-color" content="#00ff88">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="BetterSafe">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/bettersafe-icon.svg">
+    <link rel="apple-touch-icon" href="/bettersafe-icon.svg">
 """
 
 _BETTERSAFE_PILOT_CSS = """
@@ -129,6 +169,10 @@ _BETTERSAFE_PILOT_HTML = """
                 <strong>CONTROLLED LIMITED PILOT ONLY</strong> &mdash; This screen is a local, deterministic guide.
                 It is not a chatbot, not an LLM endpoint, not autonomous, and not a public-write surface.
                 Use it to convert a request into a bounded BetterSafe packet for human review.
+            </div>
+            <div class="section-banner banner-yellow">
+                iPhone path: open this dashboard in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.
+                This creates an app-like launcher without App Store permissions, background collection, or native telemetry.
             </div>
             <div class="section-banner banner-yellow">
                 Mode starts as <strong>LIMITED_CHAT_LOCAL</strong> unless the operator explicitly verifies
@@ -355,6 +399,9 @@ def _rewrite_public_html(template: str) -> str:
 
     template = template.replace("<html>", '<html lang="en" dir="ltr">', 1)
 
+    if "apple-mobile-web-app-title" not in template:
+        template = template.replace("    <title>Human Flourishing Frameworks</title>", "    <title>Human Flourishing Frameworks</title>" + _IPHONE_APP_META, 1)
+
     if ".skip-link" not in template:
         template = template.replace("    </style>", _SKIP_LINK_CSS + "    </style>", 1)
 
@@ -420,6 +467,21 @@ _sanitize_public_template()
 app = _app_module.app
 background_controller = create_background_controller_from_env()
 background_controller.start()
+
+
+@app.route("/manifest.webmanifest")
+def pwa_manifest():
+    """Manifest for iPhone/Home Screen pilot shell."""
+    response = jsonify(_PWA_MANIFEST)
+    response.headers["Content-Type"] = "application/manifest+json"
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+    return response
+
+
+@app.route("/bettersafe-icon.svg")
+def bettersafe_icon():
+    """Small local SVG icon for the BetterSafe pilot shell."""
+    return Response(_BETTERSAFE_ICON_SVG, content_type="image/svg+xml")
 
 
 @app.route("/background/status")

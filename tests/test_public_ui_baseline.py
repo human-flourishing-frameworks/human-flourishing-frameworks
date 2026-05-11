@@ -102,6 +102,39 @@ class PublicUiBaselineTests(unittest.TestCase):
         self.assertNotIn('action="/bettersafe', text)
         self.assertNotIn("XMLHttpRequest", text)
 
+    def test_iphone_home_screen_shell_is_advertised_without_native_permissions(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        self.assertIn('rel="manifest" href="/manifest.webmanifest"', text)
+        self.assertIn('name="apple-mobile-web-app-capable" content="yes"', text)
+        self.assertIn('name="apple-mobile-web-app-title" content="BetterSafe"', text)
+        self.assertIn('rel="apple-touch-icon" href="/bettersafe-icon.svg"', text)
+        self.assertIn("open this dashboard in Safari, tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>", text)
+        self.assertIn("without App Store permissions, background collection, or native telemetry", text)
+
+    def test_pwa_manifest_is_safe_home_screen_shell(self):
+        response = self.client.get("/manifest.webmanifest")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("application/manifest+json", response.headers.get("Content-Type", ""))
+        manifest = response.get_json()
+        self.assertEqual(manifest["name"], "BetterSafe Pilot")
+        self.assertEqual(manifest["short_name"], "BetterSafe")
+        self.assertEqual(manifest["start_url"], "/?surface=bettersafe-pilot")
+        self.assertEqual(manifest["display"], "standalone")
+        self.assertIn("no chatbot", manifest["description"])
+        self.assertIn("no LLM endpoint", manifest["description"])
+        self.assertIn("no public writes", manifest["description"])
+        self.assertEqual(manifest["icons"][0]["src"], "/bettersafe-icon.svg")
+
+    def test_bettersafe_icon_is_local_svg(self):
+        response = self.client.get("/bettersafe-icon.svg")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("image/svg+xml", response.headers.get("Content-Type", ""))
+        text = response.get_data(as_text=True)
+        self.assertIn("<svg", text)
+        self.assertIn("BetterSafe Pilot icon", text)
+
 
 if __name__ == "__main__":
     unittest.main()
