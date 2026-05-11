@@ -80,7 +80,13 @@ class LanternSubstrateTests(unittest.TestCase):
         self.assertEqual(kwargs["json"]["messages"][0]["content"], "hello substrate")
         self.assertIn("system", kwargs["json"])
         self.assertIn("Show the state", kwargs["json"]["system"])
-        self.assertNotIn("test-key", json.dumps(kwargs))
+
+        # The API key necessarily appears in the HTTP header for the mocked
+        # request. The safety boundary is that it must not be copied into the
+        # request body, system prompt, user message, returned JSON, or doctrine.
+        self.assertEqual(kwargs["headers"].get("x-api-key"), "test-key")
+        self.assertNotIn("test-key", json.dumps(kwargs["json"]))
+        self.assertNotIn("test-key", json.dumps(data))
 
     def test_substrate_error_returns_safe_degraded_payload(self):
         self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = True
