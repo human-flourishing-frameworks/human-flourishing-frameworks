@@ -31,6 +31,7 @@ Optional environment:
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 import json
 import os
@@ -310,7 +311,7 @@ def main() -> int:
             channel_id=channel_id,
             user_id=user_id,
         )
-        response = await discord.utils.asyncio.to_thread(post_to_lantern, wrapped, config)
+        response = await asyncio.to_thread(post_to_lantern, wrapped, config)
         text = format_discord_reply(response)
         chunks = chunk_discord_text(text)
         await interaction.followup.send(chunks[0], ephemeral=config.ephemeral_replies)
@@ -338,7 +339,7 @@ def main() -> int:
                 channel_id=message.channel.id,
                 user_id=message.author.id,
             )
-            response = await discord.utils.asyncio.to_thread(post_to_lantern, wrapped, config)
+            response = await asyncio.to_thread(post_to_lantern, wrapped, config)
             await _send_chunks(message.reply, format_discord_reply(response))
 
     bot.run(config.token)
