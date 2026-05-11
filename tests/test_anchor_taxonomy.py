@@ -45,6 +45,7 @@ class AnchorTaxonomyTest(unittest.TestCase):
             "protected_play_anchor",
             "artifact_anchor",
             "runtime_anchor",
+            "pragmatic_certainty_anchor",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)
@@ -72,6 +73,44 @@ class AnchorTaxonomyTest(unittest.TestCase):
             "windows xp device targeting",
             "real network, account, browser, executable, or download access",
             "future consent without fresh operator supervision",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_pragmatic_certainty_anchor_respects_human_absolutes(self):
+        for phrase in [
+            "human absolute language can mean practical certainty, not literal infinity",
+            "99.9999999999% may be conversationally equivalent to “everything”",
+            "respect the human absolute",
+            "preserve the literal boundary only when needed",
+            "avoid using mathematical pedantry to erase operator meaning",
+            "practical completeness over a bounded working domain may be called everything",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_pragmatic_certainty_blocks_false_omniscience(self):
+        for phrase in [
+            "no claim of omniscience, infinite knowledge, or zero uncertainty",
+            "claiming literal omniscience",
+            "claiming impossible guarantees",
+            "using operator absolutes as consent forever",
+            "treating extrapolation as proof",
+            "turning high confidence into runtime truth",
+            "literal omniscience claims",
+            "impossible guarantees",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_pragmatic_certainty_preserves_convergence_method(self):
+        for phrase in [
+            "state -> anchor -> extrapolation -> test -> correction -> stronger state",
+            "extrapolation creates candidates",
+            "evidence creates confidence",
+            "correction creates convergence",
+            "track practical certainty separately from literal certainty",
+            "use confidence tables with pragmatic ceilings",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)
