@@ -46,6 +46,17 @@ class LanternLocalChatShellTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, self.html)
 
+    def test_shell_retries_backend_readiness(self) -> None:
+        for phrase in [
+            "backendReady",
+            "checkBackendWithRetry",
+            "retrying; the door still remembers locally",
+            "cache:'no-store'",
+            "checkBackendWithRetry(12)",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.html)
+
     def test_door_memory_is_local_and_wish_specific(self) -> None:
         self.assertTrue(DOOR_MEMORY_JS.exists())
         for phrase in [
@@ -97,6 +108,8 @@ class LanternLocalChatShellTest(unittest.TestCase):
 
     def test_launcher_and_batch_contract(self) -> None:
         for phrase in ["LOCAL_BACKEND", "start_backend", "--no-backend", "Backend URL:", "Backend PID:", "Generated runtime state:"]:
+            self.assertIn(phrase, self.launcher)
+        for phrase in ["backend_health_ok", "wait_for_backend", "Backend ready:", "--backend-timeout", "/healthz"]:
             self.assertIn(phrase, self.launcher)
         self.assertIn("@echo off", self.batch_launcher)
         self.assertIn("cd /d", self.batch_launcher)
