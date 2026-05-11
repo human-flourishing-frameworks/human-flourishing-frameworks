@@ -81,7 +81,8 @@ _PUBLIC_COPY_REPLACEMENTS = (
         "irreversible after a 24-hour lock.",
         "not executable unless explicitly authorized by an operator.",
     ),
-    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Registered Sensor Sources</div>'),
+    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
+    ('<div class="stat-label">Registered Sensor Sources</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
     (
         "sensors registered. Waiting for first observation cycle...",
         "registered sensor definitions available. Live observation remains disabled unless explicitly enabled.",
