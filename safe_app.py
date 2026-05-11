@@ -57,6 +57,7 @@ _HEALTHZ_SENSOR_STATUS_JS = """
 """
 
 _REGISTERED_SENSOR_HEADER = '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors'
+_REGISTERED_SENSOR_COPY = '&mdash; registered sensors'
 _LIVE_SENSOR_HEADER = ' &mdash; live sensors: <span id="wm-live-sensors-header">checking</span>'
 
 _PUBLIC_COPY_REPLACEMENTS = (
@@ -84,6 +85,10 @@ _PUBLIC_COPY_REPLACEMENTS = (
     ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
     ('<div class="stat-label">Registered Sensor Sources</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
     (
+        "document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;",
+        "// Registered sensor count is represented in the runtime sensor source summary card.",
+    ),
+    (
         "sensors registered. Waiting for first observation cycle...",
         "registered sensor definitions available. Live observation remains disabled unless explicitly enabled.",
     ),
@@ -95,12 +100,11 @@ def _rewrite_public_html(template: str) -> str:
     for old, new in _PUBLIC_COPY_REPLACEMENTS:
         template = template.replace(old, new)
 
-    if _REGISTERED_SENSOR_HEADER in template and "wm-live-sensors-header" not in template:
-        template = template.replace(
-            _REGISTERED_SENSOR_HEADER,
-            _REGISTERED_SENSOR_HEADER + _LIVE_SENSOR_HEADER,
-            1,
-        )
+    if _REGISTERED_SENSOR_HEADER in template:
+        replacement = _REGISTERED_SENSOR_COPY
+        if "wm-live-sensors-header" not in template:
+            replacement += _LIVE_SENSOR_HEADER
+        template = template.replace(_REGISTERED_SENSOR_HEADER, replacement, 1)
 
     template = template.replace("<html>", '<html lang="en" dir="ltr">', 1)
 
