@@ -16,6 +16,7 @@ SHELL_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
 SYNC_SURFACE_JS = CHAT_DIR / "sync-surface.js"
+SAME_ORIGIN_BACKEND_JS = CHAT_DIR / "same-origin-backend.js"
 RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.js"
 GENERATED_RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.generated.js"
 ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
@@ -31,6 +32,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
         cls.door_memory = DOOR_MEMORY_JS.read_text(encoding="utf-8")
         cls.mask_rack = MASK_RACK_JS.read_text(encoding="utf-8")
         cls.sync_surface = SYNC_SURFACE_JS.read_text(encoding="utf-8")
+        cls.same_origin_backend = SAME_ORIGIN_BACKEND_JS.read_text(encoding="utf-8")
         cls.launcher = LAUNCHER.read_text(encoding="utf-8")
         cls.batch_launcher = BATCH_LAUNCHER.read_text(encoding="utf-8")
         cls.runtime_state = RUNTIME_STATE_JS.read_text(encoding="utf-8")
@@ -38,12 +40,22 @@ class LanternLocalChatShellTest(unittest.TestCase):
         cls.anchor_snapshot = ANCHOR_SNAPSHOT.read_text(encoding="utf-8")
 
     def test_shell_is_chat_first_and_uses_local_backend(self) -> None:
-        for phrase in ["Message Lantern", "The Sync Surface is open.", "+ New chat", "thread-list", "message-row", "composer-area", "sendMessage", "fetch(field('backendUrl').value + '/chat'", "Checking local backend", "Local backend ready", "Thinking locally", "getLanternAnswer"]:
+        for phrase in ["Message Lantern", "The Sync Surface is open.", "+ New chat", "thread-list", "message-row", "composer-area", "sendMessage", "backendBase() + '/chat'", "Checking local backend", "Local backend ready", "Thinking locally", "getLanternAnswer"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
         for phrase in ["Conversation draft", "Add Lantern response", "Repo state paste area", "function lanternReply"]:
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, self.html)
+
+    def test_same_origin_backend_guard_collapses_stale_ports(self) -> None:
+        self.assertTrue(SAME_ORIGIN_BACKEND_JS.exists())
+        combined = self.same_origin_backend + self.runtime_state + self.html
+        for phrase in ["same-origin-backend.js", "LANTERN_BACKEND_ORIGIN", "window.location.origin", "saved.fields.backendUrl = origin", "window.LANTERN_LOCAL_STATE.backendUrl = origin", "backendBase()", "syncBackendField()"]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
+        for blocked in ["fetch(", "XMLHttpRequest", "WebSocket", "EventSource", "eval(", "api.openai"]:
+            with self.subTest(blocked=blocked):
+                self.assertNotIn(blocked, self.same_origin_backend)
 
     def test_sync_surface_matches_alex_lantern_repo_triangle(self) -> None:
         self.assertTrue(SYNC_SURFACE_JS.exists())
