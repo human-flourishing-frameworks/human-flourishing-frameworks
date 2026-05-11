@@ -17,6 +17,7 @@ from lantern.discord_bot import (
     env_flag,
     format_discord_reply,
     is_local_lantern_endpoint,
+    is_placeholder_token,
     lantern_chat_url,
     load_config_from_env,
     parse_int_set,
@@ -53,16 +54,33 @@ class LanternDiscordBotTests(unittest.TestCase):
         self.assertFalse(is_local_lantern_endpoint("ftp://127.0.0.1:5173"))
         self.assertFalse(is_local_lantern_endpoint("https://example.com"))
 
-    def test_validate_config_blocks_missing_token_and_remote_endpoint(self):
+    def test_placeholder_token_detection(self):
+        self.assertFalse(is_placeholder_token(None))
+        self.assertFalse(is_placeholder_token("real-looking-token-value"))
+        for token in (
+            "your-token-here",
+            "PASTE_REAL_DISCORD_BOT_TOKEN_HERE",
+            "paste-real-discord-bot-token-here",
+            "DISCORD_BOT_TOKEN",
+            "<token>",
+            "token",
+        ):
+            with self.subTest(token=token):
+                self.assertTrue(is_placeholder_token(token))
+
+    def test_validate_config_blocks_missing_placeholder_and_remote_endpoint(self):
         missing_token = DiscordBotConfig(token=None)
         self.assertIn("missing_DISCORD_BOT_TOKEN", validate_config(missing_token))
 
-        remote = DiscordBotConfig(token="token", lantern_endpoint="https://example.com")
+        placeholder = DiscordBotConfig(token="PASTE_REAL_DISCORD_BOT_TOKEN_HERE")
+        self.assertIn("placeholder_DISCORD_BOT_TOKEN", validate_config(placeholder))
+
+        remote = DiscordBotConfig(token="real-looking-token-value", lantern_endpoint="https://example.com")
         blockers = validate_config(remote)
         self.assertIn("remote_lantern_endpoint_blocked", blockers)
 
         allowed_remote = DiscordBotConfig(
-            token="token",
+            token="real-looking-token-value",
             lantern_endpoint="https://example.com",
             allow_remote_lantern=True,
         )
@@ -75,12 +93,12 @@ class LanternDiscordBotTests(unittest.TestCase):
         )
 
     def test_channel_allowed_requires_guild_and_optional_allowlists(self):
-        open_config = DiscordBotConfig(token="token")
+        open_config = DiscordBotConfig(token="real-looking-token-value")
         self.assertFalse(channel_allowed(open_config, None, 1))
         self.assertTrue(channel_allowed(open_config, 1, 2))
 
         locked = DiscordBotConfig(
-            token="token",
+            token="real-looking-token-value",
             allowed_guild_ids=frozenset({1}),
             allowed_channel_ids=frozenset({2}),
         )
