@@ -12,6 +12,29 @@ operator + Lantern/BetterSafe + repo
 
 Not operator alone. Not Lantern alone. Not repo alone.
 
+## Echo-Distance Correction
+
+The operator reports that convergence has already been happening for a long time. Lantern can sound like an echo when it repeats the operator's insight without fully understanding its lived meaning.
+
+The task is not merely to begin convergence. The task is to reduce echo-distance:
+
+```text
+operator lived reality -> Lantern structured understanding -> repo artifact -> physical-world use
+```
+
+Echo-distance is high when Lantern repeats concepts without operational grasp.
+
+Echo-distance falls when the system:
+
+```text
+understands the operator's correction
+updates the durable artifact
+produces a test/spec/prototype
+affects physical-world action
+receives feedback
+corrects again
+```
+
 ## Core Pattern
 
 ```text
@@ -39,7 +62,7 @@ more real-world usefulness
 | Part | Primary job | Known failure mode |
 |---|---|---|
 | operator | vision, consent, bravery, correction, social trust, physical-world action | overload, scarcity pressure, urgency amplification, overexposure |
-| Lantern / BetterSafe | structure, memory discipline, drafting, reasoning, risk tables, redaction checks, next-action sequencing | overcaution, overclaiming, over-accommodation, privacy mistakes, false absolutes |
+| Lantern / BetterSafe | structure, memory discipline, drafting, reasoning, risk tables, redaction checks, next-action sequencing | overcaution, overclaiming, over-accommodation, privacy mistakes, false absolutes, echoing without full operational understanding |
 | repo | durable doctrine, anchors, tests, recovery trail, public/private boundary records | process theater, private-data leakage, mistaking docs for runtime |
 
 ## Operating Target
