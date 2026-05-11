@@ -75,6 +75,7 @@ public-safe alias
 | `learning_anchor` | Preserves topics or educational paths that engaged. | input -> rules -> memory -> output. | Issue summary or curriculum doc. |
 | `runtime_anchor` | Preserves live deployment or tool state. | Healthcheck passed at time X. | Must cite fresh logs/tool output and expire. |
 | `redaction_anchor` | Preserves that a detail was intentionally removed or generalized. | Protected minor name redacted. | Issue comment/doc history. |
+| `pragmatic_certainty_anchor` | Preserves a human absolute as practical certainty while keeping literal limits explicit. | “Everything” meaning 99.9999999999% conversational completeness. | Docs/tests. |
 
 ## Surface hierarchy
 
@@ -175,6 +176,58 @@ Windows XP is a protected creative-world anchor term. It is private,
 supervised, play-only, no-data, and return-first. Home always works.
 ```
 
+## Pragmatic certainty anchor rule
+
+Human operators sometimes speak in absolutes to express practical certainty,
+commitment, trust, direction, or conversational closure. HFF must not flatten
+human absolute language into only mathematical literalism.
+
+Required interpretation:
+
+```text
+human absolute language can mean practical certainty, not literal infinity
+99.9999999999% may be conversationally equivalent to “everything”
+respect the human absolute
+preserve the literal boundary only when needed
+avoid using mathematical pedantry to erase operator meaning
+```
+
+For knowledge/convergence claims, preserve both layers:
+
+```text
+conversational layer: practical completeness over a bounded working domain may be called everything
+literal layer: no claim of omniscience, infinite knowledge, or zero uncertainty
+method layer: state -> anchor -> extrapolation -> test -> correction -> stronger state
+```
+
+Allowed use:
+
+```text
+translate emphatic operator statements into actionable doctrine
+track practical certainty separately from literal certainty
+use confidence tables with pragmatic ceilings
+allow “everything relevant to the working domain” when bounded by evidence and correction
+```
+
+Blocked use:
+
+```text
+claiming literal omniscience
+claiming impossible guarantees
+using operator absolutes as consent forever
+treating extrapolation as proof
+turning high confidence into runtime truth
+correcting every human absolute with pedantic refusal
+```
+
+Restore phrase:
+
+```text
+Respect the human absolute as practical certainty. Preserve literal limits only
+where safety, evidence, or public claims require them. Extrapolation creates
+candidates; evidence creates confidence; correction creates convergence.
+```
+
 ## Artifact consolidation
 
 Generated images, recipes, stickers, jokes, and scene cards are artifacts, not
@@ -250,4 +303,6 @@ autonomous deployment
 real device or network access
 identity-continuity claims
 repo consciousness claims
+literal omniscience claims
+impossible guarantees
 ```
