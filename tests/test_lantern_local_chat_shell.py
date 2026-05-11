@@ -104,7 +104,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
                 self.assertNotIn(blocked, self.backend)
 
     def test_launcher_and_batch_contract(self) -> None:
-        for phrase in ["LOCAL_BACKEND", "start_backend", "--no-backend", "Backend URL:", "Backend PID:", "Generated runtime state:"]:
+        for phrase in ["LOCAL_BACKEND", "start_backend", "--no-backend", "Backend URL:", "Backend PID:", "Generated runtime state:", "choose_backend_url", "Backend log:", "Backend diagnosis:", "socket", "--backend-log"]:
             self.assertIn(phrase, self.launcher)
         for phrase in ["backend_health_ok", "wait_for_backend", "Backend ready:", "--backend-timeout", "/healthz"]:
             self.assertIn(phrase, self.launcher)
