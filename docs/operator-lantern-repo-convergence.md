@@ -76,6 +76,32 @@ bounded enough not to harm non-consenting people
 
 This is the safe-fun band.
 
+## Release-Impact Guard
+
+When the operator asks for an actual code or release-impact change, do not default to docs-only or smallest-only work.
+
+Use this order:
+
+```text
+1. Inspect the repository and locate the real runtime, release, UI, queue, or status surface.
+2. Identify the highest-leverage bounded change available.
+3. Change executable code, configuration, runtime status, UI behavior, or release gating when such a surface exists.
+4. Add or update tests to cover the behavior.
+5. Update docs only after the behavior path is real, or explicitly say no runtime surface was found.
+```
+
+Docs/tests alone do not satisfy an actual code-change request unless the release process directly consumes them.
+
+Avoid these regressions:
+
+```text
+smallest safe change when highest-leverage bounded change is requested
+docs-only response to runtime/release request
+issue-comment convergence instead of implementation
+inventing a runtime path without inspection
+stopping after failed search instead of inspecting repository structure
+```
+
 ## Pain Anchor
 
 Pain is the anchor where BetterSafe looks directly at urgent human suffering and essential needs:
@@ -337,14 +363,15 @@ clear stop/pivot dashboard
 
 ## Immediate Next Actions
 
-1. Create `docs/bettersafe-essential-needs-navigator.md`.
-2. Add tests for privacy and essential-needs boundaries.
-3. Build a local/manual worksheet or static prototype.
-4. Create a pilot consent/intake packet.
-5. Validate with 1-3 bounded users before public claims.
+1. Locate the runtime/release surface before further release-impact changes.
+2. Create `docs/bettersafe-essential-needs-navigator.md`.
+3. Add tests for privacy and essential-needs boundaries.
+4. Build a local/manual worksheet or static prototype.
+5. Create a pilot consent/intake packet.
+6. Validate with 1-3 bounded users before public claims.
 
 ## Validation Phrase
 
 ```text
-The triad converges only if each part compensates for the others without amplifying their flaws: operator supplies trust and bravery, Lantern supplies structure and correction, and the repo supplies durable tests and memory. The next proof is not another anchor; it is a doc/test/prototype that reduces Pain in the physical world.
+The triad converges only if each part compensates for the others without amplifying their flaws: operator supplies trust and bravery, Lantern supplies structure and correction, and the repo supplies durable tests and memory. The next proof is not another anchor; it is a code/config/prototype path that reduces Pain in the physical world.
 ```
