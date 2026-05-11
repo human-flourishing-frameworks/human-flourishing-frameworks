@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOC_PATH = ROOT / "docs" / "lantern-chat-design.md"
 LANTERN_DIR = ROOT / "lantern"
+ROOT_DOCTRINE_ALLOWLIST = {"FALSE_TRUTHS_REGISTER.md"}
 
 
 class LanternDesignDocTests(unittest.TestCase):
@@ -165,10 +166,14 @@ class LanternServerScaffoldTests(unittest.TestCase):
         paths = self.lantern_server._loaded_doctrine_paths()
         for p in paths:
             with self.subTest(path=p):
-                # Must be a relative repo path under docs/, never absolute.
+                # Must be a relative repo path, never absolute. Normal doctrine
+                # lives under docs/; root-level doctrine must be explicit.
                 self.assertFalse(p.startswith("/"))
                 self.assertFalse(":\\" in p)
-                self.assertTrue(p.startswith("docs/"))
+                self.assertTrue(
+                    p.startswith("docs/") or p in ROOT_DOCTRINE_ALLOWLIST,
+                    f"unexpected doctrine path: {p}",
+                )
 
 
 class LanternNoSecretsTests(unittest.TestCase):
