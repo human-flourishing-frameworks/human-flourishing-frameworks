@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from urllib.error import URLError
+from urllib.parse import urlparse
 from urllib.request import urlopen
 import webbrowser
 
@@ -21,6 +23,7 @@ CHAT_SHELL = CHAT_DIR / "index.html"
 RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.js"
 GENERATED_RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.generated.js"
 LOCAL_BACKEND = CHAT_DIR / "local_lantern_server.py"
+LOG_DIR = REPO_ROOT / "logs" / "lantern-local-chat"
 DEFAULT_BACKEND_URL = "http://127.0.0.1:8765"
 
 
@@ -33,18 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-backend", action="store_true")
     parser.add_argument("--backend-url", default=DEFAULT_BACKEND_URL)
     parser.add_argument("--backend-timeout", type=float, default=6.0)
+    parser.add_argument("--backend-log", default="")
     return parser
 
 
 def _run_git(args: list[str]) -> tuple[int, str, str]:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=REPO_ROOT,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
+    result = subprocess.run(["git", *args], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
@@ -114,16 +111,66 @@ def wait_for_backend(backend_url: str, timeout_seconds: float) -> bool:
     return backend_health_ok(backend_url)
 
 
-def start_backend() -> subprocess.Popen[str] | None:
+def _url_host_port(backend_url: str) -> tuple[str, int]:
+    parsed = urlparse(backend_url)
+    return parsed.hostname or "127.0.0.1", parsed.port or 8765
+
+
+def _can_bind(host: str, port: int) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind((host, port))
+        return True
+    except OSError:
+        return False
+
+
+def choose_backend_url(preferred_url: str) -> str:
+    """Use a healthy existing backend or choose a free localhost port.
+
+    This avoids a stale, unhealthy process on 8765 blocking the app forever.
+    """
+    if backend_health_ok(preferred_url):
+        return preferred_url
+    host, preferred_port = _url_host_port(preferred_url)
+    if host not in {"127.0.0.1", "localhost"}:
+        return preferred_url
+    if _can_bind("127.0.0.1", preferred_port):
+        return f"http://127.0.0.1:{preferred_port}"
+    for port in range(8766, 8800):
+        if _can_bind("127.0.0.1", port):
+            return f"http://127.0.0.1:{port}"
+    return preferred_url
+
+
+def default_backend_log_path() -> Path:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    return LOG_DIR / f"backend-{stamp}.log"
+
+
+def read_log_tail(path: Path, max_chars: int = 2400) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")[-max_chars:].strip()
+
+
+def start_backend(backend_url: str, log_path: Path) -> subprocess.Popen[str] | None:
     if not LOCAL_BACKEND.exists():
         print(f"Local Lantern backend not found: {LOCAL_BACKEND}", file=sys.stderr)
         return None
+    host, port = _url_host_port(backend_url)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_file = log_path.open("a", encoding="utf-8")
+    log_file.write(f"\n--- Lantern backend start {datetime.now(timezone.utc).isoformat()} {backend_url} ---\n")
+    log_file.flush()
     return subprocess.Popen(
-        [sys.executable, str(LOCAL_BACKEND), "--host", "127.0.0.1", "--port", "8765"],
+        [sys.executable, str(LOCAL_BACKEND), "--host", host, "--port", str(port)],
         cwd=REPO_ROOT,
         text=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
         creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
     )
 
@@ -133,29 +180,44 @@ def main(argv: list[str] | None = None) -> int:
     if not CHAT_SHELL.exists():
         print(f"Lantern local chat app not found: {CHAT_SHELL}", file=sys.stderr)
         return 1
+
+    launch_backend = not args.no_backend and not args.print_only and not args.state_only
+    backend_url = choose_backend_url(args.backend_url) if launch_backend else args.backend_url
+    backend_log = Path(args.backend_log).expanduser() if args.backend_log else default_backend_log_path()
+
     state: dict[str, object] | None = None
     if not args.skip_state:
-        state = write_runtime_state(args.backend_url)
+        state = write_runtime_state(backend_url)
+
     backend_process = None
     backend_ready = False
-    if not args.no_backend and not args.print_only and not args.state_only:
-        if not backend_health_ok(args.backend_url):
-            backend_process = start_backend()
-        backend_ready = wait_for_backend(args.backend_url, args.backend_timeout)
+    if launch_backend:
+        if not backend_health_ok(backend_url):
+            backend_process = start_backend(backend_url, backend_log)
+        backend_ready = wait_for_backend(backend_url, args.backend_timeout)
+
     url = CHAT_SHELL.resolve().as_uri()
     print("Lantern local chat app")
     print(f"URL: {url}")
     print(f"Runtime placeholder: {RUNTIME_STATE_JS}")
     print(f"Generated runtime state: {GENERATED_RUNTIME_STATE_JS}")
-    print(f"Backend URL: {args.backend_url}")
+    print(f"Backend URL: {backend_url}")
     print(f"Backend ready: {backend_ready}")
+    print(f"Backend log: {backend_log}")
     if backend_process is not None:
         print(f"Backend PID: {backend_process.pid}")
+        exit_code = backend_process.poll()
+        print(f"Backend process exit code: {exit_code if exit_code is not None else 'running'}")
     if state is not None:
         print(f"Repo: {state['repoPath']}")
         print(f"Branch: {state['branch']}")
         print(f"Commit: {state['commit']}")
         print(f"Clean: {state['isClean']}")
+    if launch_backend and not backend_ready:
+        print("Backend diagnosis: /healthz did not become ready before timeout.")
+        tail = read_log_tail(backend_log)
+        print("Backend log tail:")
+        print(tail or "empty; process may be blocked before writing or killed during startup")
     print("Boundary: local app plus localhost repo/anchor backend; no GPT/API calls, no agents, no tunnels, no public writes.")
     if args.state_only:
         return 0
