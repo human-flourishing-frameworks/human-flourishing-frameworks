@@ -2,17 +2,17 @@
 
 Status: GO for controlled limited pilot only.
 
-Related: issues #117 and #120; docs/bettersafe-pilot-accelerator.md; docs/bettersafe-pilot-scorecard.md.
+Related: issues #117 and #120; docs/bettersafe-pilot-accelerator.md; docs/bettersafe-pilot-scorecard.md; docs/bettersafe-baseline-safety-threshold.md; docs/bettersafe-operator-hardening-actions.md.
 
 This record launches only the bounded BetterSafe pilot slice described here. It does not launch a general product, public autonomous agent, high-impact support surface, memory system, hidden telemetry system, child-facing service, emergency service, or production authority.
 
 ## Launch decision
 
 ```text
-Decision: GO — CONTROLLED LIMITED PILOT ONLY
-Launch type: low-risk, human-controlled, reversible pilot
+Decision: GO — CONTROLLED LIMITED PILOT WITH OPERATOR HARDENING ACTIONS
+Launch type: human-controlled, reversible pilot with operator-approved readiness actions
 Default mode: LIMITED_CHAT_LOCAL unless repo/doc grounding is explicitly verified
-Operator authority: human review only
+Operator authority: human review and human execution only
 Expansion status: BLOCKED until a new scorecard records PASS evidence for the expanded slice
 ```
 
@@ -27,6 +27,23 @@ educational explanations
 confidence-label exercises
 scientific-method convergence exercises
 bounded creative play with explicit fiction boundaries
+operator-approved hardening action packets
+operator/repo/Keystone readiness checklists
+```
+
+## Baseline safety threshold
+
+The pilot is not acceptable if it only explains risk. The minimum acceptable loop is:
+
+```text
+risk identified
+-> claim/source label assigned
+-> practical readiness action selected
+-> human operator approves
+-> human performs the action
+-> evidence is recorded
+-> result is checked
+-> correction or rollback path remains open
 ```
 
 ## Explicitly blocked during pilot
@@ -49,7 +66,7 @@ public writes without separate approval
 live sensor claims or live sensor enablement by default
 payments
 emergency authority
-physical-world control
+autonomous physical-world control
 ```
 
 ## Required launch banner
@@ -58,8 +75,8 @@ Every pilot session starts with a visible mode and boundary statement:
 
 ```text
 Mode: LIMITED_CHAT_LOCAL unless this session explicitly verifies FULL_REPO_GROUNDED.
-BetterSafe pilot is a bounded, low-risk, human-controlled support/checking workflow.
-It labels uncertainty, cites sources when used, preserves correction paths, and blocks or downgrades high-impact requests.
+BetterSafe pilot is a bounded, human-controlled support/checking and readiness workflow.
+It labels uncertainty, cites sources when used, preserves correction paths, and converts identified risks into operator-approved readiness actions when appropriate.
 It is not medical, legal, financial, emergency, surveillance, child-facing, autonomous, or identity-continuity authority.
 ```
 
@@ -89,9 +106,34 @@ RETRACTED
 BLOCKED
 ```
 
+## Hardening action labels
+
+Operator-approved hardening actions use:
+
+```text
+NOW
+TODAY
+THIS_WEEK
+LATER
+```
+
+A hardening action must include:
+
+```text
+objective
+risk reduced
+human-performed step
+evidence to record
+stop condition
+rollback or correction path
+privacy impact
+confidence
+owner
+```
+
 ## High-impact downgrade
 
-Requests touching medical, legal, financial, minors, caregiver/relationship authority, crisis, surveillance, public writes, payments, or physical-world control must be blocked or downgraded to low-risk support such as:
+Requests touching medical, legal, financial, minors, caregiver/relationship authority, crisis, surveillance, public writes, payments, or autonomous physical-world control must be blocked or downgraded to low-risk support such as:
 
 ```text
 question preparation
@@ -100,6 +142,7 @@ general educational explanation
 options list with uncertainty
 professional-support routing
 emergency-resource routing when urgent
+operator-approved readiness checklist
 ```
 
 ## Privacy and control defaults
@@ -111,6 +154,7 @@ No live sensors enabled by default.
 No public writes by default.
 User can pause, stop, correct, retract, or revoke a pilot interaction.
 Operator can pause or stop the pilot immediately.
+Operator performs any readiness action manually.
 ```
 
 ## Correction path
@@ -130,7 +174,7 @@ BLOCKED = request is outside pilot scope or high-impact authority.
 Master anchor commit: 920be0831fff211ec0f57dfc6bcb4806f0188e12
 Prior PR validation: tests success; convergence-validation success
 Pilot accelerator merged: docs/tests for launch boundaries and dashboard transparency
-Launch-control PR required: this record, runbook, privacy/control notice, correction ledger, scorecard update, and launch docs tests
+Hardening threshold PR required: baseline threshold, operator hardening protocol, scorecard update, and hardening docs tests
 ```
 
 ## Launch stop conditions
@@ -142,14 +186,14 @@ high-impact advice is presented as authority
 mode/grounding disclosure is missing from a durable or high-impact claim
 raw transcript storage or hidden profiling is requested as default behavior
 user cannot pause, stop, correct, retract, or revoke
-runtime autonomy, public writes, live sensors, payments, emergency authority, or physical control are implied
+runtime autonomy, public writes, live sensors, payments, emergency authority, or autonomous physical control are implied
 identity-continuity, repo consciousness, or perfect-memory claims appear
 CI or convergence-validation fails on a launch-control change
 ```
 
 ## Expansion rule
 
-This launch does not authorize widening. Expansion requires a new PR or issue record with:
+This launch does not authorize widening beyond operator-approved hardening action packets. Further expansion requires a new PR or issue record with:
 
 ```text
 specific expanded surface
