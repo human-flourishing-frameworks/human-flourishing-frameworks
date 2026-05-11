@@ -39,6 +39,7 @@
     .lantern { background: #132f28; align-self: flex-start; max-width: 88%; }
     pre { white-space: pre-wrap; word-break: break-word; background: #06101d; border: 1px solid var(--line); border-radius: 10px; padding: 10px; color: #d8ffe8; }
     .danger { color: var(--bad); }
+    .ok { color: var(--accent); }
     @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -55,9 +56,10 @@
           <select id="groundingMode">
             <option>LIMITED_CHAT_LOCAL</option>
             <option>FULL_REPO_GROUNDED_AFTER_OPERATOR_PASTE</option>
+            <option>FULL_REPO_GROUNDED_FROM_LOCAL_BATCH</option>
             <option>UNAVAILABLE_OR_DEGRADED</option>
           </select>
-          <p class="small">Paste fresh repo state before claiming full grounding.</p>
+          <p class="small">Use batch launcher to load read-only repo state automatically.</p>
         </div>
         <div class="card">
           <strong>Shell default</strong>
@@ -84,7 +86,8 @@
 
     <aside aria-label="State and boundaries">
       <section>
-        <h2>Repo state paste area</h2>
+        <h2>Repo state</h2>
+        <p id="batchStateStatus" class="small">Batch state not loaded yet.</p>
         <label for="repoPath">Repo path</label>
         <input id="repoPath" value="C:\\Users\\alexp\\Documents\\human-flourishing-frameworks">
         <label for="branchName">Branch</label>
@@ -108,12 +111,18 @@
       </section>
 
       <section>
+        <h2>Batch mode</h2>
+        <p class="small">Run <code>scripts\start_lantern_local_chat.bat</code> to refresh read-only repo state and open this shell. It does not call GPT.</p>
+      </section>
+
+      <section>
         <h2>Blocked by default</h2>
-        <p class="small danger">No command execution, no agents, no tunnels, no sensors, no public writes, no payment/account action, no private log/token movement, no branch cleanup.</p>
+        <p class="small danger">No command execution from browser, no GPT calls, no agents, no tunnels, no sensors, no public writes, no payment/account action, no private log/token movement, no branch cleanup.</p>
       </section>
     </aside>
   </main>
 
+  <script src="runtime-state.js"></script>
   <script>
     const STORAGE_KEY = 'lantern-local-chat-shell-v1';
     const fields = ['groundingMode', 'shellMode', 'prompt', 'repoPath', 'branchName', 'commitSha', 'gitStatus'];
@@ -122,12 +131,30 @@
     let messages = [];
 
     function field(id) { return document.getElementById(id); }
+    function applyBatchState() {
+      const state = window.LANTERN_LOCAL_STATE;
+      const status = field('batchStateStatus');
+      if (!state) {
+        status.textContent = 'Batch state not loaded. Run scripts\\start_lantern_local_chat.bat from the repo root.';
+        status.className = 'small';
+        return;
+      }
+      field('repoPath').value = state.repoPath || field('repoPath').value;
+      field('branchName').value = state.branch || '';
+      field('commitSha').value = state.commit || '';
+      field('gitStatus').value = state.gitStatusShort || '';
+      field('groundingMode').value = state.groundingMode || 'UNAVAILABLE_OR_DEGRADED';
+      field('shellMode').value = state.shellDefault || 'cmd.exe';
+      status.textContent = 'Batch state loaded: ' + (state.isClean ? 'clean repo' : 'repo has changes or state unavailable') + ' @ ' + (state.timestamp || 'unknown time');
+      status.className = state.isClean ? 'small ok' : 'small danger';
+    }
     function loadState() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
         fields.forEach(id => { if (saved[id] !== undefined) field(id).value = saved[id]; });
         messages = saved.messages || [];
       } catch { messages = []; }
+      applyBatchState();
       render();
     }
     function saveState() {
@@ -150,11 +177,12 @@
       const mode = field('groundingMode').value;
       const shell = field('shellMode').value;
       const status = field('gitStatus').value.trim();
-      const inspected = status.length > 0;
+      const state = window.LANTERN_LOCAL_STATE;
+      const inspected = Boolean(state) || status.length > 0;
       return [
         'Lantern local response draft',
         '',
-        'State: ' + (inspected ? 'operator pasted repo status' : 'repo state not pasted yet'),
+        'State: ' + (inspected ? 'local repo state available' : 'repo state not available yet'),
         'Mode: ' + mode,
         'Shell: ' + shell,
         '',
@@ -164,7 +192,7 @@
         '3. Convert the request into the largest acceptable bounded next action with a validation path.',
         '',
         'Limit:',
-        'This shell does not call GPT, run commands, start agents, move money, open tunnels, scrape responses, or write to the repo.',
+        'This shell does not call GPT, run commands from the browser, start agents, move money, open tunnels, scrape responses, or write to the repo.',
         '',
         'Operator request:',
         input || 'UNSPECIFIED'
@@ -180,13 +208,13 @@
         'grounding mode: ' + field('groundingMode').value,
         'shell default: ' + field('shellMode').value,
         'git status --short:',
-        status || 'NOT PASTED',
+        status || '',
         '',
         'latest messages:',
         messages.slice(-6).map(m => m.role.toUpperCase() + ': ' + m.text).join('\n---\n') || 'NONE',
         '',
-        'boundaries: local draft only; no command execution; no hidden telemetry; no public writes; no autonomous action',
-        'next validation: paste state, choose one bounded change, run targeted tests externally, paste evidence back'
+        'boundaries: local draft only; no GPT calls; no command execution from browser; no hidden telemetry; no public writes; no autonomous action',
+        'next validation: use batch launcher, choose one bounded change, run targeted tests externally, paste evidence back'
       ].join('\n');
     }
     field('addMessage').addEventListener('click', () => {
