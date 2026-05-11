@@ -40,10 +40,12 @@ repo writes, no agents, no tunnels, and no deployments.
 ## Required environment
 
 ```text
-DISCORD_BOT_TOKEN=<token>
+DISCORD_BOT_TOKEN=<real Discord bot token>
 ```
 
-Never commit this token.
+Never commit this token. Placeholder values such as `your-token-here`,
+`PASTE_REAL_DISCORD_BOT_TOKEN_HERE`, `<token>`, or `DISCORD_BOT_TOKEN` are
+blocked locally before Discord login.
 
 ## Optional environment
 
@@ -59,22 +61,36 @@ LANTERN_DISCORD_TIMEOUT_SECONDS=30
 
 ## Install
 
+From the repo root:
+
 ```bash
+cd C:\tmp\hff-seven-validate
 python -m pip install -r requirements.txt
 python -m pip install -r requirements-discord.txt
 ```
 
 ## Run
 
-Start local Lantern first:
+Start local Lantern first from the repo root:
 
 ```bash
+cd C:\tmp\hff-seven-validate
 python -m lantern.server
 ```
 
-Then start the Discord adapter:
+Then start the Discord adapter from the repo root in a second shell:
 
 ```bash
+cd C:\tmp\hff-seven-validate
+set DISCORD_BOT_TOKEN=<real Discord bot token>
+python -m lantern.discord_bot
+```
+
+PowerShell form:
+
+```powershell
+cd C:\tmp\hff-seven-validate
+$env:DISCORD_BOT_TOKEN="<real Discord bot token>"
 python -m lantern.discord_bot
 ```
 
