@@ -56,6 +56,9 @@ _HEALTHZ_SENSOR_STATUS_JS = """
             });
 """
 
+_REGISTERED_SENSOR_HEADER = '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors'
+_LIVE_SENSOR_HEADER = ' &mdash; live sensors: <span id="wm-live-sensors-header">checking</span>'
+
 _PUBLIC_COPY_REPLACEMENTS = (
     (
         "<!-- AUTONOMOUS GOVERNANCE (collapsed by default) -->",
@@ -78,11 +81,6 @@ _PUBLIC_COPY_REPLACEMENTS = (
         "irreversible after a 24-hour lock.",
         "not executable unless explicitly authorized by an operator.",
     ),
-    (
-        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors',
-        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors'
-        ' &mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
-    ),
     ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Registered Sensor Sources</div>'),
     (
         "sensors registered. Waiting for first observation cycle...",
@@ -95,6 +93,13 @@ def _rewrite_public_html(template: str) -> str:
     """Apply public-copy convergence to a rendered or template HTML string."""
     for old, new in _PUBLIC_COPY_REPLACEMENTS:
         template = template.replace(old, new)
+
+    if _REGISTERED_SENSOR_HEADER in template and "wm-live-sensors-header" not in template:
+        template = template.replace(
+            _REGISTERED_SENSOR_HEADER,
+            _REGISTERED_SENSOR_HEADER + _LIVE_SENSOR_HEADER,
+            1,
+        )
 
     template = template.replace("<html>", '<html lang="en" dir="ltr">', 1)
 
@@ -115,7 +120,6 @@ def _rewrite_public_html(template: str) -> str:
 
     if (
         "wm-live-sensors-header" in template
-        and "/healthz" in template
         and "Public runtime sensor state comes from /healthz" not in template
     ):
         template = template.replace(
