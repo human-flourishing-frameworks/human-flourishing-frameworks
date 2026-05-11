@@ -1,9 +1,8 @@
-"""Guardrail tests for the scientific convergence method doc.
+"""Guardrail tests for the scientific convergence method.
 
-Asserts that ``docs/scientific-convergence-method.md`` preserves the scientific
-method contract, the updated seven-step convergence loop, acceptance-range rule,
-evidence labels, lie-by-posture rule, non-cruel correction clause, sync packet,
-and explicit non-goals.
+The active scientific convergence contract now lives in ``docs/convergence.md``.
+The legacy ``docs/scientific-convergence-method.md`` file remains only as a
+compatibility pointer so older links and issue history keep resolving.
 """
 
 import re
@@ -12,7 +11,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC_PATH = ROOT / "docs" / "scientific-convergence-method.md"
+DOC_PATH = ROOT / "docs" / "convergence.md"
+LEGACY_PATH = ROOT / "docs" / "scientific-convergence-method.md"
 
 
 class ScientificConvergenceMethodDocTests(unittest.TestCase):
@@ -30,6 +30,12 @@ class ScientificConvergenceMethodDocTests(unittest.TestCase):
 
     def test_document_exists(self):
         self.assertTrue(DOC_PATH.is_file())
+        self.assertTrue(LEGACY_PATH.is_file())
+
+    def test_legacy_doc_points_to_canonical_doc(self):
+        legacy_text = LEGACY_PATH.read_text(encoding="utf-8")
+        self.assertIn("compatibility pointer", legacy_text)
+        self.assertIn("docs/convergence.md", legacy_text)
 
     def test_core_scientific_loop_present(self):
         for phrase in (
