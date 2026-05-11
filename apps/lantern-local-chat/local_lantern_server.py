@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local Lantern chat backend.
 
-Localhost-only repo and anchor service for the Lantern desktop app.
+Localhost-only repo, anchor, and UI service for the Lantern desktop app.
 No hosted model call is made.
 """
 
@@ -21,8 +21,19 @@ ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
 ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
 INDEX_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
+MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
+SYNC_SURFACE_JS = CHAT_DIR / "sync-surface.js"
 RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.js"
 GENERATED_RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.generated.js"
+STATIC_FILES = {
+    "/": (INDEX_HTML, "text/html; charset=utf-8"),
+    "/index.html": (INDEX_HTML, "text/html; charset=utf-8"),
+    "/door-memory.js": (DOOR_MEMORY_JS, "application/javascript; charset=utf-8"),
+    "/mask-rack.js": (MASK_RACK_JS, "application/javascript; charset=utf-8"),
+    "/sync-surface.js": (SYNC_SURFACE_JS, "application/javascript; charset=utf-8"),
+    "/runtime-state.js": (RUNTIME_STATE_JS, "application/javascript; charset=utf-8"),
+    "/runtime-state.generated.js": (GENERATED_RUNTIME_STATE_JS, "application/javascript; charset=utf-8"),
+}
 
 MODES = {
     "engineer": "Engineer: convert the wish into the smallest working system change with validation.",
@@ -148,6 +159,8 @@ def build_doctor_report() -> dict[str, Any]:
     files = {
         "indexHtml": INDEX_HTML.exists(),
         "doorMemoryJs": DOOR_MEMORY_JS.exists(),
+        "maskRackJs": MASK_RACK_JS.exists(),
+        "syncSurfaceJs": SYNC_SURFACE_JS.exists(),
         "runtimePlaceholder": RUNTIME_STATE_JS.exists(),
         "generatedRuntimeState": GENERATED_RUNTIME_STATE_JS.exists(),
         "anchorSnapshot": ANCHOR_SNAPSHOT.exists(),
@@ -155,8 +168,11 @@ def build_doctor_report() -> dict[str, Any]:
     smoke = build_response("doctor smoke: find anchors and summarize current repo state", mode="doctor", include_doctor=False)
     checks = [
         ("repo clean", repo_state["isClean"]),
+        ("index served by local backend", files["indexHtml"]),
         ("anchor snapshot exists", files["anchorSnapshot"]),
         ("door memory exists", files["doorMemoryJs"]),
+        ("mask rack exists", files["maskRackJs"]),
+        ("sync surface exists", files["syncSurfaceJs"]),
         ("runtime placeholder exists", files["runtimePlaceholder"]),
         ("generated runtime state ignored by git", ignored_code == 0),
         ("chat smoke builds answer", smoke.get("ok") is True and "Lantern local answer" in smoke.get("answer", "")),
@@ -165,7 +181,7 @@ def build_doctor_report() -> dict[str, Any]:
     ]
     failed = [name for name, ok in checks if not ok]
     status = "READY" if not failed else ("DEGRADED" if len(failed) <= 2 else "BROKEN")
-    next_action = "Open the app and choose a mask." if status == "READY" else "Run the launcher, then recheck Doctor."
+    next_action = "Open the app at the backend URL, not file://." if status == "READY" else "Run the launcher, then recheck Doctor."
     return {
         "ok": True,
         "status": status,
@@ -213,33 +229,40 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         body = ["Hybrid Imagination Engine mode engaged.", mode_line, "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.", "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action."]
     else:
         body = [mode_line, "I can answer from local repo state and the anchor snapshot now.", "Use the Mask Rack to shift form while keeping the minimal frame underneath."]
-    limits = ["No direct hosted model calls.", "No external network requests.", "No browser command execution.", "Local files and git state can still be stale if the repo is not pulled."]
+    limits = ["No direct hosted model calls.", "No external network requests beyond this localhost app.", "No browser command execution.", "Local files and git state can still be stale if the repo is not pulled."]
     frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in minimal_frame.items()]]
     text = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
     return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits}
 
 
 class LanternHandler(BaseHTTPRequestHandler):
-    server_version = "LocalLantern/0.4"
+    server_version = "LocalLantern/0.5"
 
-    def _send_json(self, status: int, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, indent=2).encode("utf-8")
+    def _send_bytes(self, status: int, body: bytes, content_type: str) -> None:
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_json(self, status: int, payload: dict[str, Any]) -> None:
+        body = json.dumps(payload, indent=2).encode("utf-8")
+        self._send_bytes(status, body, "application/json; charset=utf-8")
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         self._send_json(200, {"ok": True})
 
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        if path in STATIC_FILES:
+            file_path, content_type = STATIC_FILES[path]
+            if not file_path.exists():
+                self._send_json(404, {"ok": False, "error": f"missing static file: {path}"})
+                return
+            self._send_bytes(200, file_path.read_bytes(), content_type)
+            return
         if path == "/healthz":
-            self._send_json(200, {"ok": True, "service": "local-lantern", "repoState": read_repo_state()})
+            self._send_json(200, {"ok": True, "service": "local-lantern", "repoState": read_repo_state(), "ui": "/"})
             return
         if path == "/anchors":
             self._send_json(200, {"ok": True, "anchors": load_anchors()})
@@ -277,7 +300,7 @@ class LanternHandler(BaseHTTPRequestHandler):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run the local Lantern backend.")
+    parser = argparse.ArgumentParser(description="Run the local Lantern backend and UI server.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--once", default="", help="Return one local Lantern answer without starting the server.")
@@ -295,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(build_response(args.once, mode=args.mode), indent=2))
         return 0
     server = ThreadingHTTPServer((args.host, args.port), LanternHandler)
-    print(f"Local Lantern backend listening on http://{args.host}:{args.port}")
+    print(f"Local Lantern UI/backend listening on http://{args.host}:{args.port}/")
     print("Boundary: localhost only; no hosted model calls; no external network requests.")
     try:
         server.serve_forever()
