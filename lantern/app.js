@@ -1,10 +1,9 @@
-// Lantern frontend — scaffold slice.
+// Lantern frontend - local-first shell.
 //
-// Renders the chat composer and the right-pane state surface. The
-// chat endpoint currently returns a scaffold stub; the real reply lands
-// in slice 2. The state panel is partially live (substrate / doctrine)
-// and partially stubbed (repo branch, commit, last test) until slice 2
-// adds the /api/lantern/state implementation.
+// Renders the chat composer and the right-pane state surface. The chat
+// endpoint currently returns a scaffold stub; the real reply lands in a later
+// substrate wiring slice. The state panel is live/read-only for local repo,
+// doctrine, and last-test evidence.
 
 (function () {
     'use strict';
@@ -12,6 +11,16 @@
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('input');
     const sendBtn = document.getElementById('send');
+
+    function setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text || '—';
+    }
+
+    function setClass(id, className) {
+        const el = document.getElementById(id);
+        if (el) el.className = className;
+    }
 
     function appendMessage(role, text) {
         const div = document.createElement('div');
@@ -25,26 +34,40 @@
         appendMessage('system', text);
     }
 
+    function renderList(id, items, emptyText) {
+        const list = document.getElementById(id);
+        if (!list) return;
+        list.innerHTML = '';
+        if (!items || items.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = emptyText;
+            list.appendChild(li);
+            return;
+        }
+        items.forEach(function (item) {
+            const li = document.createElement('li');
+            li.textContent = item;
+            list.appendChild(li);
+        });
+    }
+
     async function loadHealth() {
         try {
             const r = await fetch('/api/lantern/health');
             const data = await r.json();
-            document.getElementById('state-role').textContent =
-                data.role || '—';
-            const wiredEl = document.getElementById('state-wired');
-            wiredEl.textContent = data.substrate_wired ? 'yes' : 'no';
-            wiredEl.className = 'v ' +
-                (data.substrate_wired ? 'on' : 'off');
-            const keyEl = document.getElementById('state-key');
-            keyEl.textContent = data.anthropic_api_key_set ? 'yes' : 'no';
-            keyEl.className = 'v ' +
-                (data.anthropic_api_key_set ? 'on' : 'off');
-            const bindEl = document.getElementById('state-bind');
-            bindEl.textContent = data.public_bind_enabled
-                ? 'PUBLIC (warn!)'
-                : 'localhost';
-            bindEl.className = 'v ' +
-                (data.public_bind_enabled ? 'warn' : 'on');
+            setText('state-role', data.role || '—');
+
+            setText('state-wired', data.substrate_wired ? 'yes' : 'no');
+            setClass('state-wired', 'v ' + (data.substrate_wired ? 'on' : 'off'));
+
+            setText('state-key', data.anthropic_api_key_set ? 'yes' : 'no');
+            setClass('state-key', 'v ' + (data.anthropic_api_key_set ? 'on' : 'off'));
+
+            setText('state-bind', data.public_bind_enabled ? 'PUBLIC (warn!)' : 'localhost');
+            setClass('state-bind', 'v ' + (data.public_bind_enabled ? 'warn' : 'on'));
+
+            setText('state-endpoint', data.state_endpoint_wired ? 'wired' : 'stub');
+            setClass('state-endpoint', 'v ' + (data.state_endpoint_wired ? 'on' : 'warn'));
         } catch (e) {
             appendSystem(
                 'Cannot reach Lantern server. Is python lantern/server.py running?'
@@ -56,22 +79,27 @@
         try {
             const r = await fetch('/api/lantern/state');
             const data = await r.json();
-            const list = document.getElementById('doc-list');
-            list.innerHTML = '';
-            const docs = data.loaded_doctrine || [];
-            if (docs.length === 0) {
-                const li = document.createElement('li');
-                li.textContent = '(none found yet)';
-                list.appendChild(li);
-            } else {
-                docs.forEach(function (path) {
-                    const li = document.createElement('li');
-                    li.textContent = path;
-                    list.appendChild(li);
-                });
-            }
+            const repo = data.repo || {};
+            const lastTest = data.last_test || {};
+            const panelStatus = data.state_status || data.status || '—';
+
+            setText('state-status', panelStatus);
+            setClass('state-status', 'v ' + (panelStatus === 'ok' ? 'on' : 'warn'));
+            setText('state-timestamp', data.timestamp_utc || '—');
+            setText('state-path', repo.path || '—');
+            setText('state-branch', repo.branch || '—');
+            setText('state-commit', repo.commit_short || repo.commit || '—');
+
+            setText('state-dirty', repo.dirty_status || 'not_checked');
+            setClass('state-dirty', 'v warn');
+
+            setText('state-test', lastTest.status || 'missing');
+            setClass('state-test', 'v ' + (lastTest.status === 'pass' ? 'on' : 'warn'));
+
+            renderList('doc-list', data.loaded_doctrine || [], '(none found yet)');
+            renderList('limit-list', data.limits || [], '(no limits reported)');
         } catch (e) {
-            // ignore; state surface is best-effort
+            appendSystem('State request failed: ' + e.message);
         }
     }
 
@@ -91,8 +119,8 @@
             appendMessage('lantern', data.reply || '(no reply)');
             if (data.status === 'scaffold') {
                 appendSystem(
-                    'Reply was a scaffold stub. Slice 2 wires the real ' +
-                    'LLM substrate call.'
+                    'Reply was a scaffold stub. The local truth panel is ' +
+                    'wired; the LLM substrate is still not wired.'
                 );
             }
         } catch (e) {
@@ -100,6 +128,8 @@
         } finally {
             sendBtn.disabled = false;
             inputEl.focus();
+            loadHealth();
+            loadState();
         }
     }
 
@@ -112,8 +142,8 @@
     });
 
     appendSystem(
-        'Lantern scaffold loaded. The role is singular: Lantern Keystone ' +
-        'Wish. The substrate (LLM) is not yet wired in this slice.'
+        'Lantern local shell loaded. Truth panel is read-only. The role is ' +
+        'singular: Lantern Keystone Wish. The LLM substrate is not yet wired.'
     );
     loadHealth();
     loadState();
