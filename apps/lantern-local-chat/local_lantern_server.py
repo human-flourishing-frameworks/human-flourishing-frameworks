@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """Local Lantern chat backend.
 
-Localhost-only, repo-grounded response service for the Lantern desktop app.
-It intentionally avoids hosted model calls and external network requests. It
-reads local repo files and anchor snapshots, returns bounded Lantern responses,
-and exposes a Doctor report so the app can validate itself instead of making the
-operator act as the permanent copy/paste harness.
+Localhost-only repo and anchor service for the Lantern desktop app.
+No hosted model call is made.
 """
 
 from __future__ import annotations
@@ -17,7 +14,6 @@ from pathlib import Path
 import subprocess
 from typing import Any
 from urllib.parse import urlparse
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
@@ -32,7 +28,7 @@ MODES = {
     "engineer": "Engineer: convert the wish into the smallest working system change with validation.",
     "storyteller": "Storyteller: preserve myth, emotion, continuity, and return paths.",
     "comedian": "Comedian: add levity without hiding state or risk.",
-    "doctor": "Doctor: diagnose local readiness and reduce operator copy/paste burden.",
+    "doctor": "Doctor: diagnose local readiness and reduce operator copy-paste burden.",
     "game-master": "Game Master: turn the moment into playable worlds, choices, and consequences.",
     "anchor-keeper": "Anchor Keeper: compress meaning into bounded restore phrases.",
     "art-mirror": "Art Mirror: turn wishes into visual language and prompts without pretending placeholder art is final.",
@@ -50,13 +46,12 @@ def read_repo_state() -> dict[str, Any]:
     branch_code, branch_out, branch_err = _run_git(["branch", "--show-current"])
     commit_code, commit_out, commit_err = _run_git(["rev-parse", "HEAD"])
     errors = [err for err in (status_err, branch_err, commit_err) if err]
-    clean = status_code == 0 and branch_code == 0 and commit_code == 0 and not status_out.strip()
     return {
         "repoPath": str(REPO_ROOT),
         "branch": branch_out if branch_code == 0 else "UNKNOWN",
         "commit": commit_out if commit_code == 0 else "UNKNOWN",
         "gitStatusShort": status_out if status_code == 0 else "UNAVAILABLE",
-        "isClean": clean,
+        "isClean": status_code == 0 and branch_code == 0 and commit_code == 0 and not status_out.strip(),
         "errors": errors,
         "groundingMode": "LOCAL_REPO_ANCHOR_BACKEND" if not errors else "UNAVAILABLE_OR_DEGRADED",
     }
@@ -67,7 +62,7 @@ def load_anchors() -> list[dict[str, Any]]:
         return []
     data = json.loads(ANCHOR_SNAPSHOT.read_text(encoding="utf-8"))
     anchors = data.get("anchors", [])
-    return [anchor for anchor in anchors if isinstance(anchor, dict)] if isinstance(anchors, list) else []
+    return [item for item in anchors if isinstance(item, dict)] if isinstance(anchors, list) else []
 
 
 def read_anchor_taxonomy_summary() -> str:
@@ -81,11 +76,11 @@ def read_anchor_taxonomy_summary() -> str:
 def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) -> list[dict[str, Any]]:
     lowered = message.lower()
     scored: list[tuple[int, dict[str, Any]]] = []
-    default_ids = {"hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding"}
+    defaults = {"hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding"}
     for anchor in anchors:
         haystack = " ".join(str(anchor.get(k, "")) for k in ("id", "kind", "name", "short_meaning", "allowed_use", "restore_phrase")).lower()
         score = sum(1 for token in set(lowered.replace("/", " ").replace("-", " ").split()) if len(token) >= 4 and token in haystack)
-        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in default_ids:
+        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in defaults:
             score = 1
         if score > 0:
             scored.append((score, anchor))
@@ -116,48 +111,33 @@ def _normalize_mode(value: str | None) -> str:
 
 
 def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state: dict[str, Any], doctor: dict[str, Any] | None = None) -> dict[str, str]:
-    """Keep every shapeshift grounded as Vibe -> Fact -> Boundary -> Next."""
     if intent == "doctor":
-        status = (doctor or {}).get("status", "UNKNOWN")
+        status = (doctor or {}).get("status", "SMOKE")
         return {
             "Vibe": "Check the floor before the form changes.",
-            "Fact": f"Doctor status is {status}; repo branch is {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
-            "Boundary": "Readiness is local evidence, not a promise that every future action is safe.",
-            "Next": (doctor or {}).get("nextAction", "Run the local launcher, then recheck Doctor."),
-        }
-    if intent == "anchors":
-        return {
-            "Vibe": "Memory should restore direction without becoming authority.",
-            "Fact": "Anchors are loaded from the local anchor snapshot and taxonomy.",
-            "Boundary": "Anchors are not proof, consent forever, or a substitute for current correction.",
-            "Next": "Use the smallest restore phrase that preserves the next bounded move.",
-        }
-    if intent == "essential_needs":
-        return {
-            "Vibe": "Pressure needs relief before dreams become load-bearing.",
-            "Fact": "Debt and essential needs require dated cash flow, holds, reduced costs, and service income before speculative upside.",
-            "Boundary": "Do not treat project hope, trading, or metaphor as current income.",
-            "Next": "Pick one dated bill/action and one realistic service-income move.",
+            "Fact": f"Doctor status is {status}; branch is {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+            "Boundary": "Readiness is local evidence, not a future guarantee.",
+            "Next": (doctor or {}).get("nextAction", "Finish the containing Doctor check."),
         }
     if intent == "hybrid":
         return {
             "Vibe": "Lantern shifts form; the Doctor still checks reality underneath.",
-            "Fact": f"Active mask is {active_mode}; responses are repo/anchor-grounded through localhost.",
-            "Boundary": "Shapeshifting is style and tooling, not consciousness, autonomy, or proof.",
-            "Next": "Use the active mask to produce one bounded useful artifact or action.",
+            "Fact": f"Active mask is {active_mode}; response is local repo and anchor grounded.",
+            "Boundary": "Shapeshifting is style and tooling, not autonomy or proof.",
+            "Next": "Use the active mask for one bounded useful artifact or action.",
         }
     if intent == "app":
         return {
             "Vibe": "The interface should sync to Alex, not make Alex sync to it.",
             "Fact": "Door, Mask Rack, chat, and Doctor are the current desktop surfaces.",
             "Boundary": "Do not call the app ready when backend, runtime state, or tests are degraded.",
-            "Next": "Use Doctor status to decide READY, DEGRADED, or BROKEN before asking for more evidence.",
+            "Next": "Use Doctor status before asking for more evidence.",
         }
     return {
         "Vibe": MODES[active_mode],
-        "Fact": f"Local repo state is {repo_state['branch']} at {str(repo_state['commit'])[:12]}; message length is {len(message)}.",
-        "Boundary": "This is a bounded local answer, not a hosted model call, oracle, or perfect memory.",
-        "Next": "Answer in the active mask while preserving state, limits, and one useful next move.",
+        "Fact": f"Local repo state is {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+        "Boundary": "This is bounded local output, not an oracle or perfect memory.",
+        "Next": "Preserve state, limits, and one useful next move.",
     }
 
 
@@ -185,7 +165,7 @@ def build_doctor_report() -> dict[str, Any]:
     ]
     failed = [name for name, ok in checks if not ok]
     status = "READY" if not failed else ("DEGRADED" if len(failed) <= 2 else "BROKEN")
-    next_action = "Open the app and choose a mask." if status == "READY" else "Run scripts\\start_lantern_local_chat.bat, then open State > Doctor for the exact failing checks."
+    next_action = "Open the app and choose a mask." if status == "READY" else "Run the launcher, then recheck Doctor."
     return {
         "ok": True,
         "status": status,
@@ -198,7 +178,7 @@ def build_doctor_report() -> dict[str, Any]:
         "failedChecks": failed,
         "chatSmoke": {"ok": smoke.get("ok"), "intent": smoke.get("intent"), "mode": smoke.get("mode")},
         "nextAction": next_action,
-        "boundary": "Doctor is local-only and read-only except generated runtime state written by the launcher; it performs no GPT/API calls, public writes, payments, agents, tunnels, or sensors.",
+        "boundary": "Doctor is local-only and read-only except generated runtime state written by the launcher.",
     }
 
 
@@ -211,7 +191,6 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     taxonomy = read_anchor_taxonomy_summary()
     doctor = build_doctor_report() if include_doctor and intent == "doctor" else None
     minimal_frame = build_minimal_frame(message, intent, active_mode, repo_state, doctor)
-
     source_lines = [
         "source: local_lantern_server.py",
         f"mode: {active_mode}",
@@ -223,35 +202,25 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     ]
     for anchor in selected:
         source_lines.append(f"anchor: {anchor.get('id')} ({anchor.get('source_surface')})")
-
     mode_line = MODES[active_mode]
-    if intent == "doctor":
-        report = doctor or build_doctor_report()
-        body = [mode_line, "Lantern Doctor report:", f"Status: {report['status']}", f"Branch: {report['repo']['branch']}", f"Commit: {str(report['repo']['commit'])[:12]}", "Git status: " + (report["repo"]["gitStatusShort"] or "clean"), "Failed checks: " + (", ".join(report["failedChecks"]) if report["failedChecks"] else "none"), "Next action: " + report["nextAction"]]
+    if intent == "doctor" and doctor:
+        body = [mode_line, "Lantern Doctor report:", f"Status: {doctor['status']}", f"Branch: {doctor['repo']['branch']}", f"Commit: {str(doctor['repo']['commit'])[:12]}", "Git status: " + (doctor["repo"]["gitStatusShort"] or "clean"), "Failed checks: " + (", ".join(doctor["failedChecks"]) if doctor["failedChecks"] else "none"), "Next action: " + doctor["nextAction"]]
+    elif intent == "doctor":
+        body = [mode_line, "Lantern Doctor smoke response:", "Status: SMOKE", "This path does not call build_doctor_report again."]
     elif intent == "anchors":
-        body = [mode_line, "Anchors loaded locally:"]
-        for anchor in selected or anchors[:5]:
-            body.append(f"- {anchor.get('name')}: {anchor.get('restore_phrase')}")
-        body.append("Use anchors as return handles, not authority.")
-    elif intent == "essential_needs":
-        body = [mode_line, "Debt rescue should use dated cash flow, holds, reduced costs, and service income before speculative upside.", "Highest-confidence stack: stable paycheck, bill negotiation, small service gigs, then productized Discord/local workflow setup.", "Rejected for debt rescue: trading, gambling, HFT, or cash-for-risk under pressure.", "False-confidence check: project hope is not current income until money arrives."]
-    elif intent == "hike":
-        body = [mode_line, "The hike remains a consent-first wish, not a lock.", "Use gentle friend language first: would this still sound fun, how many days, camping/cabin/day hikes, no pressure.", "Keep stricter route/weather/gear checks internal until people actually opt in."]
+        body = [mode_line, "Anchors loaded locally:"] + [f"- {a.get('name')}: {a.get('restore_phrase')}" for a in (selected or anchors[:5])] + ["Use anchors as return handles, not authority."]
     elif intent == "hybrid":
         body = ["Hybrid Imagination Engine mode engaged.", mode_line, "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.", "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action."]
-    elif intent == "app":
-        body = [mode_line, "Quality gate: the app should diagnose itself before asking Alex to validate manually.", "The visible soul is Door + Mask Rack + Chat; the Doctor stays underneath as readiness state.", "Next move: use /doctor for READY / DEGRADED / BROKEN instead of repeated copy/paste loops."]
     else:
-        body = [mode_line, "I can answer from local repo state and the anchor snapshot now.", "Use the Mask Rack to shift form: engineer, storyteller, comedian, doctor, game master, anchor keeper, art mirror, or planner.", "I will label grounding and avoid pretending this is a hosted model response."]
-
-    limits = ["No direct hosted model calls.", "No external network requests.", "No browser command execution.", "No agents, tunnels, sensors, public writes, payments, or account actions.", "Local files and git state can still be stale if the repo is not pulled."]
+        body = [mode_line, "I can answer from local repo state and the anchor snapshot now.", "Use the Mask Rack to shift form while keeping the minimal frame underneath."]
+    limits = ["No direct hosted model calls.", "No external network requests.", "No browser command execution.", "Local files and git state can still be stale if the repo is not pulled."]
     frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in minimal_frame.items()]]
     text = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
     return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits}
 
 
 class LanternHandler(BaseHTTPRequestHandler):
-    server_version = "LocalLantern/0.3"
+    server_version = "LocalLantern/0.4"
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
@@ -300,7 +269,7 @@ class LanternHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"ok": False, "error": "message is required"})
                 return
             self._send_json(200, build_response(message, mode=mode))
-        except Exception as exc:  # pragma: no cover - defensive server boundary
+        except Exception as exc:  # pragma: no cover
             self._send_json(500, {"ok": False, "error": str(exc)})
 
     def log_message(self, format: str, *args: Any) -> None:
