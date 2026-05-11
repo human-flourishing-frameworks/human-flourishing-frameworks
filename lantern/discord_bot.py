@@ -46,6 +46,16 @@ DEFAULT_LANTERN_ENDPOINT = "http://127.0.0.1:5173"
 DEFAULT_TIMEOUT_SECONDS = 30.0
 MAX_DISCORD_MESSAGE_CHARS = 1900
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+PLACEHOLDER_TOKEN_VALUES = frozenset(
+    {
+        "your-token-here",
+        "paste_real_discord_bot_token_here",
+        "paste-real-discord-bot-token-here",
+        "discord_bot_token",
+        "<token>",
+        "token",
+    }
+)
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
@@ -123,10 +133,20 @@ def is_local_lantern_endpoint(endpoint: str) -> bool:
     return hostname in LOCAL_HOSTS
 
 
+def is_placeholder_token(token: str | None) -> bool:
+    """Return True for obvious placeholder tokens from docs/chat examples."""
+    if token is None:
+        return False
+    normalized = token.strip().lower()
+    return normalized in PLACEHOLDER_TOKEN_VALUES
+
+
 def validate_config(config: DiscordBotConfig) -> tuple[str, ...]:
     blockers: list[str] = []
     if not config.token:
         blockers.append("missing_DISCORD_BOT_TOKEN")
+    elif is_placeholder_token(config.token):
+        blockers.append("placeholder_DISCORD_BOT_TOKEN")
     if not config.allow_remote_lantern and not is_local_lantern_endpoint(config.lantern_endpoint):
         blockers.append("remote_lantern_endpoint_blocked")
     if config.timeout_seconds <= 0:
