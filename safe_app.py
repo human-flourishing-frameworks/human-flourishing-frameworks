@@ -56,6 +56,10 @@ _HEALTHZ_SENSOR_STATUS_JS = """
             });
 """
 
+_REGISTERED_SENSOR_HEADER = '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors'
+_REGISTERED_SENSOR_COPY = '&mdash; registered sensors'
+_LIVE_SENSOR_HEADER = ' &mdash; live sensors: <span id="wm-live-sensors-header">checking</span>'
+
 _PUBLIC_COPY_REPLACEMENTS = (
     (
         "<!-- AUTONOMOUS GOVERNANCE (collapsed by default) -->",
@@ -78,18 +82,15 @@ _PUBLIC_COPY_REPLACEMENTS = (
         "irreversible after a 24-hour lock.",
         "not executable unless explicitly authorized by an operator.",
     ),
-    (
-        '&mdash; <span id="wm-sensor-count-header">0</span> registered sensors',
-        '&mdash; live sensors: <span id="wm-live-sensors-header">checking</span>',
-    ),
+    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
+    ('<div class="stat-label">Registered Sensor Sources</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
     (
         "document.getElementById('wm-sensor-count-header').textContent = data.sensor_count || 0;",
-        "// Live sensor header is populated from /healthz below.",
+        "// Registered sensor count is represented in the runtime sensor source summary card.",
     ),
-    ('<div class="stat-label">Registered Sensors</div>', '<div class="stat-label">Runtime Sensor Sources</div>'),
     (
         "sensors registered. Waiting for first observation cycle...",
-        "sensor definitions available. Live observation remains disabled unless explicitly enabled.",
+        "registered sensor definitions available. Live observation remains disabled unless explicitly enabled.",
     ),
 )
 
@@ -98,6 +99,12 @@ def _rewrite_public_html(template: str) -> str:
     """Apply public-copy convergence to a rendered or template HTML string."""
     for old, new in _PUBLIC_COPY_REPLACEMENTS:
         template = template.replace(old, new)
+
+    if _REGISTERED_SENSOR_HEADER in template:
+        replacement = _REGISTERED_SENSOR_COPY
+        if "wm-live-sensors-header" not in template:
+            replacement += _LIVE_SENSOR_HEADER
+        template = template.replace(_REGISTERED_SENSOR_HEADER, replacement, 1)
 
     template = template.replace("<html>", '<html lang="en" dir="ltr">', 1)
 
@@ -118,7 +125,6 @@ def _rewrite_public_html(template: str) -> str:
 
     if (
         "wm-live-sensors-header" in template
-        and "/healthz" in template
         and "Public runtime sensor state comes from /healthz" not in template
     ):
         template = template.replace(
