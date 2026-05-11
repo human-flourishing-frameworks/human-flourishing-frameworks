@@ -26,34 +26,50 @@ class LanternLocalChatShellTest(unittest.TestCase):
 
     def test_shell_exists_and_declares_local_lantern_surface(self) -> None:
         self.assertTrue(SHELL_HTML.exists())
-        self.assertIn("Lantern Local Chat Shell", self.html)
-        self.assertIn("Local-first operator interface", self.html)
-        self.assertIn("Lantern-style bounded support", self.html)
+        self.assertIn("Lantern", self.html)
+        self.assertIn("Local chat", self.html)
+        self.assertIn("No direct GPT calls", self.html)
         self.assertIn("not GPT execution", self.html)
         self.assertIn("not a hosted LLM endpoint", self.html)
         self.assertIn("not autonomous authority", self.html)
 
-    def test_shell_has_required_issue_142_panels(self) -> None:
+    def test_shell_is_chat_first_not_state_panel_first(self) -> None:
         for phrase in [
-            "Conversation draft",
-            "Repo state",
+            "Message Lantern",
+            "What are we building next?",
+            "+ New chat",
+            "thread-list",
+            "message-row",
+            "composer-area",
+            "sendMessage",
+            "chatgpt-like-local",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.html)
+        self.assertNotIn("Conversation draft", self.html)
+        self.assertNotIn("Add Lantern response", self.html)
+        self.assertNotIn("Repo state paste area", self.html)
+
+    def test_shell_keeps_state_available_without_making_it_primary(self) -> None:
+        for phrase in [
+            "State",
+            "Local state",
             "git status --short",
-            "Latest handoff packet",
-            "Shell default",
+            "Handoff packet",
             "Grounding mode",
-            "Anchors in force",
-            "Batch mode",
+            "Batch-grounded repo state",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
 
     def test_shell_preserves_local_first_no_executor_boundary(self) -> None:
         for phrase in [
-            "Commands stay copy-only",
-            "does not execute shell commands",
-            "No command execution",
-            "No command execution from browser, no GPT calls, no agents, no tunnels, no sensors, no public writes",
-            "no GPT calls; no command execution from browser; no hidden telemetry; no public writes; no autonomous action",
+            "Display + draft only",
+            "Browser does not execute commands",
+            "no direct GPT/API calls",
+            "no command execution",
+            "no agents/tunnels/sensors/public writes",
+            "no browser command execution; no agents; no tunnels; no public writes",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
@@ -82,8 +98,8 @@ class LanternLocalChatShellTest(unittest.TestCase):
 
     def test_shell_uses_local_storage_only_for_draft_state(self) -> None:
         self.assertIn("localStorage", self.html)
-        self.assertIn("lantern-local-chat-shell-v1", self.html)
-        self.assertIn("Clear local draft", self.html)
+        self.assertIn("lantern-chatgpt-like-local-v1", self.html)
+        self.assertIn("Clear local chats", self.html)
         self.assertNotIn("sessionStorage", self.html)
 
     def test_launcher_exists_and_writes_read_only_state_snapshot(self) -> None:
