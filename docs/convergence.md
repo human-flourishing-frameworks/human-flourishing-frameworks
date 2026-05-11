@@ -32,6 +32,8 @@ the largest acceptable bounded action, and keeps the return door open.
 
 ## Scientific correction loop
 
+Convergence is a scientific correction loop.
+
 ```text
 observe signal
 -> classify source and mode
@@ -43,6 +45,12 @@ observe signal
 -> validate outcome
 -> preserve only necessary artifact
 -> repeat if useful
+```
+
+Compatibility phrase:
+
+```text
+observe signal -> form hypothesis -> define falsifier -> measure evidence -> revise confidence -> choose the largest acceptable bounded action
 ```
 
 ## Seven-step convergence loop
@@ -161,6 +169,8 @@ runtime level: what authority or side effect is being widened?
 system level: what capability gap or anti-pattern is visible?
 ```
 
+Scientific convergence adds the test contract for each level.
+
 ## Iteration target
 
 Each pass should improve at least one of:
@@ -209,6 +219,17 @@ metaphor = current implementation
 correlation = causation
 private conversation = public record
 project hope = current income
+```
+
+## Risk-management lens
+
+Use this only as a review lens, not as an external authority over the repo:
+
+```text
+govern the boundary
+map the context
+measure evidence
+manage residual risk
 ```
 
 ## Evidence labels
