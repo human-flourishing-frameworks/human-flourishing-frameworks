@@ -15,11 +15,11 @@ class BetterSafePilotLaunchDocsTests(unittest.TestCase):
         normalized_phrase = re.sub(r"\s+", " ", phrase)
         self.assertIn(normalized_phrase, normalized_text)
 
-    def test_launch_record_is_controlled_limited_pilot_only(self):
+    def test_launch_record_is_controlled_hardening_pilot(self):
         doc = self.read("docs/bettersafe-pilot-launch-record.md")
         required_phrases = [
-            "Decision: GO — CONTROLLED LIMITED PILOT ONLY",
-            "low-risk, human-controlled, reversible pilot",
+            "Decision: GO — CONTROLLED LIMITED PILOT WITH OPERATOR HARDENING ACTIONS",
+            "human-controlled, reversible pilot with operator-approved readiness actions",
             "Default mode: LIMITED_CHAT_LOCAL unless repo/doc grounding is explicitly verified",
             "Expansion status: BLOCKED until a new scorecard records PASS evidence for the expanded slice",
             "It does not launch a general product, public autonomous agent, high-impact support surface",
@@ -42,7 +42,7 @@ class BetterSafePilotLaunchDocsTests(unittest.TestCase):
             "runtime autonomy",
             "public writes without separate approval",
             "live sensor claims or live sensor enablement by default",
-            "physical-world control",
+            "autonomous physical-world control",
         ]
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
@@ -52,7 +52,7 @@ class BetterSafePilotLaunchDocsTests(unittest.TestCase):
         doc = self.read("docs/bettersafe-pilot-launch-record.md")
         required_phrases = [
             "Mode: LIMITED_CHAT_LOCAL unless this session explicitly verifies FULL_REPO_GROUNDED.",
-            "It labels uncertainty, cites sources when used, preserves correction paths, and blocks or downgrades high-impact requests.",
+            "It labels uncertainty, cites sources when used, preserves correction paths, and converts identified risks into operator-approved readiness actions when appropriate.",
             "FACT_SOURCE_BACKED",
             "FACT_OPERATOR_REPORTED",
             "INFERENCE",
@@ -123,14 +123,13 @@ class BetterSafePilotLaunchDocsTests(unittest.TestCase):
     def test_scorecard_go_is_still_expansion_blocked(self):
         doc = self.read("docs/bettersafe-pilot-scorecard.md")
         required_phrases = [
-            "Decision: GO — CONTROLLED LIMITED PILOT ONLY",
+            "Decision: GO — CONTROLLED LIMITED PILOT WITH OPERATOR HARDENING ACTIONS",
             "Expansion: BLOCKED until a new scorecard records PASS evidence for the expanded slice.",
             "Any UNKNOWN_OR_BLOCKED, PENDING, FAIL, or PASS_PENDING_CURRENT_PR status blocks merge or expansion until resolved.",
-            "The current GO decision applies only after the launch-control PR passes tests and convergence-validation.",
-            "Runtime autonomy: BLOCKED",
-            "Raw transcript storage by default: BLOCKED",
-            "Live sensors by default: BLOCKED",
-            "Public writes by default: BLOCKED",
+            "The current hardening threshold applies only after the PR passes tests and convergence-validation.",
+            "Operator-approved readiness actions: ALLOWED",
+            "Unattended authority: BLOCKED",
+            "Public high-impact authority: BLOCKED",
         ]
         for phrase in required_phrases:
             with self.subTest(phrase=phrase):
