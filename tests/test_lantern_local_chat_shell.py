@@ -95,8 +95,8 @@ class LanternLocalChatShellTest(unittest.TestCase):
         for expected in ["hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding", "resonance-convergence", "essential-needs"]:
             self.assertIn(expected, ids)
 
-    def test_backend_is_local_repo_anchor_engine_with_doctor_and_modes(self) -> None:
-        for phrase in ["Local Lantern", "ThreadingHTTPServer", "127.0.0.1", "ANCHOR_SNAPSHOT", "ANCHOR_TAXONOMY", "build_response", "do_POST", "do_GET", "/chat", "/healthz", "/doctor", "/modes", "build_doctor_report", "MODES"]:
+    def test_backend_is_local_repo_anchor_engine_with_doctor_modes_and_ui(self) -> None:
+        for phrase in ["Local Lantern", "ThreadingHTTPServer", "127.0.0.1", "ANCHOR_SNAPSHOT", "ANCHOR_TAXONOMY", "build_response", "do_POST", "do_GET", "/chat", "/healthz", "/doctor", "/modes", "build_doctor_report", "MODES", "STATIC_FILES", "INDEX_HTML", "sync-surface.js", "Local Lantern UI/backend listening"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.backend)
         for blocked in ["openai.ChatCompletion", "from openai", "import openai", "anthropic.Client", "import anthropic", "google.generativeai", "requests.post", "urllib.request.urlopen", "httpx.", "aiohttp."]:
@@ -104,9 +104,9 @@ class LanternLocalChatShellTest(unittest.TestCase):
                 self.assertNotIn(blocked, self.backend)
 
     def test_launcher_and_batch_contract(self) -> None:
-        for phrase in ["LOCAL_BACKEND", "start_backend", "--no-backend", "Backend URL:", "Backend PID:", "Generated runtime state:", "choose_backend_url", "Backend log:", "Backend diagnosis:", "socket", "--backend-log"]:
+        for phrase in ["LOCAL_BACKEND", "start_backend", "--no-backend", "Backend URL:", "Backend PID:", "Generated runtime state:", "choose_backend_url", "Backend log:", "Backend diagnosis:", "socket", "--backend-log", "uiUrl", "Local file fallback:"]:
             self.assertIn(phrase, self.launcher)
-        for phrase in ["backend_health_ok", "wait_for_backend", "Backend ready:", "--backend-timeout", "/healthz"]:
+        for phrase in ["backend_health_ok", "wait_for_backend", "Backend ready:", "--backend-timeout", "/healthz", "webbrowser.open(ui_url"]:
             self.assertIn(phrase, self.launcher)
         self.assertIn("@echo off", self.batch_launcher)
         self.assertIn("cd /d", self.batch_launcher)
@@ -147,6 +147,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
         generated_runtime_state = GENERATED_RUNTIME_STATE_JS.read_text(encoding="utf-8")
         self.assertIn("window.LANTERN_LOCAL_STATE =", generated_runtime_state)
         self.assertIn("backendUrl", generated_runtime_state)
+        self.assertIn("uiUrl", generated_runtime_state)
         self.assertIn("LOCAL_REPO_ANCHOR_BACKEND", generated_runtime_state)
         self.assertIn("window.LANTERN_LOCAL_STATE = null", RUNTIME_STATE_JS.read_text(encoding="utf-8"))
 
