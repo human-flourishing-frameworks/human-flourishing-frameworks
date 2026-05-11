@@ -35,11 +35,17 @@ anchors
 
 ## Anchors
 
-Anchors are fixed points in time that help people center thought, emotion, and action so the system can find the signal again later.
+For humans, an anchor is mostly something memorable: an easy-to-remember object, phrase, symbol, token, moment, name, ritual, or contract that lets them interact with the system again.
+
+It does not have to be called an anchor by the person using it.
+
+It does not have to look like a literal anchor.
+
+It functions as an anchor for BetterSafe if it gives the person and the system a shared return point.
 
 An anchor is not a prison, prophecy, identity claim, or permanent label.
 
-An anchor is a returnable reference point:
+An anchor is a semi-stable, returnable reference point:
 
 ```text
 what was felt
@@ -47,15 +53,49 @@ what mattered
 what was chosen
 what needed protection
 what direction the person wanted to move
+what phrase/symbol/object helps them find it again
 ```
+
+## Human-Facing Anchor Forms
+
+Use plain, memorable forms before internal terminology:
+
+```text
+nickname
+sticker
+card
+phrase
+song
+symbol
+color
+object
+bookmark
+room name
+door name
+world name
+ritual/check-in
+```
+
+Examples:
+
+```text
+"Pain is not the destination"
+"Find a door, leave a door"
+"happy / fun / safe"
+"Bubbles"
+"The Pillow Dimension"
+"weather map mode"
+```
+
+These can function as anchors even when the person never hears the word "anchor."
 
 ## Anchor Record Shape
 
-Use the minimum necessary form:
+Use the minimum necessary internal form:
 
 ```text
 anchor_id:
-anchor_name:
+anchor_name_or_public_phrase:
 created_at:
 owner_label:
 context_label:
@@ -65,7 +105,7 @@ desired_direction:
 safe_fun_happy_target:
 privacy_level:
 next_action:
-return_phrase:
+return_phrase_or_symbol:
 revision_note:
 ```
 
@@ -78,6 +118,7 @@ revision_note:
 5. Anchors should help the person return to agency.
 6. Anchors should not become scripture, diagnosis, destiny, or authority.
 7. Anchors should support the happy/fun/safe attractor.
+8. Anchors should be memorable enough for humans to use without technical language.
 
 ## Example Anchor Types
 
@@ -163,5 +204,5 @@ a person can use it without worshipping it
 a person can adapt it to their own life
 a person can leave safely
 a person can reduce Pain or increase happy/fun/safe range
-a person can create an anchor that helps them return to agency later
+a person can create or choose a memorable return point that helps them regain agency later
 ```
