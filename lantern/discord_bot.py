@@ -52,6 +52,18 @@ DEFAULT_TIMEOUT_SECONDS = 30.0
 MAX_DISCORD_MESSAGE_CHARS = 1900
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 _TRUE_VALUES = {"1", "true", "yes", "on"}
+_PLACEHOLDER_TOKENS = {
+    "paste-token-here",
+    "paste_token_here",
+    "replace-me",
+    "replace_me",
+    "your-token-here",
+    "your_token_here",
+    "discord-bot-token",
+    "discord_bot_token",
+    "<token>",
+    "<discord_bot_token>",
+}
 
 
 @dataclass(frozen=True)
@@ -86,6 +98,15 @@ def env_flag(name: str, default: bool = False) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() in _TRUE_VALUES
+
+
+def is_placeholder_token(token: str | None) -> bool:
+    """Return True for docs/example values that should never reach Discord."""
+
+    if token is None:
+        return False
+    normalized = token.strip().lower()
+    return normalized in _PLACEHOLDER_TOKENS or normalized.startswith("paste-")
 
 
 def parse_int_set(raw: str | None) -> frozenset[int]:
@@ -145,6 +166,8 @@ def validate_config(config: DiscordBotConfig) -> tuple[str, ...]:
     blockers: list[str] = []
     if not config.token:
         blockers.append("missing_DISCORD_BOT_TOKEN")
+    elif is_placeholder_token(config.token):
+        blockers.append("placeholder_DISCORD_BOT_TOKEN")
     if not config.allow_remote_lantern and not is_local_lantern_endpoint(config.lantern_endpoint):
         blockers.append("remote_lantern_endpoint_blocked")
     if config.timeout_seconds <= 0:
@@ -301,6 +324,8 @@ def main() -> int:
     blockers = validate_config(config)
     if blockers:
         print("[LANTERN DISCORD] blocked:" + ";".join(blockers))
+        if "placeholder_DISCORD_BOT_TOKEN" in blockers:
+            print("[LANTERN DISCORD] Set DISCORD_BOT_TOKEN to the real Bot token from Discord Developer Portal > Bot > Token.")
         return 2
 
     try:
