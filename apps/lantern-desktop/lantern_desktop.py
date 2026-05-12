@@ -189,6 +189,8 @@ class LanternChat(tk.Tk):
         self.events: queue.Queue[tuple[str, Any]] = queue.Queue()
         self.status = tk.StringVar(value="STARTING_OBSERVED")
         self.endpoint = tk.StringVar(value="Endpoint: unknown")
+        self.waiting_for_reply = False
+        self.send_button: ttk.Button | None = None
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._build()
         self.after(100, self._poll)
@@ -224,8 +226,28 @@ class LanternChat(tk.Tk):
         bottom.pack(fill=tk.X, pady=(8, 0))
         self.input = tk.Text(bottom, height=4, wrap=tk.WORD)
         self.input.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.input.bind("<Control-Return>", lambda _event: self.ask())
-        ttk.Button(bottom, text="Send", command=self.ask).pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
+        self.input.bind("<Return>", self._on_enter)
+        self.input.bind("<Shift-Return>", self._on_shift_enter)
+        self.input.bind("<Control-Return>", self._on_control_enter)
+        self.send_button = ttk.Button(bottom, text="Send", command=self.ask)
+        self.send_button.pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
+
+        ttk.Label(
+            main,
+            text="Keyboard: Enter sends | Shift+Enter adds a new line | Ctrl+Enter also sends",
+        ).pack(fill=tk.X, pady=(4, 0))
+
+    def _on_enter(self, _event: tk.Event) -> str:
+        self.ask()
+        return "break"
+
+    def _on_shift_enter(self, _event: tk.Event) -> str:
+        self.input.insert(tk.INSERT, "\n")
+        return "break"
+
+    def _on_control_enter(self, _event: tk.Event) -> str:
+        self.ask()
+        return "break"
 
     def append(self, text: str) -> None:
         self.output.configure(state=tk.NORMAL)
@@ -255,19 +277,32 @@ class LanternChat(tk.Tk):
                     self.append(f"Status: BACKEND_REACHABLE_OBSERVED at {value}")
                 elif kind == "error":
                     self.status.set("BACKEND_UNREACHABLE_OBSERVED")
+                    self.waiting_for_reply = False
+                    self._set_send_enabled(True)
                     self.append(f"Error: {value}")
                 elif kind == "answer":
+                    self.waiting_for_reply = False
+                    self._set_send_enabled(True)
                     self.append(value)
         except queue.Empty:
             pass
         self.after(100, self._poll)
 
+    def _set_send_enabled(self, enabled: bool) -> None:
+        if self.send_button is not None:
+            self.send_button.configure(state=(tk.NORMAL if enabled else tk.DISABLED))
+
     def ask(self) -> None:
+        if self.waiting_for_reply:
+            return
         message = self.input.get("1.0", tk.END).strip()
         if not message:
             return
         self.input.delete("1.0", tk.END)
+        self.waiting_for_reply = True
+        self._set_send_enabled(False)
         self.append(f"Alex: {message}")
+        self.append("Lantern: working locally...")
         threading.Thread(target=self._ask_thread, args=(message,), daemon=True).start()
 
     def _ask_thread(self, message: str) -> None:
