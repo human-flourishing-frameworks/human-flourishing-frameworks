@@ -2,11 +2,12 @@
 """Native Lantern desktop chat app.
 
 Purpose:
-A plain local chat interface between Alex and Lantern plus the HFF repo.
+A plain local chat interface between Alex/operator, Lantern, and the HFF repo.
 
 Boundary:
 - standard-library Tkinter app;
 - localhost Lantern backend only;
+- one operator chat path;
 - no hosted GPT/Claude/API calls from Lantern;
 - no agents, tunnels, sensors, deployments, or repo writes from chat;
 - stays on until the user closes the window.
@@ -33,6 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_SCRIPT = REPO_ROOT / "apps" / "lantern-local-chat" / "local_lantern_server.py"
 DEFAULT_PORT = 8765
 MAX_PORT = 8799
+INTERNAL_BACKEND_MODE = "engineer"
 
 
 class LocalLantern:
@@ -78,14 +80,22 @@ class LocalLantern:
         }
 
     def find_running_endpoint(self) -> str | None:
+        checked: set[int] = set()
         for port in [self.preferred_port, *range(DEFAULT_PORT, self.max_port + 1)]:
+            if port in checked:
+                continue
+            checked.add(port)
             endpoint = self.endpoint_for(port)
             if self.health(endpoint).get("ok") is True:
                 return endpoint
         return None
 
     def choose_free_endpoint(self) -> str:
+        checked: set[int] = set()
         for port in [self.preferred_port, *range(DEFAULT_PORT, self.max_port + 1)]:
+            if port in checked:
+                continue
+            checked.add(port)
             if self._can_bind(port):
                 return self.endpoint_for(port)
         return self.endpoint_for(self.preferred_port)
@@ -115,11 +125,11 @@ class LocalLantern:
             time.sleep(0.25)
         raise RuntimeError(f"Lantern backend did not become reachable at {endpoint}")
 
-    def chat(self, message: str, mode: str) -> dict[str, Any]:
+    def chat(self, message: str) -> dict[str, Any]:
         if not self.endpoint:
             self.ensure_backend()
         url = (self.endpoint or self.endpoint_for(self.preferred_port)).rstrip("/") + "/chat"
-        payload = json.dumps({"message": message, "mode": mode}).encode("utf-8")
+        payload = json.dumps({"message": message, "mode": INTERNAL_BACKEND_MODE}).encode("utf-8")
         request = Request(url, data=payload, headers={"content-type": "application/json"}, method="POST")
         try:
             with urlopen(request, timeout=20.0) as response:  # noqa: S310
@@ -145,6 +155,9 @@ def plain_chat_answer(data: dict[str, Any]) -> str:
 
     if data.get("ok") is not True:
         return str(data.get("answer") or data.get("error") or "Lantern could not answer from the local backend.")
+
+    if isinstance(data.get("plainAnswer"), str) and data["plainAnswer"].strip():
+        return data["plainAnswer"].strip()
 
     frame = data.get("minimalFrame") if isinstance(data.get("minimalFrame"), dict) else {}
     if frame:
@@ -174,7 +187,6 @@ class LanternChat(tk.Tk):
         self.minsize(760, 520)
         self.client = LocalLantern()
         self.events: queue.Queue[tuple[str, Any]] = queue.Queue()
-        self.mode = tk.StringVar(value="engineer")
         self.status = tk.StringVar(value="STARTING_OBSERVED")
         self.endpoint = tk.StringVar(value="Endpoint: unknown")
         self.protocol("WM_DELETE_WINDOW", self.close)
@@ -192,22 +204,14 @@ class LanternChat(tk.Tk):
         ttk.Label(top, textvariable=self.status).pack(side=tk.RIGHT)
 
         description = (
-            "Local chat with Lantern and the HFF repo. Lantern reads local repo/anchor state and answers here. "
-            "Alex keeps authority; Lantern does not run commands, edit files, deploy, browse, or call hosted GPT/Claude from this path."
+            "Local chat between Alex/operator, Lantern, and the HFF repo. "
+            "One operator path. No mode picker. No command execution, repo edits, deployments, browsing, or hosted GPT/Claude calls from this path."
         )
         ttk.Label(main, text=description, wraplength=920).pack(fill=tk.X, pady=(8, 4))
         ttk.Label(main, textvariable=self.endpoint).pack(fill=tk.X, pady=(0, 8))
 
         toolbar = ttk.Frame(main)
         toolbar.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(toolbar, text="Mode:").pack(side=tk.LEFT)
-        ttk.Combobox(
-            toolbar,
-            textvariable=self.mode,
-            state="readonly",
-            values=("engineer", "doctor", "planner", "anchor-keeper"),
-            width=18,
-        ).pack(side=tk.LEFT, padx=(6, 10))
         ttk.Button(toolbar, text="Status", command=self.show_status).pack(side=tk.LEFT)
         ttk.Button(toolbar, text="Clear", command=self.clear).pack(side=tk.LEFT, padx=(6, 0))
 
@@ -264,10 +268,10 @@ class LanternChat(tk.Tk):
             return
         self.input.delete("1.0", tk.END)
         self.append(f"Alex: {message}")
-        threading.Thread(target=self._ask_thread, args=(message, self.mode.get()), daemon=True).start()
+        threading.Thread(target=self._ask_thread, args=(message,), daemon=True).start()
 
-    def _ask_thread(self, message: str, mode: str) -> None:
-        self.events.put(("answer", "Lantern:\n" + plain_chat_answer(self.client.chat(message, mode))))
+    def _ask_thread(self, message: str) -> None:
+        self.events.put(("answer", "Lantern:\n" + plain_chat_answer(self.client.chat(message))))
 
     def show_status(self) -> None:
         health = self.client.health()
