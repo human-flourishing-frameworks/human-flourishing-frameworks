@@ -19,6 +19,7 @@ from lantern.discord_bot import (
     extract_lantern_status,
     format_discord_reply,
     is_local_lantern_endpoint,
+    is_placeholder_token,
     lantern_chat_url,
     load_config_from_env,
     normalize_local_path,
@@ -44,6 +45,14 @@ class LanternDiscordBotTests(unittest.TestCase):
         self.assertEqual(normalize_local_path("chat"), "/chat")
         self.assertEqual(normalize_local_path("/chat"), "/chat")
         self.assertEqual(normalize_local_path(""), "/chat")
+
+    def test_placeholder_token_detection(self):
+        self.assertTrue(is_placeholder_token("paste-token-here"))
+        self.assertTrue(is_placeholder_token("replace-me"))
+        self.assertTrue(is_placeholder_token("<token>"))
+        self.assertFalse(is_placeholder_token("realistic.token.value"))
+        blockers = validate_config(DiscordBotConfig(token="paste-token-here"))
+        self.assertIn("placeholder_DISCORD_BOT_TOKEN", blockers)
 
     def test_config_defaults_to_local_desktop_server_ephemeral_slash_command_mode(self):
         with patch.dict(os.environ, {"DISCORD_BOT_TOKEN": "token"}, clear=True):
