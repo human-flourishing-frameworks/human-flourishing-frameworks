@@ -61,6 +61,13 @@ _PLACEHOLDER_TOKENS = {
     "your_token_here",
     "discord-bot-token",
     "discord_bot_token",
+    "real-token-from-discord-developer-portal",
+    "real_token_from_discord_developer_portal",
+    "real_token_from_discord_developer_portal",
+    "real-token-from-developer-portal",
+    "real_token_from_developer_portal",
+    "token-from-discord-developer-portal",
+    "token_from_discord_developer_portal",
     "<token>",
     "<discord_bot_token>",
 }
@@ -106,7 +113,12 @@ def is_placeholder_token(token: str | None) -> bool:
     if token is None:
         return False
     normalized = token.strip().lower()
-    return normalized in _PLACEHOLDER_TOKENS or normalized.startswith("paste-")
+    normalized_words = normalized.replace("_", "-")
+    if normalized in _PLACEHOLDER_TOKENS or normalized_words in _PLACEHOLDER_TOKENS:
+        return True
+    if normalized.startswith(("paste-", "replace-", "your-")):
+        return True
+    return "token" in normalized and "discord" in normalized and "portal" in normalized
 
 
 def parse_int_set(raw: str | None) -> frozenset[int]:
