@@ -357,7 +357,30 @@ def chunk_discord_text(text: str, limit: int = MAX_DISCORD_MESSAGE_CHARS) -> lis
     return chunks
 
 
+def _raw_response_has_internal_lantern_fields(response: LanternResponse) -> bool:
+    return any(key in response.raw for key in ("repoState", "selectedAnchors", "minimalFrame", "sources", "limits"))
+
+
+def format_public_lantern_reply(response: LanternResponse) -> str:
+    """Return a calm Discord-safe reply without internal repo/anchor details."""
+
+    if response.status not in {"ok", "READY", "unknown"}:
+        return (
+            "Lantern had trouble answering from the local server. "
+            "Try again after checking the local Lantern window."
+        )
+
+    return (
+        "Lantern is online. I can help check a question, make an idea clearer, "
+        "or suggest one practical next step.\n\n"
+        "I only reply when used, and I do not moderate the server, store private chats, "
+        "or take actions for you."
+    )
+
+
 def format_discord_reply(response: LanternResponse) -> str:
+    if _raw_response_has_internal_lantern_fields(response):
+        return format_public_lantern_reply(response)
     prefix = f"Lantern status: {response.status}"
     if response.model:
         prefix += f" | model: {response.model}"
@@ -411,15 +434,15 @@ def main() -> int:
         )
         await bot.tree.sync()
 
-    @bot.tree.command(name=config.command_name, description="Ask local Lantern with convergence boundaries.")
-    @app_commands.describe(prompt="Text to send to local Lantern")
+    @bot.tree.command(name=config.command_name, description="Ask local Lantern with clear, bounded replies.")
+    @app_commands.describe(prompt="Question or idea to send to local Lantern")
     async def lantern_command(interaction: discord.Interaction, prompt: str):
         guild_id = interaction.guild_id
         channel_id = interaction.channel_id
         user_id = interaction.user.id if interaction.user else None
         if not channel_allowed(config, guild_id, channel_id):
             await interaction.response.send_message(
-                "Lantern Discord adapter is not enabled for this guild/channel.",
+                "Lantern is not enabled for this server or channel.",
                 ephemeral=True,
             )
             return
