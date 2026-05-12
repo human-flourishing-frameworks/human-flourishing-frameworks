@@ -21,12 +21,15 @@ Required environment:
 
 Optional environment:
 
-    LANTERN_DISCORD_ENDPOINT=http://127.0.0.1:5173
+    LANTERN_DISCORD_ENDPOINT=http://127.0.0.1:8765
+    LANTERN_DISCORD_CHAT_PATH=/chat
+    LANTERN_DISCORD_MODE=engineer
     LANTERN_DISCORD_ALLOWED_GUILDS=123,456
     LANTERN_DISCORD_ALLOWED_CHANNELS=789,101112
     LANTERN_DISCORD_EPHEMERAL=true
     LANTERN_DISCORD_ENABLE_MENTIONS=false
     LANTERN_DISCORD_ALLOW_REMOTE=false
+    LANTERN_DISCORD_TIMEOUT_SECONDS=30
 """
 
 from __future__ import annotations
@@ -42,7 +45,9 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
-DEFAULT_LANTERN_ENDPOINT = "http://127.0.0.1:5173"
+DEFAULT_LANTERN_ENDPOINT = "http://127.0.0.1:8765"
+DEFAULT_LANTERN_CHAT_PATH = "/chat"
+DEFAULT_LANTERN_MODE = "engineer"
 DEFAULT_TIMEOUT_SECONDS = 30.0
 MAX_DISCORD_MESSAGE_CHARS = 1900
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -55,6 +60,8 @@ class DiscordBotConfig:
 
     token: str | None = None
     lantern_endpoint: str = DEFAULT_LANTERN_ENDPOINT
+    lantern_chat_path: str = DEFAULT_LANTERN_CHAT_PATH
+    lantern_mode: str = DEFAULT_LANTERN_MODE
     allowed_guild_ids: frozenset[int] = field(default_factory=frozenset)
     allowed_channel_ids: frozenset[int] = field(default_factory=frozenset)
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
@@ -96,6 +103,15 @@ def parse_int_set(raw: str | None) -> frozenset[int]:
     return frozenset(values)
 
 
+def normalize_local_path(path: str | None) -> str:
+    """Normalize a local HTTP path for the Lantern backend."""
+
+    value = (path or DEFAULT_LANTERN_CHAT_PATH).strip()
+    if not value.startswith("/"):
+        value = "/" + value
+    return value
+
+
 def load_config_from_env() -> DiscordBotConfig:
     timeout_raw = os.environ.get("LANTERN_DISCORD_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS))
     try:
@@ -106,6 +122,8 @@ def load_config_from_env() -> DiscordBotConfig:
     return DiscordBotConfig(
         token=os.environ.get("DISCORD_BOT_TOKEN"),
         lantern_endpoint=os.environ.get("LANTERN_DISCORD_ENDPOINT", DEFAULT_LANTERN_ENDPOINT),
+        lantern_chat_path=normalize_local_path(os.environ.get("LANTERN_DISCORD_CHAT_PATH", DEFAULT_LANTERN_CHAT_PATH)),
+        lantern_mode=os.environ.get("LANTERN_DISCORD_MODE", DEFAULT_LANTERN_MODE),
         allowed_guild_ids=parse_int_set(os.environ.get("LANTERN_DISCORD_ALLOWED_GUILDS")),
         allowed_channel_ids=parse_int_set(os.environ.get("LANTERN_DISCORD_ALLOWED_CHANNELS")),
         timeout_seconds=timeout,
@@ -131,12 +149,14 @@ def validate_config(config: DiscordBotConfig) -> tuple[str, ...]:
         blockers.append("remote_lantern_endpoint_blocked")
     if config.timeout_seconds <= 0:
         blockers.append("invalid_timeout")
+    if not normalize_local_path(config.lantern_chat_path).startswith("/"):
+        blockers.append("invalid_lantern_chat_path")
     return tuple(blockers)
 
 
-def lantern_chat_url(endpoint: str) -> str:
+def lantern_chat_url(endpoint: str, chat_path: str = DEFAULT_LANTERN_CHAT_PATH) -> str:
     endpoint = endpoint.rstrip("/")
-    return endpoint + "/api/lantern/chat"
+    return endpoint + normalize_local_path(chat_path)
 
 
 def channel_allowed(config: DiscordBotConfig, guild_id: int | None, channel_id: int | None) -> bool:
@@ -180,10 +200,30 @@ def build_lantern_message(
     ).strip()
 
 
+def extract_lantern_reply(data: dict[str, Any]) -> str:
+    """Accept both the desktop local server shape and the older API shape."""
+
+    for key in ("answer", "reply", "message"):
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return "Lantern returned no text reply."
+
+
+def extract_lantern_status(data: dict[str, Any]) -> str:
+    status = data.get("status")
+    if isinstance(status, str) and status.strip():
+        return status.strip()
+    ok = data.get("ok")
+    if isinstance(ok, bool):
+        return "ok" if ok else "error"
+    return "unknown"
+
+
 def post_to_lantern(message: str, config: DiscordBotConfig) -> LanternResponse:
-    payload = json.dumps({"message": message}).encode("utf-8")
+    payload = json.dumps({"message": message, "mode": config.lantern_mode}).encode("utf-8")
     request = Request(
-        lantern_chat_url(config.lantern_endpoint),
+        lantern_chat_url(config.lantern_endpoint, config.lantern_chat_path),
         data=payload,
         headers={"content-type": "application/json"},
         method="POST",
@@ -211,12 +251,10 @@ def post_to_lantern(message: str, config: DiscordBotConfig) -> LanternResponse:
     if not isinstance(data, dict):
         return LanternResponse(status="invalid_lantern_response", reply="Lantern returned a non-object response.")
 
-    reply = data.get("reply")
-    if not isinstance(reply, str) or not reply.strip():
-        reply = "Lantern returned no text reply."
+    reply = extract_lantern_reply(data)
     model = data.get("model") if isinstance(data.get("model"), str) else None
-    status = data.get("status") if isinstance(data.get("status"), str) else "unknown"
-    return LanternResponse(status=status, reply=reply.strip(), model=model, raw=data)
+    status = extract_lantern_status(data)
+    return LanternResponse(status=status, reply=reply, model=model, raw=data)
 
 
 def chunk_discord_text(text: str, limit: int = MAX_DISCORD_MESSAGE_CHARS) -> list[str]:
@@ -285,6 +323,7 @@ def main() -> int:
     async def on_ready():
         print(
             f"[LANTERN DISCORD] logged_in={bot.user} endpoint={config.lantern_endpoint} "
+            f"chat_path={config.lantern_chat_path} mode={config.lantern_mode} "
             f"guild_allowlist={sorted(config.allowed_guild_ids)} "
             f"channel_allowlist={sorted(config.allowed_channel_ids)}"
         )
