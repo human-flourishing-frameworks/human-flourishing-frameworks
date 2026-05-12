@@ -15,10 +15,13 @@ from lantern.discord_bot import (
     channel_allowed,
     chunk_discord_text,
     env_flag,
+    extract_lantern_reply,
+    extract_lantern_status,
     format_discord_reply,
     is_local_lantern_endpoint,
     lantern_chat_url,
     load_config_from_env,
+    normalize_local_path,
     parse_int_set,
     validate_config,
 )
@@ -37,20 +40,27 @@ class LanternDiscordBotTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_int_set("abc")
 
-    def test_config_defaults_to_local_ephemeral_slash_command_mode(self):
+    def test_normalize_local_path(self):
+        self.assertEqual(normalize_local_path("chat"), "/chat")
+        self.assertEqual(normalize_local_path("/chat"), "/chat")
+        self.assertEqual(normalize_local_path(""), "/chat")
+
+    def test_config_defaults_to_local_desktop_server_ephemeral_slash_command_mode(self):
         with patch.dict(os.environ, {"DISCORD_BOT_TOKEN": "token"}, clear=True):
             config = load_config_from_env()
         self.assertEqual(config.token, "token")
-        self.assertEqual(config.lantern_endpoint, "http://127.0.0.1:5173")
+        self.assertEqual(config.lantern_endpoint, "http://127.0.0.1:8765")
+        self.assertEqual(config.lantern_chat_path, "/chat")
+        self.assertEqual(config.lantern_mode, "engineer")
         self.assertTrue(config.ephemeral_replies)
         self.assertFalse(config.enable_mentions)
         self.assertFalse(config.allow_remote_lantern)
         self.assertEqual(config.command_name, "lantern")
 
     def test_local_endpoint_detection(self):
-        self.assertTrue(is_local_lantern_endpoint("http://127.0.0.1:5173"))
-        self.assertTrue(is_local_lantern_endpoint("http://localhost:5173"))
-        self.assertFalse(is_local_lantern_endpoint("ftp://127.0.0.1:5173"))
+        self.assertTrue(is_local_lantern_endpoint("http://127.0.0.1:8765"))
+        self.assertTrue(is_local_lantern_endpoint("http://localhost:8765"))
+        self.assertFalse(is_local_lantern_endpoint("ftp://127.0.0.1:8765"))
         self.assertFalse(is_local_lantern_endpoint("https://example.com"))
 
     def test_validate_config_blocks_missing_token_and_remote_endpoint(self):
@@ -68,11 +78,25 @@ class LanternDiscordBotTests(unittest.TestCase):
         )
         self.assertEqual(validate_config(allowed_remote), tuple())
 
-    def test_lantern_chat_url(self):
+    def test_lantern_chat_url_defaults_to_desktop_chat_endpoint(self):
         self.assertEqual(
-            lantern_chat_url("http://127.0.0.1:5173/"),
+            lantern_chat_url("http://127.0.0.1:8765/"),
+            "http://127.0.0.1:8765/chat",
+        )
+        self.assertEqual(
+            lantern_chat_url("http://127.0.0.1:5173/", "/api/lantern/chat"),
             "http://127.0.0.1:5173/api/lantern/chat",
         )
+
+    def test_extract_lantern_reply_accepts_desktop_and_legacy_shapes(self):
+        self.assertEqual(extract_lantern_reply({"answer": "desktop answer"}), "desktop answer")
+        self.assertEqual(extract_lantern_reply({"reply": "legacy reply"}), "legacy reply")
+        self.assertEqual(extract_lantern_reply({}), "Lantern returned no text reply.")
+
+    def test_extract_lantern_status_accepts_ok_boolean(self):
+        self.assertEqual(extract_lantern_status({"ok": True}), "ok")
+        self.assertEqual(extract_lantern_status({"ok": False}), "error")
+        self.assertEqual(extract_lantern_status({"status": "READY"}), "READY")
 
     def test_channel_allowed_requires_guild_and_optional_allowlists(self):
         open_config = DiscordBotConfig(token="token")
