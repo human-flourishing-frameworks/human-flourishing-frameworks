@@ -175,10 +175,9 @@
         <div class="anchor">Show the state. Say the limit. Self-correct before acting.</div>
     </header>
 
-    <div class="scaffold-banner">
-        Scaffold mode: LLM substrate not yet wired. Chat replies are
-        stubs until slice 2 (Anthropic API wiring) lands and
-        <code>ANTHROPIC_API_KEY</code> is set.
+    <div class="scaffold-banner" id="substrate-banner" hidden>
+        <code>ANTHROPIC_API_KEY</code> not set in this shell — chat is
+        returning local stubs. Set the key and restart for live voice.
     </div>
 
     <main>
