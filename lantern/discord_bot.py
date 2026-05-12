@@ -19,6 +19,9 @@ Required environment:
 
     DISCORD_BOT_TOKEN=<token>
 
+If the token is missing or still set to a placeholder, the adapter prompts for
+it at startup. The token is used only for the current process and is not saved.
+
 Optional environment:
 
     LANTERN_DISCORD_ENDPOINT=http://127.0.0.1:8765
@@ -35,11 +38,13 @@ Optional environment:
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+import getpass
 import json
 import os
+import sys
 import textwrap
-from typing import Any
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -62,7 +67,6 @@ _PLACEHOLDER_TOKENS = {
     "discord-bot-token",
     "discord_bot_token",
     "real-token-from-discord-developer-portal",
-    "real_token_from_discord_developer_portal",
     "real_token_from_discord_developer_portal",
     "real-token-from-developer-portal",
     "real_token_from_developer_portal",
@@ -119,6 +123,47 @@ def is_placeholder_token(token: str | None) -> bool:
     if normalized.startswith(("paste-", "replace-", "your-")):
         return True
     return "token" in normalized and "discord" in normalized and "portal" in normalized
+
+
+def should_prompt_for_token(config: DiscordBotConfig) -> bool:
+    """Return True when an interactive run should ask for a Discord token."""
+
+    return not config.token or is_placeholder_token(config.token)
+
+
+def prompt_for_discord_token(
+    config: DiscordBotConfig,
+    *,
+    input_func: Callable[[str], str] = getpass.getpass,
+    interactive: bool | None = None,
+) -> DiscordBotConfig:
+    """Prompt for a token only for the current process.
+
+    The value is not written to disk, printed, or exported back to the shell.
+    Non-interactive runs keep the original config and let validation report the
+    missing or placeholder token.
+    """
+
+    if not should_prompt_for_token(config):
+        return config
+    if interactive is None:
+        interactive = bool(sys.stdin and sys.stdin.isatty())
+    if not interactive:
+        return config
+
+    reason = "missing" if not config.token else "a placeholder"
+    print(
+        f"[LANTERN DISCORD] DISCORD_BOT_TOKEN is {reason}. "
+        "Paste the Bot token from Discord Developer Portal > Bot > Token."
+    )
+    try:
+        token = input_func("[LANTERN DISCORD] Bot token (input hidden): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return config
+    if not token:
+        return config
+    return replace(config, token=token)
 
 
 def parse_int_set(raw: str | None) -> frozenset[int]:
@@ -332,12 +377,12 @@ def main() -> int:
     without installing Discord packages.
     """
 
-    config = load_config_from_env()
+    config = prompt_for_discord_token(load_config_from_env())
     blockers = validate_config(config)
     if blockers:
         print("[LANTERN DISCORD] blocked:" + ";".join(blockers))
-        if "placeholder_DISCORD_BOT_TOKEN" in blockers:
-            print("[LANTERN DISCORD] Set DISCORD_BOT_TOKEN to the real Bot token from Discord Developer Portal > Bot > Token.")
+        if "missing_DISCORD_BOT_TOKEN" in blockers or "placeholder_DISCORD_BOT_TOKEN" in blockers:
+            print("[LANTERN DISCORD] Use the real Bot token from Discord Developer Portal > Bot > Token.")
         return 2
 
     try:
