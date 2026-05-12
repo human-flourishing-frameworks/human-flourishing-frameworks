@@ -18,9 +18,11 @@ from lantern.discord_bot import (
     extract_lantern_reply,
     extract_lantern_status,
     format_discord_reply,
+    format_status_edge_report,
     is_local_lantern_endpoint,
     is_placeholder_token,
     lantern_chat_url,
+    lantern_health_url,
     load_config_from_env,
     normalize_local_path,
     parse_int_set,
@@ -97,6 +99,9 @@ class LanternDiscordBotTests(unittest.TestCase):
             "http://127.0.0.1:5173/api/lantern/chat",
         )
 
+    def test_lantern_health_url(self):
+        self.assertEqual(lantern_health_url("http://127.0.0.1:8765/"), "http://127.0.0.1:8765/healthz")
+
     def test_extract_lantern_reply_accepts_desktop_and_legacy_shapes(self):
         self.assertEqual(extract_lantern_reply({"answer": "desktop answer"}), "desktop answer")
         self.assertEqual(extract_lantern_reply({"reply": "legacy reply"}), "legacy reply")
@@ -153,6 +158,44 @@ class LanternDiscordBotTests(unittest.TestCase):
         self.assertIn("Lantern status: ok", formatted)
         self.assertIn("model: model-x", formatted)
         self.assertTrue(formatted.endswith("hello"))
+
+    def test_format_discord_reply_hides_internal_local_lantern_fields(self):
+        response = LanternResponse(
+            status="ok",
+            reply="repo: C:/secret\nSources:\nanchor: hidden",
+            raw={"repoState": {"repoPath": "C:/secret"}, "sources": ["anchor"]},
+        )
+        formatted = format_discord_reply(response)
+        self.assertIn("Lantern is online", formatted)
+        self.assertNotIn("C:/secret", formatted)
+        self.assertNotIn("anchor", formatted.lower())
+
+    def test_format_discord_reply_unavailable_is_public_safe(self):
+        response = LanternResponse(status="lantern_unavailable", reply="debug tunnel command text")
+        formatted = format_discord_reply(response)
+        self.assertIn("local Lantern server is not reachable", formatted)
+        self.assertNotIn("tunnel", formatted.lower())
+        self.assertNotIn("debug", formatted.lower())
+
+    def test_status_edge_report_states_scope_and_edge(self):
+        config = DiscordBotConfig(token="token", lantern_endpoint="http://127.0.0.1:8766")
+        formatted = format_status_edge_report(
+            config,
+            {
+                "status": "BACKEND_REACHABLE_OBSERVED",
+                "url": "http://127.0.0.1:8766/healthz",
+                "branch": "master",
+                "commit": "abcdef123456",
+                "isClean": True,
+            },
+        )
+        self.assertIn("bounded observation", formatted)
+        self.assertIn("ONLINE_OBSERVED", formatted)
+        self.assertIn("BACKEND_REACHABLE_OBSERVED", formatted)
+        self.assertIn("branch master", formatted)
+        self.assertIn("commit abcdef123456", formatted)
+        self.assertIn("do not prove uptime", formatted)
+        self.assertIn("no GPT outside", formatted)
 
 
 if __name__ == "__main__":
