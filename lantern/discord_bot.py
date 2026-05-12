@@ -239,6 +239,10 @@ def lantern_chat_url(endpoint: str, chat_path: str = DEFAULT_LANTERN_CHAT_PATH) 
     return endpoint + normalize_local_path(chat_path)
 
 
+def lantern_health_url(endpoint: str) -> str:
+    return endpoint.rstrip("/") + "/healthz"
+
+
 def channel_allowed(config: DiscordBotConfig, guild_id: int | None, channel_id: int | None) -> bool:
     if guild_id is None:
         return False
@@ -315,16 +319,13 @@ def post_to_lantern(message: str, config: DiscordBotConfig) -> LanternResponse:
         body = exc.read().decode("utf-8", errors="replace")
         return LanternResponse(
             status="lantern_http_error",
-            reply=f"Lantern HTTP error {exc.code}. Limit: no retry or hidden action. Body: {body[:400]}",
+            reply=f"Lantern HTTP error {exc.code}. Body: {body[:400]}",
             raw={"error": body, "code": exc.code},
         )
     except (URLError, TimeoutError, OSError) as exc:
         return LanternResponse(
             status="lantern_unavailable",
-            reply=(
-                "Lantern local endpoint is unavailable. Limit: I cannot run Lantern, "
-                "open tunnels, or start services from Discord."
-            ),
+            reply="Lantern local endpoint is unavailable.",
             raw={"error_class": type(exc).__name__, "error": str(exc)},
         )
 
@@ -335,6 +336,72 @@ def post_to_lantern(message: str, config: DiscordBotConfig) -> LanternResponse:
     model = data.get("model") if isinstance(data.get("model"), str) else None
     status = extract_lantern_status(data)
     return LanternResponse(status=status, reply=reply, model=model, raw=data)
+
+
+def get_lantern_health(config: DiscordBotConfig) -> dict[str, Any]:
+    """Return bounded, public-safe health for the configured local Lantern server."""
+
+    url = lantern_health_url(config.lantern_endpoint)
+    request = Request(url, headers={"accept": "application/json"}, method="GET")
+    try:
+        with urlopen(request, timeout=min(config.timeout_seconds, 5.0)) as response:  # noqa: S310 - URL is validated by config.
+            data = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        return {"status": "BACKEND_HTTP_ERROR_OBSERVED", "reachable": False, "url": url, "error": f"HTTP {exc.code}"}
+    except (URLError, TimeoutError, OSError) as exc:
+        return {"status": "BACKEND_UNREACHABLE_OBSERVED", "reachable": False, "url": url, "error": type(exc).__name__}
+    except json.JSONDecodeError:
+        return {"status": "BACKEND_INVALID_JSON_OBSERVED", "reachable": False, "url": url, "error": "invalid_json"}
+
+    if not isinstance(data, dict):
+        return {"status": "BACKEND_INVALID_RESPONSE_OBSERVED", "reachable": False, "url": url, "error": "non_object"}
+
+    repo_state = data.get("repoState") if isinstance(data.get("repoState"), dict) else {}
+    commit = repo_state.get("commit") if isinstance(repo_state.get("commit"), str) else "UNKNOWN"
+    branch = repo_state.get("branch") if isinstance(repo_state.get("branch"), str) else "UNKNOWN"
+    is_clean = repo_state.get("isClean") if isinstance(repo_state.get("isClean"), bool) else None
+    ok = data.get("ok") is True
+    return {
+        "status": "BACKEND_REACHABLE_OBSERVED" if ok else "BACKEND_DEGRADED_OBSERVED",
+        "reachable": ok,
+        "url": url,
+        "service": data.get("service") if isinstance(data.get("service"), str) else "unknown",
+        "branch": branch,
+        "commit": commit[:12],
+        "isClean": is_clean,
+    }
+
+
+def format_status_edge_report(config: DiscordBotConfig, health: dict[str, Any], *, discord_connected: bool = True) -> str:
+    """Format a status report that states its edge instead of using absolutes."""
+
+    discord_status = "ONLINE_OBSERVED" if discord_connected else "UNKNOWN"
+    backend_status = str(health.get("status", "UNKNOWN"))
+    repo_bits: list[str] = []
+    if health.get("branch") and health.get("branch") != "UNKNOWN":
+        repo_bits.append(f"branch {health['branch']}")
+    if health.get("commit") and health.get("commit") != "UNKNOWN":
+        repo_bits.append(f"commit {health['commit']}")
+    if isinstance(health.get("isClean"), bool):
+        repo_bits.append("clean" if health["isClean"] else "dirty")
+    repo_line = ", ".join(repo_bits) if repo_bits else "repo details not reported"
+
+    return textwrap.dedent(
+        f"""
+        Lantern status — bounded observation
+
+        Discord adapter: {discord_status} for this running bot process.
+        Local backend: {backend_status} at {health.get('url', lantern_health_url(config.lantern_endpoint))}.
+        Repo signal: {repo_line}.
+        Public output: PUBLIC_SAFE_OUTPUT_ACTIVE for the tested slash-command path.
+
+        Edge:
+        These labels describe the current observed path only. They do not prove uptime,
+        autonomy, full safety, or no GPT outside the local Lantern backend. If the local
+        server closes, the port changes, the token expires, or this process stops, the
+        status can change.
+        """
+    ).strip()
 
 
 def chunk_discord_text(text: str, limit: int = MAX_DISCORD_MESSAGE_CHARS) -> list[str]:
@@ -366,8 +433,8 @@ def format_public_lantern_reply(response: LanternResponse) -> str:
 
     if response.status not in {"ok", "READY", "unknown"}:
         return (
-            "Lantern had trouble answering from the local server. "
-            "Try again after checking the local Lantern window."
+            "Lantern is connected to Discord, but the local Lantern server is not reachable right now. "
+            "Check that the local Lantern server window is open and that the configured port is correct."
         )
 
     return (
@@ -379,7 +446,7 @@ def format_public_lantern_reply(response: LanternResponse) -> str:
 
 
 def format_discord_reply(response: LanternResponse) -> str:
-    if _raw_response_has_internal_lantern_fields(response):
+    if _raw_response_has_internal_lantern_fields(response) or response.status.startswith("lantern_"):
         return format_public_lantern_reply(response)
     prefix = f"Lantern status: {response.status}"
     if response.model:
@@ -461,6 +528,20 @@ def main() -> int:
         await interaction.followup.send(chunks[0], ephemeral=config.ephemeral_replies)
         for chunk in chunks[1:]:
             await interaction.followup.send(chunk, ephemeral=config.ephemeral_replies)
+
+    @bot.tree.command(name="lantern_status", description="Show bounded Lantern connection status.")
+    async def lantern_status_command(interaction: discord.Interaction):
+        guild_id = interaction.guild_id
+        channel_id = interaction.channel_id
+        if not channel_allowed(config, guild_id, channel_id):
+            await interaction.response.send_message(
+                "Lantern is not enabled for this server or channel.",
+                ephemeral=True,
+            )
+            return
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        health = await asyncio.to_thread(get_lantern_health, config)
+        await interaction.followup.send(format_status_edge_report(config, health), ephemeral=True)
 
     if config.enable_mentions:
 
