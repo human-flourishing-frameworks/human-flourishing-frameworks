@@ -1,18 +1,21 @@
-"""Lantern Flask server - local-first shell.
+"""Lantern dashboard server.
 
-This runtime is intentionally bounded. It serves the static frontend, exposes
-local/read-only truth endpoints, and routes chat through a configured LLM
+Lantern is one server-backed conversational dashboard with visible state,
+bounded sensors, and explicit limits. It serves the web dashboard, exposes
+read-only status/state endpoints, and routes chat through a configured LLM
 substrate when an API key is present.
 
-Current slice:
-- `/api/lantern/health` reports substrate/key/bind toggles;
+Current surface:
+- `/` serves the GPT-style Lantern dashboard;
+- `/manifest.webmanifest` supports desktop/phone install shortcuts;
+- `/api/lantern/health` reports provider/model/bind/degraded-mode status;
 - `/api/lantern/state` reads local git HEAD/ref state, doctrine paths, and an
   optional last-test record;
-- `/api/lantern/chat` can call Anthropic Messages API when configured.
+- `/api/lantern/chat` calls Anthropic Messages API when configured.
 
 Boundary:
 - localhost-only bind by default;
-- read-only local inspection only;
+- read-only local/status inspection only;
 - no autonomous repo writes;
 - no command execution from chat.
 """
@@ -35,13 +38,15 @@ LANTERN_HOME = Path.home() / ".lantern"
 LAST_TEST_PATH = LANTERN_HOME / "state" / "last-test.json"
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-3-5-sonnet-latest"
+SUBSTRATE_PROVIDER = "anthropic"
+PRODUCT_NAME = "Lantern Dashboard"
 
 app = Flask(__name__)
 
 
 @app.route("/")
 def index():
-    """Serve the chat UI."""
+    """Serve the dashboard UI."""
     return send_from_directory(str(LANTERN_DIR), "index.html")
 
 
@@ -50,19 +55,32 @@ def app_js():
     return send_from_directory(str(LANTERN_DIR), "app.js")
 
 
+@app.route("/manifest.webmanifest")
+def manifest():
+    """Serve the installable web app manifest."""
+    return send_from_directory(str(LANTERN_DIR), "manifest.webmanifest")
+
+
 @app.route("/api/lantern/health")
 def health():
-    """Lightweight readiness probe with explicit toggle visibility."""
+    """Lightweight readiness probe with explicit substrate visibility."""
+    substrate_wired = _substrate_wired()
     return jsonify({
         "status": "ok",
         "service": "lantern",
+        "product": PRODUCT_NAME,
         "role": "Lantern Keystone Wish",
         "anchor": "Show the state. Say the limit. Self-correct before acting.",
-        "substrate_wired": _substrate_wired(),
+        "substrate_provider": SUBSTRATE_PROVIDER,
+        "substrate_external": True,
+        "substrate_wired": substrate_wired,
+        "substrate_status": "ready" if substrate_wired else "degraded",
+        "degraded_reason": None if substrate_wired else "ANTHROPIC_API_KEY not set or disabled in tests",
         "state_endpoint_wired": True,
         "anthropic_api_key_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "model": _anthropic_model(),
         "public_bind_enabled": _public_bind_enabled(),
+        "app_installable": True,
     })
 
 
@@ -70,29 +88,30 @@ def health():
 def state():
     """Return read-only local truth panel state."""
     return jsonify({
-        "status": "scaffold",
+        "status": "ok",
         "state_status": "ok",
         "truth_panel_wired": True,
         "service": "lantern",
+        "product": PRODUCT_NAME,
         "timestamp_utc": _utc_now(),
         "anchor": "Show the state. Say the limit. Then act small.",
         "repo": _repo_state(),
         "loaded_doctrine": _loaded_doctrine_paths(),
         "last_test": _last_test_state(),
         "limits": [
-            "read-only local state only",
-            "chat substrate can answer but cannot run commands",
+            "chat can answer through the configured server substrate",
+            "state and sensors are read-only in this dashboard",
             "dirty worktree details require an operator-run status check",
-            "no repo writes, merges, deploys, agents, or tunnels",
+            "no repo writes, merges, deploys, agents, tunnels, or commands from chat",
         ],
     })
 
 
 @app.route("/api/lantern/chat", methods=["POST"])
 def chat():
-    """Chat endpoint.
+    """Server-backed Lantern chat endpoint.
 
-    In normal local runtime, calls Anthropic when ``ANTHROPIC_API_KEY`` is set.
+    In normal runtime, calls Anthropic when ``ANTHROPIC_API_KEY`` is set.
     In Flask test mode, real substrate calls stay disabled unless the test sets
     ``ALLOW_SUBSTRATE_IN_TESTS`` so the suite never spends tokens or depends on
     network by accident.
@@ -109,7 +128,7 @@ def chat():
         }), 400
 
     if not _substrate_wired():
-        return jsonify(_scaffold_chat_payload(user_message))
+        return jsonify(_degraded_chat_payload(user_message))
 
     try:
         reply = _call_anthropic(user_message)
@@ -119,12 +138,13 @@ def chat():
             "user_message_received": user_message,
             "role": "Lantern Keystone Wish",
             "reply": (
-                "State observed: local Lantern shell is up, but the LLM "
-                "substrate call failed. Limit: no hidden retry, no repo action, "
-                f"no tunnel. Error class: {type(exc).__name__}."
+                "State observed: Lantern dashboard is up, but the configured "
+                "server substrate call failed. Limit: no hidden retry, no repo "
+                f"action, no tunnel. Error class: {type(exc).__name__}."
             ),
             "anchor": "Show the state. Say the limit.",
             "model": _anthropic_model(),
+            "substrate_provider": SUBSTRATE_PROVIDER,
         }), 502
 
     return jsonify({
@@ -134,22 +154,24 @@ def chat():
         "reply": reply,
         "anchor": "Show the state. Say the limit.",
         "model": _anthropic_model(),
+        "substrate_provider": SUBSTRATE_PROVIDER,
         "state": _chat_state_summary(),
     })
 
 
-def _scaffold_chat_payload(user_message: str) -> dict[str, Any]:
+def _degraded_chat_payload(user_message: str) -> dict[str, Any]:
     return {
-        "status": "scaffold",
+        "status": "degraded",
         "user_message_received": user_message,
         "role": "Lantern Keystone Wish",
         "reply": (
-            "Lantern local shell is up. The truth panel is wired to read "
-            "local repo HEAD/ref state, but the LLM substrate is not yet "
-            "wired in this slice."
+            "Lantern dashboard is open, but the server substrate is not "
+            "available in this runtime. The state panel remains visible. "
+            "Limit: no local LLM is being claimed, and no hidden action ran."
         ),
         "anchor": "Show the state. Say the limit.",
-        "next_slice": "LLM substrate wiring after local truth panel validation",
+        "substrate_provider": SUBSTRATE_PROVIDER,
+        "degraded_reason": "ANTHROPIC_API_KEY not set or disabled in tests",
     }
 
 
@@ -204,10 +226,10 @@ def _extract_anthropic_text(data: dict[str, Any]) -> str:
 def _build_system_prompt() -> str:
     state_summary = _chat_state_summary()
     doctrine = _doctrine_excerpt(max_chars=18000)
-    return f"""You are Lantern Keystone Wish, running in Alex's local HFF shell.
+    return f"""You are Lantern Keystone Wish, running in Alex's HFF Lantern dashboard.
 
 Required operating shape:
-State observed: cite the local state you can see.
+State observed: cite the state you can see.
 Limit: say what is unavailable or unverified.
 Plan: act small; do not claim authority you do not have.
 
@@ -219,7 +241,7 @@ Hard boundaries:
 - Living operator correction overrides stale memory.
 - Keep the return door open.
 
-Local state summary:
+Visible dashboard state summary:
 {json.dumps(state_summary, indent=2)}
 
 Doctrine excerpts read fresh for this turn:
@@ -234,6 +256,7 @@ def _chat_state_summary() -> dict[str, Any]:
         "last_test": _last_test_state(),
         "loaded_doctrine": _loaded_doctrine_paths(),
         "public_bind_enabled": _public_bind_enabled(),
+        "substrate_provider": SUBSTRATE_PROVIDER,
         "substrate_wired": _substrate_wired(),
     }
 
@@ -341,12 +364,16 @@ def _loaded_doctrine_paths() -> list[str]:
     candidates = [
         "FALSE_TRUTHS_REGISTER.md",
         "docs/seven-anchors-self-correction.md",
+        "docs/convergence.md",
+        "docs/door-protocol.md",
+        "docs/persistent-convergence-loop.md",
         "docs/convergence-status.md",
         "docs/keystone-memory-contract.md",
         "docs/keystone-self-convergence.md",
         "docs/keystone-table-door-anchors.md",
         "docs/operator-consent-bravery-protocol.md",
         "docs/lantern-chat-design.md",
+        "docs/lantern-dashboard-app.md",
     ]
     found = []
     for rel in candidates:
@@ -403,9 +430,9 @@ def main(argv: list[str] | None = None) -> int:
 
     port = int(os.environ.get("LANTERN_PORT", "5173"))
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("[LANTERN] ANTHROPIC_API_KEY not set. Chat will return stub replies.")
+        print("[LANTERN] ANTHROPIC_API_KEY not set. Chat will return degraded replies.")
 
-    print(f"[LANTERN] role=Lantern Keystone Wish bind={host}:{port}")
+    print(f"[LANTERN] product={PRODUCT_NAME} bind={host}:{port}")
     app.run(host=host, port=port, debug=False)
     return 0
 
