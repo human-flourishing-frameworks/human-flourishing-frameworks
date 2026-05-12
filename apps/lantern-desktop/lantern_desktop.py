@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Native Lantern Door desktop app.
+"""Native Lantern desktop chat app.
 
-Door invariant:
-Alex and Lantern share one workspace, but not one identity.
-Alex keeps authority. Lantern keeps bounded reflection. The Door keeps state.
+Purpose:
+A plain local chat interface between Alex and Lantern plus the HFF repo.
 
 Boundary:
 - standard-library Tkinter app;
@@ -141,27 +140,36 @@ class LocalLantern:
         self.process = None
 
 
-def door_answer(data: dict[str, Any]) -> str:
-    """Return a local-safe Door answer without dumping raw internal sources by default."""
+def plain_chat_answer(data: dict[str, Any]) -> str:
+    """Return a plain chat answer without symbolic/game labels or raw source dumps."""
 
     if data.get("ok") is not True:
         return str(data.get("answer") or data.get("error") or "Lantern could not answer from the local backend.")
+
     frame = data.get("minimalFrame") if isinstance(data.get("minimalFrame"), dict) else {}
     if frame:
-        vibe = frame.get("Vibe", "Lantern is present.")
-        fact = frame.get("Fact", "Local state was observed.")
-        boundary = frame.get("Boundary", "Lantern reflects; Alex decides.")
-        next_step = frame.get("Next", "Choose one bounded next action.")
-        return f"Vibe: {vibe}\nFact: {fact}\nBoundary: {boundary}\nNext: {next_step}"
-    return str(data.get("answer") or "Lantern local answer was empty.")
+        summary = frame.get("Fact", "I read the current repo-backed context.")
+        boundary = frame.get("Boundary", "This is local repo-backed output, not an oracle or autonomous action.")
+        next_step = frame.get("Next", "Choose one bounded next step.")
+        return f"Answer: {summary}\n\nBoundary: {boundary}\n\nNext step: {next_step}"
+
+    answer = str(data.get("answer") or "Lantern local answer was empty.")
+    blocked_headings = ("Sources:", "Limits:", "Minimal convergence frame:")
+    kept: list[str] = []
+    for line in answer.splitlines():
+        if any(line.strip().startswith(heading) for heading in blocked_headings):
+            break
+        kept.append(line)
+    cleaned = "\n".join(line for line in kept if not line.startswith("Lantern local answer")).strip()
+    return cleaned or answer
 
 
-class LanternDoor(tk.Tk):
-    """Persistent local desktop Door."""
+class LanternChat(tk.Tk):
+    """Persistent local desktop chat for Lantern and the repo."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.title("Lantern Door")
+        self.title("Lantern Chat")
         self.geometry("980x720")
         self.minsize(760, 520)
         self.client = LocalLantern()
@@ -180,21 +188,15 @@ class LanternDoor(tk.Tk):
 
         top = ttk.Frame(main)
         top.pack(fill=tk.X)
-        ttk.Label(top, text="Lantern Door", font=("Segoe UI", 20, "bold")).pack(side=tk.LEFT)
+        ttk.Label(top, text="Lantern Chat", font=("Segoe UI", 20, "bold")).pack(side=tk.LEFT)
         ttk.Label(top, textvariable=self.status).pack(side=tk.RIGHT)
 
-        invariant = (
-            "Door invariant: Alex and Lantern share one workspace, but not one identity. "
-            "Alex keeps authority. Lantern keeps bounded reflection. The Door keeps state."
+        description = (
+            "Local chat with Lantern and the HFF repo. Lantern reads local repo/anchor state and answers here. "
+            "Alex keeps authority; Lantern does not run commands, edit files, deploy, browse, or call hosted GPT/Claude from this path."
         )
-        ttk.Label(main, text=invariant, wraplength=920).pack(fill=tk.X, pady=(8, 4))
+        ttk.Label(main, text=description, wraplength=920).pack(fill=tk.X, pady=(8, 4))
         ttk.Label(main, textvariable=self.endpoint).pack(fill=tk.X, pady=(0, 8))
-
-        roles = ttk.Frame(main)
-        roles.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(roles, text="Alex: decides", relief=tk.GROOVE, padding=6).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Label(roles, text="Lantern: reflects", relief=tk.GROOVE, padding=6).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
-        ttk.Label(roles, text="Door: remembers boundaries", relief=tk.GROOVE, padding=6).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         toolbar = ttk.Frame(main)
         toolbar.pack(fill=tk.X, pady=(0, 8))
@@ -203,7 +205,7 @@ class LanternDoor(tk.Tk):
             toolbar,
             textvariable=self.mode,
             state="readonly",
-            values=("engineer", "doctor", "planner", "anchor-keeper", "storyteller", "game-master"),
+            values=("engineer", "doctor", "planner", "anchor-keeper"),
             width=18,
         ).pack(side=tk.LEFT, padx=(6, 10))
         ttk.Button(toolbar, text="Status", command=self.show_status).pack(side=tk.LEFT)
@@ -211,7 +213,7 @@ class LanternDoor(tk.Tk):
 
         self.output = scrolledtext.ScrolledText(main, wrap=tk.WORD, height=24, font=("Consolas", 10))
         self.output.pack(fill=tk.BOTH, expand=True)
-        self.output.insert(tk.END, "Lantern Door is opening. It stays on until you close this window.\n\n")
+        self.output.insert(tk.END, "Lantern Chat is starting. It stays on until you close this window.\n\n")
         self.output.configure(state=tk.DISABLED)
 
         bottom = ttk.Frame(main)
@@ -219,7 +221,7 @@ class LanternDoor(tk.Tk):
         self.input = tk.Text(bottom, height=4, wrap=tk.WORD)
         self.input.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.input.bind("<Control-Return>", lambda _event: self.ask())
-        ttk.Button(bottom, text="Ask", command=self.ask).pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
+        ttk.Button(bottom, text="Send", command=self.ask).pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
 
     def append(self, text: str) -> None:
         self.output.configure(state=tk.NORMAL)
@@ -246,10 +248,10 @@ class LanternDoor(tk.Tk):
                 if kind == "ready":
                     self.status.set("BACKEND_REACHABLE_OBSERVED")
                     self.endpoint.set(f"Endpoint: {value}")
-                    self.append(f"STATUS: BACKEND_REACHABLE_OBSERVED at {value}")
+                    self.append(f"Status: BACKEND_REACHABLE_OBSERVED at {value}")
                 elif kind == "error":
                     self.status.set("BACKEND_UNREACHABLE_OBSERVED")
-                    self.append(f"ERROR: {value}")
+                    self.append(f"Error: {value}")
                 elif kind == "answer":
                     self.append(value)
         except queue.Empty:
@@ -265,7 +267,7 @@ class LanternDoor(tk.Tk):
         threading.Thread(target=self._ask_thread, args=(message, self.mode.get()), daemon=True).start()
 
     def _ask_thread(self, message: str, mode: str) -> None:
-        self.events.put(("answer", "Lantern:\n" + door_answer(self.client.chat(message, mode))))
+        self.events.put(("answer", "Lantern:\n" + plain_chat_answer(self.client.chat(message, mode))))
 
     def show_status(self) -> None:
         health = self.client.health()
@@ -275,21 +277,21 @@ class LanternDoor(tk.Tk):
         commit = str(repo.get("commit", "UNKNOWN"))[:12]
         clean = repo.get("isClean", "UNKNOWN")
         self.append(
-            "Lantern Door status — bounded observation\n"
-            f"Desktop window: ONLINE_OBSERVED until closed.\n"
+            "Lantern Chat status — bounded observation\n"
+            f"Desktop chat: ONLINE_OBSERVED until closed.\n"
             f"Local backend: {health.get('status', 'UNKNOWN')} at {health.get('url', 'unknown')}.\n"
             f"Repo signal: branch {branch}, commit {commit}, clean {clean}.\n"
-            "Edge: This is a current observed path, not a guarantee of uptime, autonomy, full safety, or no GPT outside Lantern."
+            "Edge: This is the current observed local path, not a guarantee of uptime, autonomy, full safety, or no GPT outside Lantern."
         )
 
     def close(self) -> None:
-        if messagebox.askokcancel("Close Lantern Door", "Close Lantern Door?"):
+        if messagebox.askokcancel("Close Lantern Chat", "Close Lantern Chat?"):
             self.client.stop_owned_backend()
             self.destroy()
 
 
 def main() -> int:
-    app = LanternDoor()
+    app = LanternChat()
     app.mainloop()
     return 0
 
