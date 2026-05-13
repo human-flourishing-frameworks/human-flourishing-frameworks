@@ -12,10 +12,15 @@ sensors, no claim that Lantern physically completed a task.
 
 from __future__ import annotations
 
+from pathlib import Path
 import re
-from typing import Any
+import sys
 
-from lantern import discord_bot
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from lantern import discord_bot  # noqa: E402
 
 _STOP_MARKERS = (
     "\nMinimal convergence frame:",
