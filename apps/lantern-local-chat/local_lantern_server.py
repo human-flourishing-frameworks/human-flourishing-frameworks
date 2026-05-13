@@ -8,6 +8,7 @@ No hosted model call is made.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,6 +23,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
 ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
 ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
+
+# Local journal — every Lantern turn appended here so each new turn can look
+# back at the last few. Anchors are vantage points; the journal gives them
+# a past to view from. Operator-readable JSONL, deletable any time.
+JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
 INDEX_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
@@ -225,6 +231,33 @@ def build_doctor_report() -> dict[str, Any]:
     }
 
 
+def _append_journal(entry: dict[str, Any]) -> None:
+    """Append a single turn to the local journal. Silent on any write error."""
+    try:
+        JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with JOURNAL_PATH.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def _read_recent_journal(n: int = 3) -> list[dict[str, Any]]:
+    """Return the last n journal entries. Empty list on any read error."""
+    if not JOURNAL_PATH.exists():
+        return []
+    try:
+        lines = JOURNAL_PATH.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    entries: list[dict[str, Any]] = []
+    for line in lines[-n:]:
+        try:
+            entries.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return entries
+
+
 def _maybe_call_llm(
     message: str,
     intent: str,
@@ -360,11 +393,31 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         ]
     limits = ["No direct hosted model calls.", "No external network requests beyond this localhost app.", "No browser command execution.", "Local files and git state can still be stale if the repo is not pulled."]
     frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in minimal_frame.items()]]
-    templated = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
+    # Past — last few turns from the journal, surfaced so each anchor can see back.
+    recent = _read_recent_journal(3)
+    past_lines: list[str] = []
+    if recent:
+        past_lines.append("Past (last turns from journal):")
+        for ent in recent:
+            ts = (ent.get("ts") or "")[:19]
+            you = (ent.get("user_message") or "").strip()[:70]
+            past_lines.append(f"  {ts}  you: \"{you}\"")
+    body_with_past = body if not past_lines else ([*past_lines, ""] + body)
+    templated = "\n".join(["Lantern local answer", "", *body_with_past, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
     # Opt-in live LLM voice. Off unless LANTERN_LLM_PROVIDER + OPENAI_API_KEY are set.
     llm_reply = _maybe_call_llm(message, intent, minimal_frame, repo_state, selected)
     text = llm_reply if llm_reply else templated
     voice = "llm" if llm_reply else "local-templated"
+    # Append this turn to the local journal so the next turn can look back at it.
+    _append_journal({
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "kind": "chat",
+        "intent": intent,
+        "mode": active_mode,
+        "user_message": message[:500],
+        "answer_excerpt": text[:200],
+        "voice": voice,
+    })
     return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits, "voice": voice}
 
 
