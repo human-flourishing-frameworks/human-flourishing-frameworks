@@ -4,6 +4,10 @@
 
 > **Status:** early development experimental software. A public deployment is validated only by fresh, surface-specific smoke evidence; it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
 
+Plain-language summary:
+
+HFF is a research and advisory framework for testing source-backed modeling, recovery workflows, deployment boundaries, and human-centered system design. It is not a government, enforcement system, autonomous authority, or production critical infrastructure.
+
 ## Current deployment
 
 Primary cloud URL:
@@ -23,14 +27,16 @@ The container is started with gunicorn and binds to the injected `PORT`, falling
 
 Railway may appear in older logs or historical deploys, but Render is the primary public surface currently covered by the repo smoke scripts.
 
+Public deployment claims should always be backed by fresh smoke evidence because deployments, routes, and hosting providers can drift over time.
+
 ## Capability and authority boundary
 
-HFF can do more than passive research, but capability is not authority.
+HFF can support more than passive research workflows, but capability is not authority.
 
 HFF can help:
 
 - model sources, uncertainty, evidence, risks, and candidate actions;
-- run bounded local or deployment-support workflows when explicitly enabled;
+- run bounded local or deployment-support workflows when explicitly enabled and operator-reviewed;
 - support operator-reviewed decisions with logs, tests, and audit evidence;
 - expose status, beliefs, synthetic demos, and advisory results;
 - test safety boundaries, release posture, and system convergence.
@@ -56,9 +62,9 @@ The system must not be described as a production governance authority, moral ora
 A bounded framework for measuring, modeling, and improving outcomes across beings and systems:
 
 - **Sensors** observe outcomes with uncertainty, provenance, and coverage gaps.
-- **World model** maintains Bayesian beliefs and updates as measurements arrive.
+- **World model** maintains Bayesian beliefs and updates estimates as measurements arrive.
 - **Live sensors** exist but are opt-in with `ENABLE_LIVE_SENSORS`; they are not enabled by default.
-- **Autonomous agents** are experimental workflows for detecting evidence, verifying records, proposing consensus, and creating audit-backed escalations. They are not public enforcement authority.
+- **Autonomous agents** are experimental advisory/research workflows for detecting evidence, verifying records, proposing consensus, and creating audit-backed escalations. They are not public enforcement authority.
 - **PBFT consensus** is currently a teaching/research implementation, not hardened production consensus.
 - **Ed25519 signing and audit-chain logic** provide tamper-evidence, not tamper-proof storage.
 - **Node adoption telemetry** reports liveness/visibility, not trust or authority.
@@ -76,6 +82,22 @@ A bounded framework for measuring, modeling, and improving outcomes across being
 - Not a self-repairing deployment system. Operators still control deploys, secrets, and recovery.
 - Not proof that visible nodes are verified or security-relevant.
 - Not a human transportation, substrate-transfer, or cosmic-door system; those topics are documented only as safety boundaries and evidence classifications.
+
+## Public surface and accessibility posture
+
+See:
+
+- [`docs/public-surface-policy.md`](./docs/public-surface-policy.md)
+- [`docs/internationalization-and-accessibility.md`](./docs/internationalization-and-accessibility.md)
+
+Key rules:
+
+- public does not mean uncontrolled;
+- token-gated does not mean safe;
+- consent does not mean permanent;
+- a signal does not equal the person;
+- APKs/mobile apps are not public by default;
+- vehicle control is outside current allowed scope.
 
 ## Current state
 
@@ -255,6 +277,8 @@ Current safety and public-boundary documents include:
 - [`DEPLOYMENT_AUTONOMY_BOUNDARY.md`](./DEPLOYMENT_AUTONOMY_BOUNDARY.md): deployment and recovery remain operator/governance controlled.
 - [`PUBLIC_DEPLOYMENT_STRATEGY.md`](./PUBLIC_DEPLOYMENT_STRATEGY.md): Railway is a hosting adapter, not the architecture; public surfaces should stay portable and default-closed.
 - [`HUMAN_TRANSPORTATION_BOUNDARY.md`](./HUMAN_TRANSPORTATION_BOUNDARY.md): human-preserving traversal claims require canary, quarantine, continuity, consent, and return evidence.
+- [`docs/public-surface-policy.md`](./docs/public-surface-policy.md): classification for dashboard, APIs, sensors, SDKs, APKs, logs, artifacts, and high-risk actuator-adjacent surfaces.
+- [`docs/internationalization-and-accessibility.md`](./docs/internationalization-and-accessibility.md): translation, accessibility, plain-language, and jurisdiction-sensitive public-readiness posture.
 - [`docs/convergence-status.md`](./docs/convergence-status.md): convergence state, desync handling, and held runtime gates.
 - [`docs/keystone-memory-contract.md`](./docs/keystone-memory-contract.md): Keystone continuity memory rules, raw-transcript boundary, and resync protocol.
 - [`docs/capability-confidence-model.md`](./docs/capability-confidence-model.md): contextual capability confidence without ranking human worth.
@@ -287,7 +311,7 @@ The system defines flourishing differently for different scopes:
 - **Animals:** health, safety, comfort, natural behavior
 - **Ecosystems:** biodiversity, stability, resilience
 
-Weights are not fixed. The model updates them as it learns what correlates with good outcomes.
+Weights are not fixed. The model updates estimates as configured data and methods change.
 
 These metrics are advisory and value-laden. They are not a ranking of people, cultures, or moral worth. They should be interpreted with source confidence, uncertainty, affected-party context, and challenge paths.
 
@@ -302,7 +326,7 @@ Useful contributions:
 
 ## License
 
-[Add actual license here]
+No production-use license has been finalized yet. Until an explicit license is added, treat the repository as source-visible research software rather than a broadly licensed production framework.
 
 ---
 
