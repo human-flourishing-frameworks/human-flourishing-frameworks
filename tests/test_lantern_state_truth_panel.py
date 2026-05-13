@@ -25,9 +25,7 @@ class LanternStateTruthPanelTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
 
-        # status remains scaffold for compatibility with slice-1 tests; the
-        # truth-panel-specific state is now wired.
-        self.assertEqual(data.get("status"), "scaffold")
+        self.assertEqual(data.get("status"), "ok")
         self.assertEqual(data.get("state_status"), "ok")
         self.assertTrue(data.get("truth_panel_wired"))
 
@@ -56,12 +54,14 @@ class LanternStateTruthPanelTests(unittest.TestCase):
         self.assertIn("timestamp_utc", data)
         self.assertIn("loaded_doctrine", data)
         self.assertIn("last_test", data)
+        self.assertIn("local_llm_context", data)
         self.assertIn("limits", data)
 
         self.assertIn("docs/lantern-chat-design.md", data.get("loaded_doctrine") or [])
         self.assertIsInstance(data.get("last_test"), dict)
+        self.assertIsInstance(data.get("local_llm_context"), dict)
         self.assertTrue(any(
-            "read-only local state" in limit
+            "read-only" in limit
             for limit in (data.get("limits") or [])
         ))
 

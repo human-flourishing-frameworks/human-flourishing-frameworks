@@ -1,9 +1,4 @@
-"""Lantern substrate wiring tests.
-
-These tests prove Slice 2A can call a mocked Anthropic Messages substrate when
-explicitly enabled in Flask test mode, while default test/runtime guardrails
-remain off unless an operator supplies an API key.
-"""
+"""Lantern substrate wiring tests."""
 
 import json
 import os
@@ -37,7 +32,7 @@ class LanternSubstrateTests(unittest.TestCase):
         self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = False
 
     def test_test_mode_blocks_real_substrate_even_with_key(self):
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=False):
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-token"}, clear=False):
             response = self.client.post(
                 "/api/lantern/chat",
                 data=json.dumps({"message": "hello"}),
@@ -46,8 +41,9 @@ class LanternSubstrateTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         data = response.get_json()
-        self.assertEqual(data.get("status"), "scaffold")
-        self.assertIn("not yet wired", data.get("reply", ""))
+        self.assertEqual(data.get("status"), "degraded")
+        self.assertIn("server substrate is not available", data.get("reply", ""))
+        self.assertIn("no local LLM is being claimed", data.get("reply", ""))
 
     def test_mocked_substrate_call_returns_reply_when_explicitly_enabled(self):
         self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = True
@@ -57,7 +53,7 @@ class LanternSubstrateTests(unittest.TestCase):
             ]
         }
 
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=False), \
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-token"}, clear=False), \
              mock.patch("lantern.server.requests.post") as post:
             post.return_value = FakeAnthropicResponse(fake_payload)
             response = self.client.post(
@@ -81,17 +77,14 @@ class LanternSubstrateTests(unittest.TestCase):
         self.assertIn("system", kwargs["json"])
         self.assertIn("Show the state", kwargs["json"]["system"])
 
-        # The API key necessarily appears in the HTTP header for the mocked
-        # request. The safety boundary is that it must not be copied into the
-        # request body, system prompt, user message, returned JSON, or doctrine.
-        self.assertEqual(kwargs["headers"].get("x-api-key"), "test-key")
-        self.assertNotIn("test-key", json.dumps(kwargs["json"]))
-        self.assertNotIn("test-key", json.dumps(data))
+        self.assertEqual(kwargs["headers"].get("x-api-key"), "unit-test-token")
+        self.assertNotIn("unit-test-token", json.dumps(kwargs["json"]))
+        self.assertNotIn("unit-test-token", json.dumps(data))
 
     def test_substrate_error_returns_safe_degraded_payload(self):
         self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = True
 
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}, clear=False), \
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-token"}, clear=False), \
              mock.patch("lantern.server.requests.post", side_effect=TimeoutError("timeout")):
             response = self.client.post(
                 "/api/lantern/chat",

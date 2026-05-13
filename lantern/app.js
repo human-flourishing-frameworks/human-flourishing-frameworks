@@ -1,9 +1,8 @@
 // Lantern frontend - local-first shell.
 //
-// Renders the chat composer and the right-pane state surface. The chat
-// endpoint currently returns a scaffold stub; the real reply lands in a later
-// substrate wiring slice. The state panel is live/read-only for local repo,
-// doctrine, and last-test evidence.
+// Renders the chat composer and the right-pane state surface. The state panel
+// is live/read-only for local repo, doctrine, last-test evidence, and optional
+// local LLM context packet metadata.
 
 (function () {
     'use strict';
@@ -66,12 +65,10 @@
             setText('state-bind', data.public_bind_enabled ? 'PUBLIC (warn!)' : 'localhost');
             setClass('state-bind', 'v ' + (data.public_bind_enabled ? 'warn' : 'on'));
 
-            setText('state-endpoint', data.state_endpoint_wired ? 'wired' : 'stub');
-            setClass('state-endpoint', 'v ' + (data.state_endpoint_wired ? 'on' : 'warn'));
+            const banner = document.getElementById('substrate-banner');
+            if (banner) banner.hidden = Boolean(data.substrate_wired);
         } catch (e) {
-            appendSystem(
-                'Cannot reach Lantern server. Is python lantern/server.py running?'
-            );
+            appendSystem('Cannot reach Lantern server. Is python lantern/server.py running?');
         }
     }
 
@@ -81,23 +78,24 @@
             const data = await r.json();
             const repo = data.repo || {};
             const lastTest = data.last_test || {};
+            const localMemory = data.local_llm_context || {};
             const panelStatus = data.state_status || data.status || '—';
 
-            setText('state-status', panelStatus);
-            setClass('state-status', 'v ' + (panelStatus === 'ok' ? 'on' : 'warn'));
-            setText('state-timestamp', data.timestamp_utc || '—');
-            setText('state-path', repo.path || '—');
             setText('state-branch', repo.branch || '—');
             setText('state-commit', repo.commit_short || repo.commit || '—');
-
-            setText('state-dirty', repo.dirty_status || 'not_checked');
-            setClass('state-dirty', 'v warn');
 
             setText('state-test', lastTest.status || 'missing');
             setClass('state-test', 'v ' + (lastTest.status === 'pass' ? 'on' : 'warn'));
 
+            setText('memory-status', localMemory.status || 'missing');
+            setClass('memory-status', 'v ' + (localMemory.status === 'present' ? 'on' : 'warn'));
+            setText('memory-path', localMemory.path || '~/.lantern/state/llm-context.local.md');
+            setText('memory-local', localMemory.local_only ? 'yes' : 'no');
+            setClass('memory-local', 'v ' + (localMemory.local_only ? 'on' : 'warn'));
+            setText('memory-proof', localMemory.memory_is_proof ? 'true' : 'false');
+            setClass('memory-proof', 'v ' + (localMemory.memory_is_proof ? 'warn' : 'on'));
+
             renderList('doc-list', data.loaded_doctrine || [], '(none found yet)');
-            renderList('limit-list', data.limits || [], '(no limits reported)');
         } catch (e) {
             appendSystem('State request failed: ' + e.message);
         }
@@ -117,11 +115,8 @@
             });
             const data = await r.json();
             appendMessage('lantern', data.reply || '(no reply)');
-            if (data.status === 'scaffold') {
-                appendSystem(
-                    'Reply was a scaffold stub. The local truth panel is ' +
-                    'wired; the LLM substrate is still not wired.'
-                );
+            if (data.status === 'degraded') {
+                appendSystem('Reply was degraded. The dashboard is visible; the LLM substrate is not wired.');
             }
         } catch (e) {
             appendSystem('Chat request failed: ' + e.message);
@@ -143,7 +138,7 @@
 
     appendSystem(
         'Lantern local shell loaded. Truth panel is read-only. The role is ' +
-        'singular: Lantern Keystone Wish. The LLM substrate is not yet wired.'
+        'singular: Lantern Keystone Wish. Memory is not proof.'
     );
     loadHealth();
     loadState();
