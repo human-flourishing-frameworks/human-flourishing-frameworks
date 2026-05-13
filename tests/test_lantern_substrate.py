@@ -5,15 +5,18 @@ import os
 import unittest
 from unittest import mock
 
+import requests
+
 
 class FakeAnthropicResponse:
-    def __init__(self, payload, status_code=200):
+    def __init__(self, payload, status_code=200, reason="OK"):
         self._payload = payload
         self.status_code = status_code
+        self.reason = reason
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise RuntimeError(f"HTTP {self.status_code}")
+            raise requests.HTTPError(f"HTTP {self.status_code}", response=self)
 
     def json(self):
         return self._payload
@@ -81,7 +84,39 @@ class LanternSubstrateTests(unittest.TestCase):
         self.assertNotIn("unit-test-token", json.dumps(kwargs["json"]))
         self.assertNotIn("unit-test-token", json.dumps(data))
 
-    def test_substrate_error_returns_safe_degraded_payload(self):
+    def test_substrate_error_returns_safe_diagnostic_payload(self):
+        self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = True
+
+        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-token"}, clear=False), \
+             mock.patch(
+                 "lantern.server.requests.post",
+                 return_value=FakeAnthropicResponse({"error": "redacted"}, status_code=401, reason="Unauthorized"),
+             ):
+            response = self.client.post(
+                "/api/lantern/chat",
+                data=json.dumps({"message": "hello substrate"}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 502)
+        data = response.get_json()
+        self.assertEqual(data.get("status"), "substrate_error")
+        self.assertIn("configured anthropic substrate failed at HTTP 401", data.get("reply", ""))
+        self.assertIn("no secret inspection", data.get("reply", ""))
+        self.assertIn("no provider switch", data.get("reply", ""))
+
+        detail = data.get("substrate_error") or {}
+        self.assertEqual(detail.get("provider"), "anthropic")
+        self.assertEqual(detail.get("http_status_code"), 401)
+        self.assertEqual(detail.get("http_status_family"), "4xx")
+        self.assertEqual(detail.get("http_reason"), "Unauthorized")
+        self.assertTrue(detail.get("secret_safe"))
+        self.assertFalse(detail.get("hidden_retry"))
+        self.assertFalse(detail.get("action_taken"))
+        self.assertFalse(detail.get("body_included"))
+        self.assertNotIn("unit-test-token", json.dumps(data))
+
+    def test_substrate_timeout_returns_safe_classification_without_status(self):
         self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = True
 
         with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "unit-test-token"}, clear=False), \
@@ -94,9 +129,11 @@ class LanternSubstrateTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 502)
         data = response.get_json()
-        self.assertEqual(data.get("status"), "substrate_error")
-        self.assertIn("substrate call failed", data.get("reply", ""))
-        self.assertIn("no repo action", data.get("reply", ""))
+        detail = data.get("substrate_error") or {}
+        self.assertEqual(detail.get("error_class"), "TimeoutError")
+        self.assertIsNone(detail.get("http_status_code"))
+        self.assertEqual(detail.get("http_status_family"), "unknown")
+        self.assertIn("no hidden retry", data.get("reply", ""))
 
     def test_empty_chat_message_is_rejected_without_substrate_call(self):
         self.lantern_server.app.config["ALLOW_SUBSTRATE_IN_TESTS"] = True
