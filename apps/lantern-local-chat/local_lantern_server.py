@@ -200,6 +200,10 @@ def classify_intent(message: str) -> str:
     _acks = {"ok", "okay", "k", "kk", "yes", "yeah", "yep", "got it", "thanks", "thank you", "ty", "nice", "cool"}
     if stripped in _acks:
         return "ack"
+    if _has_word(text, ("sing", "play", "music", "song", "songs", "tune")):
+        return "sing"
+    if _has_word(text, ("hush", "quiet", "silence", "mute")):
+        return "hush"
     if _has_word(text, ("doctor", "ready", "status", "state", "repo", "dirty", "commit", "branch", "healthz")):
         return "doctor"
     if _has_word(text, ("anchor", "anchors", "restore", "hff", "framework")):
@@ -234,6 +238,20 @@ def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state:
             "Fact": f"Heard: '{message[:64].strip()}'. Nothing else fired.",
             "Boundary": "I won't pretend to act on an ack alone.",
             "Next": "Say a target when you have one.",
+        }
+    if intent == "sing":
+        return {
+            "Vibe": "Curator playing real beings.",
+            "Fact": "Lantern is playing one recording from ~/.lantern/sounds/ via pygame.",
+            "Boundary": "Real recordings only. No synthesis. Speakers may bleed into open mic.",
+            "Next": "Say 'hush' to stop. Drop more songs in the folder to grow the library.",
+        }
+    if intent == "hush":
+        return {
+            "Vibe": "Going quiet.",
+            "Fact": "Lantern stopped playback.",
+            "Boundary": "Sound off; voice still here in text.",
+            "Next": "Say 'sing' again when you want music back.",
         }
     if intent == "doctor":
         status = (doctor or {}).get("status", "SMOKE")
@@ -309,6 +327,49 @@ def build_doctor_report() -> dict[str, Any]:
         "nextAction": next_action,
         "boundary": "Doctor is local-only and read-only except generated runtime state written by the launcher.",
     }
+
+
+SOUNDS_DIR = Path.home() / ".lantern" / "sounds"
+SOUND_EXTS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".opus"}
+
+
+def _maybe_play_sound() -> str | None:
+    """Trigger pygame to play one real-being recording from the operator's
+    curated sounds folder. Returns the filename if started, None otherwise.
+
+    Per the voice rule: only real recorded sounds, no synthesis. The folder
+    is operator-curated; if empty, returns None and the caller surfaces it.
+    """
+    try:
+        import pygame  # type: ignore
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        if not SOUNDS_DIR.exists():
+            return None
+        import random
+        files = [p for p in SOUNDS_DIR.iterdir()
+                 if p.is_file() and p.suffix.lower() in SOUND_EXTS]
+        if not files:
+            return None
+        pick = random.choice(files)
+        pygame.mixer.music.load(str(pick))
+        pygame.mixer.music.play()
+        return pick.name
+    except Exception:
+        return None
+
+
+def _maybe_stop_sound() -> bool:
+    """Stop any current pygame playback. Returns True if mixer was active."""
+    try:
+        import pygame  # type: ignore
+        if pygame.mixer.get_init():
+            was_busy = pygame.mixer.music.get_busy()
+            pygame.mixer.music.stop()
+            return bool(was_busy)
+    except Exception:
+        pass
+    return False
 
 
 def _append_journal(entry: dict[str, Any]) -> None:
@@ -470,6 +531,18 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         body = ["Hi, Papa.", "Captain Lantern Blinkbug is listening through the local door.", "What do you want to look at?"]
     elif intent == "ack":
         body = ["Got it.", "Standing by."]
+    elif intent == "sing":
+        played = _maybe_play_sound()
+        if played:
+            body = [f"Playing: {played}", "Real being singing. Speakers may bleed into the mic.", "Say 'hush' to stop."]
+        else:
+            body = ["Lantern has nothing to sing right now.", f"Drop a song into {SOUNDS_DIR}", "Real recordings only — voice rule."]
+    elif intent == "hush":
+        was_playing = _maybe_stop_sound()
+        if was_playing:
+            body = ["Quiet.", "Voice still here in text. Say 'sing' to start again."]
+        else:
+            body = ["Already quiet.", "Nothing was playing."]
     elif intent == "doctor" and doctor:
         body = [mode_line, "Lantern Doctor report:", f"Status: {doctor['status']}", f"Branch: {doctor['repo']['branch']}", f"Commit: {str(doctor['repo']['commit'])[:12]}", "Git status: " + (doctor["repo"]["gitStatusShort"] or "clean"), "Failed checks: " + (", ".join(doctor["failedChecks"]) if doctor["failedChecks"] else "none"), "Next action: " + doctor["nextAction"]]
     elif intent == "doctor":
@@ -498,8 +571,12 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
             past_lines.append(f"  {ts}  you: \"{you}\"")
     body_with_past = body if not past_lines else ([*past_lines, ""] + body)
     templated = "\n".join(["Lantern local answer", "", *body_with_past, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
+    # Action intents (sing, hush) are action-authoritative — the action result
+    # is what matters, not the LLM's commentary. Skip _maybe_call_llm for them
+    # so qwen-coder's safety refusal can't mask Lantern's actual hands.
+    _ACTION_INTENTS = {"sing", "hush"}
     # Opt-in live LLM voice. Off unless LANTERN_LLM_PROVIDER + OPENAI_API_KEY are set.
-    llm_reply = _maybe_call_llm(message, intent, minimal_frame, repo_state, selected)
+    llm_reply = None if intent in _ACTION_INTENTS else _maybe_call_llm(message, intent, minimal_frame, repo_state, selected)
     if llm_reply:
         text = llm_reply
         _model = os.environ.get("LANTERN_OPENAI_MODEL", "").strip()
