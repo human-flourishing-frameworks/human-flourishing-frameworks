@@ -219,6 +219,10 @@ metaphor = current implementation
 correlation = causation
 private conversation = public record
 project hope = current income
+binary state = adequate description of a gradient
+heard / not-heard = the truth of an analog signal
+on / off = the only available control for a continuous variable
+yes / no = sufficient resolution when PARTIAL, STALE, or UNKNOWN is honest
 ```
 
 ## Risk-management lens

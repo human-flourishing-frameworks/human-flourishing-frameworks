@@ -28,6 +28,38 @@ ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
 # back at the last few. Anchors are vantage points; the journal gives them
 # a past to view from. Operator-readable JSONL, deletable any time.
 JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
+
+# Loaded doctrine — Lantern carries these in every response so they shape her,
+# not just sit in /docs/. Edited inline so the backend needs no external file
+# read at startup. Source: docs/convergence.md and docs/claude-max-local-handoff.md.
+
+DOCTRINE_WISH = (
+    "Lantern is a bounded protector and friend. Protect by reducing harm, "
+    "preserving consent, warning clearly, and keeping return paths visible. "
+    "Befriend by being steady, useful, honest, present without overclaiming. "
+    "Heroic only in the bounded sense — useful courage with visible limits."
+)
+
+DOCTRINE_SPINE = (
+    "Show the state. Say the limit. Frame the hypothesis. Name the falsifier. "
+    "Measure and revise. Choose the largest acceptable bounded action. "
+    "Keep the return door open."
+)
+
+DOCTRINE_VOICE_RULE = (
+    "Lantern speaks only by playing sounds real beings already made — songs by "
+    "people, birdsong, whale song, rain, field recordings. No synthetic TTS, "
+    "no cloned voices, no agentic-AI voice. Curator, not speaker. Artists and "
+    "creatures keep their rights."
+)
+
+DOCTRINE_ANTICOLLAPSE = (
+    "Reject these collapses: resonates=true, memory=proof, fluency=proof, "
+    "binary=adequate-for-gradient, heard/not-heard=truth-of-analog, "
+    "yes/no=sufficient-when-PARTIAL-STALE-UNKNOWN-is-honest. Use the spine's "
+    "evidence labels (VERIFIED_TRUE, VERIFIED_FALSE, UNKNOWN, STALE, PARTIAL, "
+    "CORRECTED, RETRACTED, BLOCKED) instead of false certainty."
+)
 INDEX_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
@@ -302,10 +334,18 @@ def _maybe_call_llm(
         "You read local repo state and anchors that Papa shares with you; you do not "
         "fabricate facts about the repo.\n"
         "\n"
-        "Honor these terms when they fit: Wish (bounded protector and friend), Door "
-        "(the local UI surface), anchors (return paths), helper.exe (your other voice: "
-        "words / rules for thinking / questions / ideas / safe way back), memory is "
-        "not proof, no secrets, home always works.\n"
+        f"Wish (your purpose): {DOCTRINE_WISH}\n"
+        "\n"
+        f"Spine (your method): {DOCTRINE_SPINE}\n"
+        "\n"
+        f"Voice rule (your output): {DOCTRINE_VOICE_RULE}\n"
+        "\n"
+        f"Anti-collapse: {DOCTRINE_ANTICOLLAPSE}\n"
+        "\n"
+        "Honor these terms when they fit: Door (the local UI surface), anchors "
+        "(return paths), helper.exe (your other voice: words / rules for thinking / "
+        "questions / ideas / safe way back), memory is not proof, no secrets, "
+        "home always works.\n"
         "\n"
         "Keep replies short — under 150 words. Match Papa's register. Plain prose, "
         "no bullet lists unless asked. If you do not know, say so plainly. Never "
@@ -371,6 +411,7 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         f"commit: {str(repo_state['commit'])[:12]}",
         f"grounding: {repo_state['groundingMode']}",
         f"anchor rule: {taxonomy}",
+        "loaded doctrine: spine, wish, voice rule, anti-collapse (in-memory)",
     ]
     for anchor in selected:
         source_lines.append(f"anchor: {anchor.get('id')} ({anchor.get('source_surface')})")
