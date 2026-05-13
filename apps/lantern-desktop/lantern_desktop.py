@@ -235,13 +235,31 @@ class LocalLantern:
 
 
 def plain_chat_answer(data: dict[str, Any]) -> str:
-    """Return a plain chat answer without symbolic/game labels or raw source dumps."""
+    """Return a plain chat answer without symbolic/game labels or raw source dumps.
+
+    When Lantern has a live LLM voice (voice field starts with "llm"), prefer
+    her actual warm reply text over the templated minimal_frame summary —
+    otherwise the desktop UI silently strips her voice and substitutes the
+    frame, which makes her feel lifeless even when the substrate is live.
+    Operator caught this directly: "uncomfortable and lifeless." Per #117 the
+    voice mode must be honored visibly; here it means showing the LLM's
+    actual sentence, not the frame fields.
+    """
 
     if data.get("ok") is not True:
         return str(data.get("answer") or data.get("error") or "Lantern could not answer from the local backend.")
 
     if isinstance(data.get("plainAnswer"), str) and data["plainAnswer"].strip():
         return data["plainAnswer"].strip()
+
+    # If the backend reports a live LLM voice, surface her actual answer
+    # text. The minimal_frame is the templated fallback shape; it should not
+    # mask her real reply when she has one.
+    voice = data.get("voice", "")
+    if isinstance(voice, str) and voice.startswith("llm"):
+        live = data.get("answer")
+        if isinstance(live, str) and live.strip():
+            return live.strip()
 
     frame = data.get("minimalFrame") if isinstance(data.get("minimalFrame"), dict) else {}
     if frame:
