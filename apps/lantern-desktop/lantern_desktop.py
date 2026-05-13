@@ -358,6 +358,8 @@ class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
         self._build()
         self.after(100, self._poll)
         threading.Thread(target=self._start_backend, daemon=True).start()
+        # Global hotkey: Ctrl+Shift+L summons the window from any app.
+        threading.Thread(target=self._global_hotkey_loop, daemon=True).start()
 
     # ---------------------------------------------------------------- theming
 
@@ -754,6 +756,8 @@ class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
                     self.mic_state = "idle"
                     self.mic_button.configure(text="Talk")
                     self._append_system(f"Voice error: {value}")
+                elif kind == "summon":
+                    self._summon_window()
         except queue.Empty:
             pass
         self.after(100, self._poll)
@@ -777,6 +781,69 @@ class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
 
     def _ask_thread(self, message: str) -> None:
         self.events.put(("answer", plain_chat_answer(self.client.chat(message))))
+
+    # ---------------------------------------------------------- global hotkey
+
+    def _global_hotkey_loop(self) -> None:
+        """Listen for Ctrl+Shift+L from any window; raise Lantern Chat when fired.
+
+        Pure ctypes + Win32 RegisterHotKey. No new dependency. Listener thread
+        cannot touch Tk widgets directly — it pushes a "summon" event onto the
+        events queue and _poll handles the actual window-raise on the main
+        thread.
+
+        Silently no-ops on non-Windows or if registration fails (e.g. another
+        instance already grabbed the same key).
+        """
+        try:
+            import ctypes
+            from ctypes import wintypes
+        except ImportError:
+            return
+        if not hasattr(ctypes, "windll"):
+            return  # not Windows
+        user32 = ctypes.windll.user32
+        MOD_CONTROL = 0x0002
+        MOD_SHIFT   = 0x0004
+        VK_L        = 0x4C
+        WM_HOTKEY   = 0x0312
+        hotkey_id = 0xC0DE  # arbitrary
+        try:
+            ok = user32.RegisterHotKey(None, hotkey_id,
+                                       MOD_CONTROL | MOD_SHIFT, VK_L)
+        except Exception:
+            return
+        if not ok:
+            # Probably another instance owns the key. Not fatal.
+            return
+        try:
+            msg = wintypes.MSG()
+            while True:
+                ret = user32.GetMessageW(ctypes.byref(msg), None, 0, 0)
+                if ret == 0 or ret == -1:
+                    break
+                if msg.message == WM_HOTKEY and msg.wParam == hotkey_id:
+                    self.events.put(("summon", None))
+        finally:
+            try:
+                user32.UnregisterHotKey(None, hotkey_id)
+            except Exception:
+                pass
+
+    def _summon_window(self) -> None:
+        """Bring this Lantern Chat window forward on the operator's screen."""
+        try:
+            self.deiconify()
+            self.lift()
+            self.focus_force()
+            try:
+                self.attributes("-topmost", True)
+                self.after(120, lambda: self.attributes("-topmost", False))
+            except tk.TclError:
+                pass
+            self.input.focus_set()
+        except tk.TclError:
+            pass
 
     # ----------------------------------------------------------------- voice out
 
