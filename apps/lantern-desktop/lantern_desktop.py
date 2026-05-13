@@ -193,12 +193,29 @@ class LocalLantern:
             raise FileNotFoundError(f"Lantern backend script not found: {BACKEND_SCRIPT}")
         endpoint = self.choose_free_endpoint()
         port = int(endpoint.rsplit(":", 1)[1])
+        # Load operator substrate config from ~/.lantern/config.json so backend
+        # env survives every watchdog respawn, per the watchdog_envless_respawn
+        # and powershell_startprocess_env_drop anchor packets. If the config
+        # is missing or unreadable, fall back to current process env silently.
+        spawn_env = dict(os.environ)
+        config_path = Path.home() / ".lantern" / "config.json"
+        if config_path.exists():
+            try:
+                cfg = json.loads(config_path.read_text(encoding="utf-8"))
+                sub_env = cfg.get("substrate_env") if isinstance(cfg, dict) else None
+                if isinstance(sub_env, dict):
+                    for k, v in sub_env.items():
+                        if isinstance(k, str) and isinstance(v, str):
+                            spawn_env[k] = v
+            except (OSError, json.JSONDecodeError):
+                pass
         self.process = subprocess.Popen(
             [sys.executable, str(BACKEND_SCRIPT), "--host", "127.0.0.1", "--port", str(port)],
             cwd=REPO_ROOT,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             text=True,
+            env=spawn_env,
             creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
         )
         deadline = time.monotonic() + 10.0
