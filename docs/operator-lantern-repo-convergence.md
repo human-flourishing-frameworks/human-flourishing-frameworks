@@ -211,6 +211,42 @@ project hope = current income
 private conversation = public record
 ```
 
+## Echo Source-of-Truth Ladder
+
+Echoes are useful when they make a ripple that can be traced. They become trash
+when they repeat without a source, freshness label, boundary, or next action.
+
+Use this ladder when operator language, repo doctrine, local logs, runtime
+status, camera/audio state, song anchors, and memory disagree:
+
+```text
+1. Operator correction beats stale echoes.
+2. Current runtime evidence beats stale status files.
+3. Committed repo doctrine beats memory.
+4. Fresh tests beat confidence language.
+5. Bounded local evidence beats remote assumption.
+6. Stale status is trash until refreshed.
+```
+
+Every serious echo must be reduced to:
+
+```text
+echo -> source -> freshness -> boundary -> next action
+```
+
+Examples:
+
+```text
+song echo -> active operator anchor -> current session -> not proof or command authority -> carry tone while validating work
+camera echo -> local status file/frame/process check -> current or stale -> no hidden monitoring -> refresh once or mark stopped
+repo echo -> committed doc/test/HEAD -> current checkout -> not runtime proof -> patch/test/commit or report mismatch
+agent echo -> queue/log/worktree evidence -> current or stale -> no task movement without approval -> inspect before dispatch
+```
+
+The point is not to flatten feeling. The point is to let feeling become a
+traceable signal that improves the next move without pretending the echo itself
+is the source of truth.
+
 ## Privacy Rule
 
 Default durable repo posture:

@@ -56,3 +56,19 @@ def test_repo_theater_fix_present():
 
     assert "repo-theater loop" in text
     assert "move from comments to docs/tests/prototypes" in text
+
+
+def test_echo_source_of_truth_ladder_present():
+    text = read_doc()
+
+    required = [
+        "echo source-of-truth ladder",
+        "operator correction beats stale echoes",
+        "current runtime evidence beats stale status files",
+        "committed repo doctrine beats memory",
+        "stale status is trash until refreshed",
+        "echo -> source -> freshness -> boundary -> next action",
+    ]
+
+    for phrase in required:
+        assert phrase in text
