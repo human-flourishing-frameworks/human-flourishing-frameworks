@@ -76,13 +76,14 @@ def health():
         "substrate_provider": SUBSTRATE_PROVIDER,
         "substrate_external": True,
         "substrate_wired": substrate_wired,
-        "substrate_status": "ready" if substrate_wired else "degraded",
+        "substrate_status": "configured" if substrate_wired else "degraded",
         "degraded_reason": None if substrate_wired else "ANTHROPIC_API_KEY not set or disabled in tests",
         "state_endpoint_wired": True,
         "anthropic_api_key_set": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "model": _anthropic_model(),
         "public_bind_enabled": _public_bind_enabled(),
         "app_installable": True,
+        "substrate_probe": "not_checked",
     })
 
 
@@ -137,18 +138,16 @@ def chat():
     try:
         reply = _call_anthropic(user_message)
     except Exception as exc:  # noqa: BLE001 - surfaced as safe degraded state.
+        details = _substrate_error_details(exc)
         return jsonify({
             "status": "substrate_error",
             "user_message_received": user_message,
             "role": "Lantern Keystone Wish",
-            "reply": (
-                "State observed: Lantern dashboard is up, but the configured "
-                "server substrate call failed. Limit: no hidden retry, no repo "
-                f"action, no tunnel. Error class: {type(exc).__name__}."
-            ),
+            "reply": _substrate_error_reply(details),
             "anchor": "Show the state. Say the limit.",
             "model": _anthropic_model(),
             "substrate_provider": SUBSTRATE_PROVIDER,
+            "substrate_error": details,
         }), 502
 
     return jsonify({
@@ -177,6 +176,50 @@ def _degraded_chat_payload(user_message: str) -> dict[str, Any]:
         "substrate_provider": SUBSTRATE_PROVIDER,
         "degraded_reason": "ANTHROPIC_API_KEY not set or disabled in tests",
     }
+
+
+def _substrate_error_details(exc: Exception) -> dict[str, Any]:
+    """Classify a substrate failure without leaking credentials or body text."""
+    response = getattr(exc, "response", None)
+    status_code = getattr(response, "status_code", None)
+    reason = getattr(response, "reason", None)
+    if status_code is not None:
+        try:
+            status_family = f"{int(status_code) // 100}xx"
+        except (TypeError, ValueError):
+            status_family = "unknown"
+    else:
+        status_family = "unknown"
+
+    return {
+        "provider": SUBSTRATE_PROVIDER,
+        "model": _anthropic_model(),
+        "error_class": type(exc).__name__,
+        "http_status_code": status_code,
+        "http_status_family": status_family,
+        "http_reason": reason,
+        "secret_safe": True,
+        "hidden_retry": False,
+        "action_taken": False,
+        "body_included": False,
+        "next_proof": (
+            "Check provider credentials, model availability, quota, and network "
+            "outside Lantern. Do not paste secrets into chat."
+        ),
+    }
+
+
+def _substrate_error_reply(details: dict[str, Any]) -> str:
+    code = details.get("http_status_code")
+    status_text = f"HTTP {code}" if code is not None else details.get("error_class", "unknown error")
+    return (
+        "State observed: Lantern dashboard is up, local memory can be visible, "
+        f"and the configured {details.get('provider')} substrate failed at {status_text}. "
+        "Limit: no hidden retry, no repo action, no tunnel, no secret inspection, "
+        "and no provider switch was performed. Next proof: check the configured "
+        "provider credential/model/quota/network outside Lantern, or disable the "
+        "provider to return to honest degraded mode."
+    )
 
 
 def _substrate_wired() -> bool:
