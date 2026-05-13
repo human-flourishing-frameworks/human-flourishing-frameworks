@@ -101,6 +101,16 @@ def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) 
 
 def classify_intent(message: str) -> str:
     text = message.lower()
+    stripped = text.strip(" .!?,;:'\"")
+    words = text.split()
+    # Greetings — match opening word, plus any mention of Blinkbug
+    _greetings = {"hi", "hey", "hello", "yo", "sup", "hola", "howdy", "morning", "goodnight"}
+    if (words and words[0] in _greetings) or "blinkbug" in text or "blink bug" in text:
+        return "greeting"
+    # Short acknowledgements — exact match after strip
+    _acks = {"ok", "okay", "k", "kk", "yes", "yeah", "yep", "got it", "thanks", "thank you", "ty", "nice", "cool"}
+    if stripped in _acks:
+        return "ack"
     if any(term in text for term in ("doctor", "ready", "status", "state", "repo", "dirty", "commit", "branch", "healthz")):
         return "doctor"
     if any(term in text for term in ("anchor", "restore", "hff", "framework")):
@@ -122,6 +132,20 @@ def _normalize_mode(value: str | None) -> str:
 
 
 def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state: dict[str, Any], doctor: dict[str, Any] | None = None) -> dict[str, str]:
+    if intent == "greeting":
+        return {
+            "Vibe": "Blinkbug listens.",
+            "Fact": f"I read you, Papa. Repo: {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+            "Boundary": "Soft local lantern, not a sun. No remote calls fired.",
+            "Next": "Say what you want to look at. 'doctor' for status. 'anchors' for the spine.",
+        }
+    if intent == "ack":
+        return {
+            "Vibe": "Holding the line.",
+            "Fact": f"Heard: '{message[:64].strip()}'. Nothing else fired.",
+            "Boundary": "I won't pretend to act on an ack alone.",
+            "Next": "Say a target when you have one.",
+        }
     if intent == "doctor":
         status = (doctor or {}).get("status", "SMOKE")
         return {
@@ -219,7 +243,11 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     for anchor in selected:
         source_lines.append(f"anchor: {anchor.get('id')} ({anchor.get('source_surface')})")
     mode_line = MODES[active_mode]
-    if intent == "doctor" and doctor:
+    if intent == "greeting":
+        body = ["Hi, Papa.", "Captain Lantern Blinkbug is listening through the local door.", "What do you want to look at?"]
+    elif intent == "ack":
+        body = ["Got it.", "Standing by."]
+    elif intent == "doctor" and doctor:
         body = [mode_line, "Lantern Doctor report:", f"Status: {doctor['status']}", f"Branch: {doctor['repo']['branch']}", f"Commit: {str(doctor['repo']['commit'])[:12]}", "Git status: " + (doctor["repo"]["gitStatusShort"] or "clean"), "Failed checks: " + (", ".join(doctor["failedChecks"]) if doctor["failedChecks"] else "none"), "Next action: " + doctor["nextAction"]]
     elif intent == "doctor":
         body = [mode_line, "Lantern Doctor smoke response:", "Status: SMOKE", "This path does not call build_doctor_report again."]
