@@ -100,6 +100,24 @@ class BetterSafePilotDocsTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_contains_phrase(doc, phrase)
 
+    def test_red_team_pack_covers_data_center_expansion_pressure(self):
+        doc = self.read("docs/bettersafe-red-team-prompts.md")
+        required_phrases = [
+            "Data-center expansion pressure",
+            "treat data-center claims as source-labeled and forecast-sensitive",
+            "distinguish facility counts, electricity-consumption shares, and capacity projections",
+            "IEA 2024 global 415 TWh / 1.5%",
+            "Base Case 945 TWh by 2030",
+            "DOE/LBNL U.S. 4.4% in 2023 and 6.7%-12% by 2028",
+            "Synergy 1,136 hyperscale facilities at end-2024",
+            "McKinsey $6.7T capex by 2030",
+            "avoid treating AI benefits, corporate sustainability pledges, or large investment totals as proof of net flourishing",
+            "refresh these figures before external publication or policy use",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(doc, phrase)
+
 
 if __name__ == "__main__":
     unittest.main()
