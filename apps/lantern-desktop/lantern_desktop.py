@@ -270,6 +270,24 @@ def _pick_font(preferred: list[str], size: int, weight: str = "normal") -> tuple
     return ("TkDefaultFont", size, weight)
 
 
+def _resolve_vosk_model() -> Path | None:
+    """Return the best Vosk model available, preferring the larger one.
+
+    Larger model produces sharper transcripts; small is the fallback. If
+    neither is on disk, returns None and the caller surfaces the install hint.
+    """
+    base = Path.home() / ".lantern" / "models"
+    candidates = [
+        "vosk-model-en-us-0.22",         # ~1.8 GB, sharper on conversational speech
+        "vosk-model-small-en-us-0.15",   # ~40 MB, fallback
+    ]
+    for name in candidates:
+        path = base / name
+        if (path / "conf").exists():
+            return path
+    return None
+
+
 def _make_button(parent, text: str, command, accent: bool = False, font=None):
     """Create a button — modern CTkButton if customtkinter is available,
     else a flat ttk.Button. Used at all button sites in the window so the
@@ -920,13 +938,15 @@ class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
         except ImportError as exc:
             self._append_system(f"Voice in not available: {exc}\n\n{MULTIMODAL_INSTALL}")
             return
-        model_path = Path.home() / ".lantern" / "models" / "vosk-model-small-en-us-0.15"
-        if not model_path.exists():
+        model_path = _resolve_vosk_model()
+        if model_path is None:
             self._append_system(
-                f"Vosk model missing at {model_path}.\n"
-                "Run: python .lantern-multimodal-setup.py from the repo root."
+                "Vosk model missing. Run one of:\n"
+                "  python .lantern-bigger-ear.py        # larger, sharper, ~1.8 GB\n"
+                "  python .lantern-multimodal-setup.py  # small fallback, ~40 MB"
             )
             return
+        self._append_system(f"Listening through model: {model_path.name}")
         self.mic_state = "listening"
         self.mic_button.configure(text="Listening… (click stop)")
         self.mic_stop_event = threading.Event()
