@@ -9,8 +9,8 @@ Current surface:
 - `/` serves the GPT-style Lantern dashboard;
 - `/manifest.webmanifest` supports desktop/phone install shortcuts;
 - `/api/lantern/health` reports provider/model/bind/degraded-mode status;
-- `/api/lantern/state` reads local git HEAD/ref state, doctrine paths, and an
-  optional last-test record;
+- `/api/lantern/state` reads local git HEAD/ref state, doctrine paths, an
+  optional last-test record, and optional local LLM context metadata;
 - `/api/lantern/chat` calls Anthropic Messages API when configured.
 
 Boundary:
@@ -36,6 +36,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LANTERN_DIR = Path(__file__).resolve().parent
 LANTERN_HOME = Path.home() / ".lantern"
 LAST_TEST_PATH = LANTERN_HOME / "state" / "last-test.json"
+LOCAL_LLM_CONTEXT_PATH = LANTERN_HOME / "state" / "llm-context.local.md"
+LOCAL_LLM_CONTEXT_MAX_CHARS = 12000
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = "claude-3-5-sonnet-latest"
 SUBSTRATE_PROVIDER = "anthropic"
@@ -98,9 +100,11 @@ def state():
         "repo": _repo_state(),
         "loaded_doctrine": _loaded_doctrine_paths(),
         "last_test": _last_test_state(),
+        "local_llm_context": _local_llm_context_state(include_excerpt=True),
         "limits": [
             "chat can answer through the configured server substrate",
             "state and sensors are read-only in this dashboard",
+            "local LLM context is optional, read-only, operator-visible, and not proof",
             "dirty worktree details require an operator-run status check",
             "no repo writes, merges, deploys, agents, tunnels, or commands from chat",
         ],
@@ -255,6 +259,7 @@ def _chat_state_summary() -> dict[str, Any]:
         "repo": _repo_state(),
         "last_test": _last_test_state(),
         "loaded_doctrine": _loaded_doctrine_paths(),
+        "local_llm_context": _local_llm_context_state(include_excerpt=False),
         "public_bind_enabled": _public_bind_enabled(),
         "substrate_provider": SUBSTRATE_PROVIDER,
         "substrate_wired": _substrate_wired(),
@@ -410,6 +415,70 @@ def _last_test_state() -> dict[str, Any]:
     data.setdefault("status", "present")
     data.setdefault("path", display_path)
     return data
+
+
+def _local_llm_context_state(
+    include_excerpt: bool = False,
+    max_chars: int = LOCAL_LLM_CONTEXT_MAX_CHARS,
+) -> dict[str, Any]:
+    """Return optional local LLM context packet state without claiming proof."""
+    display_path = "~/.lantern/state/llm-context.local.md"
+    path = LOCAL_LLM_CONTEXT_PATH
+
+    if not path.is_file():
+        return {
+            "status": "missing",
+            "path": display_path,
+            "format": "markdown",
+            "local_only": True,
+            "operator_visible": True,
+            "memory_is_proof": False,
+            "message": "No local LLM context packet found.",
+        }
+
+    try:
+        size_bytes = path.stat().st_size
+    except OSError as exc:
+        return {
+            "status": "unreadable",
+            "path": display_path,
+            "format": "markdown",
+            "local_only": True,
+            "operator_visible": True,
+            "memory_is_proof": False,
+            "message": str(exc),
+        }
+
+    payload: dict[str, Any] = {
+        "status": "present",
+        "path": display_path,
+        "format": "markdown",
+        "local_only": True,
+        "operator_visible": True,
+        "memory_is_proof": False,
+        "size_bytes": size_bytes,
+        "content_included": include_excerpt,
+        "max_chars": max_chars if include_excerpt else 0,
+    }
+
+    if not include_excerpt:
+        return payload
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        payload.update({
+            "status": "unreadable",
+            "content_included": False,
+            "message": str(exc),
+        })
+        return payload
+
+    payload.update({
+        "content_excerpt": text[:max_chars],
+        "truncated": len(text) > max_chars,
+    })
+    return payload
 
 
 def _public_bind_enabled() -> bool:
