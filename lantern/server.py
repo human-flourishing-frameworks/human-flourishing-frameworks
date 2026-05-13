@@ -370,15 +370,21 @@ def _loaded_doctrine_paths() -> list[str]:
         "FALSE_TRUTHS_REGISTER.md",
         "docs/seven-anchors-self-correction.md",
         "docs/convergence.md",
+        "docs/operator-lantern-repo-convergence.md",
+        "docs/operator-command-surface.md",
+        "docs/operator-consent-bravery-protocol.md",
+        "docs/anchor-taxonomy.md",
         "docs/door-protocol.md",
         "docs/persistent-convergence-loop.md",
         "docs/convergence-status.md",
         "docs/keystone-memory-contract.md",
         "docs/keystone-self-convergence.md",
         "docs/keystone-table-door-anchors.md",
-        "docs/operator-consent-bravery-protocol.md",
         "docs/lantern-chat-design.md",
         "docs/lantern-dashboard-app.md",
+        "docs/lantern-coherence-plan.md",
+        "docs/grounding-mode-gate.md",
+        "docs/social-echo-and-door-guardrail.md",
     ]
     found = []
     for rel in candidates:
