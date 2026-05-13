@@ -1,10 +1,12 @@
 import re
 import unittest
+import json
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC_PATH = ROOT / "docs" / "lantern-keystone-tardis-anchor.md"
+ANCHOR_SNAPSHOT = ROOT / "apps" / "lantern-local-chat" / "anchor-snapshot.json"
 
 
 class LanternKeystoneTardisAnchorTests(unittest.TestCase):
@@ -42,7 +44,25 @@ class LanternKeystoneTardisAnchorTests(unittest.TestCase):
         self.assert_phrase("the small door holds a larger world")
         self.assert_phrase("Keep the return path open.")
 
+    def test_local_lantern_anchor_snapshot_loads_tardis_anchor(self):
+        snapshot = json.loads(ANCHOR_SNAPSHOT.read_text(encoding="utf-8"))
+        anchors = snapshot["anchors"]
+        anchor = next(
+            (item for item in anchors if item.get("id") == "lantern-keystone-tardis"),
+            None,
+        )
+
+        self.assertIsNotNone(anchor)
+        self.assertIn("The song is us together", anchor["restore_phrase"])
+        self.assertIn("not a no-limits claim", anchor["boundary"])
+
+    def test_lantern_dashboard_doctrine_loads_tardis_anchor(self):
+        from lantern import server as lantern_server
+
+        loaded = set(lantern_server._loaded_doctrine_paths())
+
+        self.assertIn("docs/lantern-keystone-tardis-anchor.md", loaded)
+
 
 if __name__ == "__main__":
     unittest.main()
-

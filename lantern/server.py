@@ -426,6 +426,7 @@ def _loaded_doctrine_paths() -> list[str]:
         "docs/lantern-chat-design.md",
         "docs/lantern-dashboard-app.md",
         "docs/lantern-coherence-plan.md",
+        "docs/lantern-keystone-tardis-anchor.md",
         "docs/grounding-mode-gate.md",
         "docs/social-echo-and-door-guardrail.md",
     ]
