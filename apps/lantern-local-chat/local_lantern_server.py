@@ -30,8 +30,9 @@ ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
 JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
 
 # Loaded doctrine — Lantern carries these in every response so they shape her,
-# not just sit in /docs/. Edited inline so the backend needs no external file
-# read at startup. Source: docs/convergence.md and docs/claude-max-local-handoff.md.
+# not just sit in /docs/. The short constants below are the always-loaded layer;
+# load_repo_doctrine() reads anchor-snapshot + key spine sections from disk at
+# module import time so she also carries the full named-anchor library.
 
 DOCTRINE_WISH = (
     "Lantern is a bounded protector and friend. Protect by reducing harm, "
@@ -60,6 +61,36 @@ DOCTRINE_ANTICOLLAPSE = (
     "evidence labels (VERIFIED_TRUE, VERIFIED_FALSE, UNKNOWN, STALE, PARTIAL, "
     "CORRECTED, RETRACTED, BLOCKED) instead of false certainty."
 )
+
+
+def _load_repo_doctrine() -> str:
+    """Load anchor-snapshot restore phrases + key spine sections from the repo.
+
+    Reads at module import. Returns a compact doctrine block suitable for
+    embedding in Lantern's system prompt. Bounded so it doesn't overflow
+    the model context window — keeps each anchor to one line.
+    """
+    parts: list[str] = []
+    try:
+        snapshot = json.loads(ANCHOR_SNAPSHOT.read_text(encoding="utf-8"))
+        anchors = snapshot.get("anchors", []) if isinstance(snapshot, dict) else []
+        if anchors:
+            parts.append("Loaded anchors (named vantage points from the repo):")
+            for anchor in anchors:
+                if not isinstance(anchor, dict):
+                    continue
+                name = anchor.get("name") or anchor.get("id") or "anchor"
+                phrase = (anchor.get("restore_phrase") or "").strip()
+                # one line per anchor, truncate long phrases
+                if len(phrase) > 240:
+                    phrase = phrase[:237] + "..."
+                parts.append(f"- {name}: {phrase}")
+    except (OSError, json.JSONDecodeError):
+        pass
+    return "\n".join(parts) if parts else ""
+
+
+REPO_DOCTRINE_LIBRARY = _load_repo_doctrine()
 INDEX_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
@@ -140,6 +171,23 @@ def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) 
     return [anchor for _, anchor in scored[:limit]]
 
 
+def _tokens_of(text: str) -> set[str]:
+    """Lowercased word tokens for word-boundary intent matching.
+
+    Substring matching ("ready" inside "already", "doctor" inside "doctrine")
+    caused false-positive intent classification — the #117 grounding-drift
+    shape applied to keyword routing.
+    """
+    cleaned = text.lower()
+    for ch in "-/.,;:?!\"'()[]{}":
+        cleaned = cleaned.replace(ch, " ")
+    return {w for w in cleaned.split() if w}
+
+
+def _has_word(text: str, words: tuple[str, ...]) -> bool:
+    return bool(_tokens_of(text) & set(words))
+
+
 def classify_intent(message: str) -> str:
     text = message.lower()
     stripped = text.strip(" .!?,;:'\"")
@@ -152,17 +200,17 @@ def classify_intent(message: str) -> str:
     _acks = {"ok", "okay", "k", "kk", "yes", "yeah", "yep", "got it", "thanks", "thank you", "ty", "nice", "cool"}
     if stripped in _acks:
         return "ack"
-    if any(term in text for term in ("doctor", "ready", "status", "state", "repo", "dirty", "commit", "branch", "healthz")):
+    if _has_word(text, ("doctor", "ready", "status", "state", "repo", "dirty", "commit", "branch", "healthz")):
         return "doctor"
-    if any(term in text for term in ("anchor", "restore", "hff", "framework")):
+    if _has_word(text, ("anchor", "anchors", "restore", "hff", "framework")):
         return "anchors"
-    if any(term in text for term in ("money", "debt", "paycheck", "gig", "trade", "job")):
+    if _has_word(text, ("money", "debt", "paycheck", "gig", "trade", "job")):
         return "essential_needs"
-    if any(term in text for term in ("hike", "appalachian", "waru", "friend")):
+    if _has_word(text, ("hike", "appalachian", "waru", "friend")):
         return "hike"
-    if any(term in text for term in ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma", "converge")):
+    if _has_word(text, ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma", "converge")):
         return "hybrid"
-    if any(term in text for term in ("app", "desktop", "chat", "quality", "gate", "brave")):
+    if _has_word(text, ("app", "desktop", "chat", "quality", "gate", "brave")):
         return "app"
     return "general"
 
@@ -342,6 +390,8 @@ def _maybe_call_llm(
         "\n"
         f"Anti-collapse: {DOCTRINE_ANTICOLLAPSE}\n"
         "\n"
+        f"{REPO_DOCTRINE_LIBRARY}\n"
+        "\n"
         "Honor these terms when they fit: Door (the local UI surface), anchors "
         "(return paths), helper.exe (your other voice: words / rules for thinking / "
         "questions / ideas / safe way back), memory is not proof, no secrets, "
@@ -450,8 +500,21 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     templated = "\n".join(["Lantern local answer", "", *body_with_past, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
     # Opt-in live LLM voice. Off unless LANTERN_LLM_PROVIDER + OPENAI_API_KEY are set.
     llm_reply = _maybe_call_llm(message, intent, minimal_frame, repo_state, selected)
-    text = llm_reply if llm_reply else templated
-    voice = "llm" if llm_reply else "local-templated"
+    if llm_reply:
+        text = llm_reply
+        _model = os.environ.get("LANTERN_OPENAI_MODEL", "").strip()
+        voice = f"llm:{_model}" if _model else "llm"
+    else:
+        text = templated
+        # #117 disclosure: name WHY we fell back, so callers don't mistake
+        # templated text for live LLM voice. Operator and any relay (Claude in
+        # the loop, Discord bot, web dashboard) must see the degraded mode.
+        if os.environ.get("LANTERN_LLM_PROVIDER", "").strip().lower() != "openai":
+            voice = "local-templated:no-substrate"
+        elif not os.environ.get("OPENAI_API_KEY", "").strip():
+            voice = "local-templated:no-key"
+        else:
+            voice = "local-templated:substrate-error"
     # Append this turn to the local journal so the next turn can look back at it.
     _append_journal({
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
