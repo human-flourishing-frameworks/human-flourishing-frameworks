@@ -52,6 +52,11 @@ AVATAR_PATH = Path.home() / ".lantern" / "avatar.png"
 # Optional Wish-scene painting. If present, shown as a hero strip above the chat.
 WISH_SCENE_PATH = Path.home() / ".lantern" / "state" / "wish-scene.png"
 
+# Curated sound library — Lantern reads only from here. Operator drops songs in.
+# No other folder is scanned. Empty folder = Lantern has nothing to sing.
+SOUNDS_DIR = Path.home() / ".lantern" / "sounds"
+SOUND_EXTS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".opus"}
+
 # Hints surfaced when an operator clicks a multimodal button before installs landed.
 #
 # VOICE RULE: Lantern speaks ONLY by PLAYING sounds real beings already made —
@@ -549,6 +554,13 @@ class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
         self.mic_state = "idle"  # idle | listening | transcribing
         self.mic_stop_event: threading.Event | None = None
 
+        # Sing button — voice out via curated recordings (Bumblebee pattern).
+        # Plays a file from ~/.lantern/sounds/ only. No synthesis. No scanning.
+        self.sing_button = _make_button(input_wrap, "Sing", self._on_sing_click)
+        self.sing_button.pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
+        self.sing_state = "quiet"  # quiet | playing
+        self._pygame_inited = False
+
         ttk.Label(
             outer,
             text="Enter sends   ·   Shift+Enter newline   ·   Ctrl+Enter also sends",
@@ -765,6 +777,66 @@ class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
 
     def _ask_thread(self, message: str) -> None:
         self.events.put(("answer", plain_chat_answer(self.client.chat(message))))
+
+    # ----------------------------------------------------------------- voice out
+
+    def _on_sing_click(self) -> None:
+        if self.sing_state == "playing":
+            self._stop_singing()
+            return
+        try:
+            import pygame  # noqa: F401
+        except ImportError as exc:
+            self._append_system(f"Sing not available: {exc}\n\npip install pygame")
+            return
+        if not SOUNDS_DIR.exists():
+            SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
+        files = [p for p in SOUNDS_DIR.iterdir()
+                 if p.is_file() and p.suffix.lower() in SOUND_EXTS]
+        if not files:
+            self._append_system(
+                f"Lantern has nothing to sing tonight.\n"
+                f"Drop song files into {SOUNDS_DIR}\\\n"
+                "  .mp3 .wav .ogg .m4a .flac .opus"
+            )
+            return
+        import random as _random
+        pick = _random.choice(files)
+        threading.Thread(target=self._play_thread, args=(pick,), daemon=True).start()
+
+    def _stop_singing(self) -> None:
+        try:
+            import pygame
+            pygame.mixer.music.stop()
+        except Exception:
+            pass
+        self.sing_state = "quiet"
+        self.sing_button.configure(text="Sing")
+
+    def _play_thread(self, path: Path) -> None:
+        try:
+            import pygame
+            if not self._pygame_inited:
+                pygame.mixer.init()
+                self._pygame_inited = True
+            pygame.mixer.music.load(str(path))
+            pygame.mixer.music.play()
+        except Exception as exc:
+            self.events.put(("voice_error", f"sing: {type(exc).__name__}: {exc}"))
+            return
+        self.sing_state = "playing"
+        self.sing_button.configure(text="Hush")
+        self._append_system(f"Lantern is playing: {path.name}")
+        # Poll until playback ends or stop fires
+        try:
+            import pygame
+            while pygame.mixer.music.get_busy() and self.sing_state == "playing":
+                time.sleep(0.2)
+        except Exception:
+            pass
+        if self.sing_state == "playing":
+            self.sing_state = "quiet"
+            self.sing_button.configure(text="Sing")
 
     # ------------------------------------------------------------------ voice in
 
