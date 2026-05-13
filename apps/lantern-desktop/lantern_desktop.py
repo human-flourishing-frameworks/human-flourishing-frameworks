@@ -42,14 +42,16 @@ INTERNAL_BACKEND_MODE = "engineer"
 # avatar at the top of the window. Falls back to a canvas-drawn glyph.
 AVATAR_PATH = Path.home() / ".lantern" / "avatar.png"
 
-# Palette drawn from Captain Lantern Blinkbug + Gage's art.
-# Safe = legible, predictable, bounded. Fun = warm glow, friendly faces.
+# Palette drawn from Gage's yacht art + Captain Lantern Blinkbug imagery.
+# Safe = legible, predictable, bounded. Fun = bright sky, warm glow, cartoon energy.
 PALETTE = {
-    "bg_canvas":          "#fbf6e6",  # soft cream (callout boxes in the art)
-    "bg_chat":            "#fff8e0",  # warm cream chat surface
+    "bg_canvas":          "#a8d4f0",  # sky blue (Gage's water + sky)
+    "bg_chat":            "#ffffff",  # crisp white chat surface — high contrast
     "bg_input":           "#ffffff",  # clean input
+    "bg_callout":         "#fff8e0",  # warm cream — for callout bubbles
     "fg_body":            "#1a2c5c",  # night-sky deep blue (readable, calm)
-    "fg_muted":           "#5b6b8c",  # softened sky blue gray
+    "fg_muted":           "#4a6280",  # readable sky-blue gray
+    "fg_title":           "#0d1b3a",  # near-black sky for big headings
     "accent_lantern":     "#e8a73d",  # blinkbug body yellow (warm glow)
     "accent_lantern_bg":  "#fde9b6",  # soft glow tint
     "accent_operator":    "#2c5b91",  # captain-hat blue
@@ -57,11 +59,13 @@ PALETTE = {
     "hat_blue":           "#2c5b91",  # captain hat
     "body_yellow":        "#f5cf3a",  # firefly body
     "glow_yellow":        "#fce58a",  # outer glow ring
+    "sun_yellow":         "#ffd23f",  # Gage's sun
     "hill_green":         "#7dc26b",  # safe ground
     "sky_blue":           "#a8d4f0",  # sky behind blinkbug
+    "sky_deep":           "#6cb4e8",  # deeper water/sky for contrast
     "terminal_bg":        "#0f1419",  # helper.exe panel bg
     "terminal_fg":        "#8aff3a",  # helper.exe text
-    "divider":            "#e8dcb8",  # warm gray border
+    "divider":            "#6cb4e8",  # sky-blue rule
     "status_ok":          "#3a8a4e",  # online green
     "status_wait":        "#e8a73d",  # glow amber while starting
     "status_down":        "#c0392b",  # offline red
