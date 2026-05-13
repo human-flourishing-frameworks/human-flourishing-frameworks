@@ -39,10 +39,38 @@ function Get-RepoRoot {
 function Invoke-Git {
     param([string]$RepoRoot, [string[]]$Arguments)
 
-    $result = & git -C $RepoRoot @Arguments 2>&1
+    # Use System.Diagnostics.Process instead of PowerShell native redirection.
+    # Windows PowerShell can convert native stderr lines such as Git's normal
+    # "From https://..." fetch banner into NativeCommandError records when
+    # ErrorActionPreference is Stop. Capturing stdout/stderr directly keeps
+    # ordinary Git progress text from aborting the watchdog before it can open
+    # the desktop app.
+    $psi = [System.Diagnostics.ProcessStartInfo]::new()
+    $psi.FileName = "git"
+    $psi.WorkingDirectory = $RepoRoot
+    $psi.UseShellExecute = $false
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.CreateNoWindow = $true
+
+    [void]$psi.ArgumentList.Add("-C")
+    [void]$psi.ArgumentList.Add($RepoRoot)
+    foreach ($arg in $Arguments) {
+        [void]$psi.ArgumentList.Add($arg)
+    }
+
+    $process = [System.Diagnostics.Process]::Start($psi)
+    $stdout = $process.StandardOutput.ReadToEnd()
+    $stderr = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+
+    $parts = @()
+    if (-not [string]::IsNullOrWhiteSpace($stdout)) { $parts += $stdout.Trim() }
+    if (-not [string]::IsNullOrWhiteSpace($stderr)) { $parts += $stderr.Trim() }
+
     return [PSCustomObject]@{
-        ExitCode = $LASTEXITCODE
-        Output = ($result | Out-String).Trim()
+        ExitCode = $process.ExitCode
+        Output = ($parts -join [Environment]::NewLine).Trim()
     }
 }
 
