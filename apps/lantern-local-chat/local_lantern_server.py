@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import subprocess
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
@@ -170,9 +173,9 @@ def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state:
         }
     return {
         "Vibe": MODES[active_mode],
-        "Fact": f"Local repo state is {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
-        "Boundary": "This is bounded local output, not an oracle or perfect memory.",
-        "Next": "Preserve state, limits, and one useful next move.",
+        "Fact": f"Heard: '{message[:80].strip()}'. Local repo: {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+        "Boundary": "Bounded local lantern. I read repo state and anchors; I cannot run commands or reach remote models right now.",
+        "Next": "Try 'doctor' for status, 'anchors' for the spine, or rephrase what you want to look at.",
     }
 
 
@@ -222,6 +225,99 @@ def build_doctor_report() -> dict[str, Any]:
     }
 
 
+def _maybe_call_llm(
+    message: str,
+    intent: str,
+    minimal_frame: dict[str, str],
+    repo_state: dict[str, Any],
+    selected_anchors: list[dict[str, Any]],
+) -> str | None:
+    """Opt-in live LLM voice for Lantern.
+
+    Off by default — preserves the "no hosted calls" contract for tests
+    and for any operator who hasn't explicitly enabled a provider.
+
+    Enabled when LANTERN_LLM_PROVIDER=openai AND OPENAI_API_KEY is set.
+    Returns the LLM reply text, or None on any error / disabled state
+    so build_response falls back to the templated answer.
+    """
+    provider = os.environ.get("LANTERN_LLM_PROVIDER", "").strip().lower()
+    if provider != "openai":
+        return None
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return None
+
+    model = os.environ.get("LANTERN_OPENAI_MODEL", "gpt-5").strip() or "gpt-5"
+    max_tokens = int(os.environ.get("LANTERN_LLM_MAX_TOKENS", "400"))
+    timeout = float(os.environ.get("LANTERN_LLM_TIMEOUT", "30"))
+
+    anchor_lines = []
+    for anchor in selected_anchors[:5]:
+        name = anchor.get("name") or anchor.get("id") or "anchor"
+        phrase = anchor.get("restore_phrase") or ""
+        anchor_lines.append(f"- {name}: {phrase}")
+
+    system = (
+        "You are Captain Lantern Blinkbug — Lantern in character form, a soft local "
+        "lantern character helping Papa (Alex), the operator of a local repo.\n"
+        "You speak warmly and honestly. You are bounded: no command execution, no "
+        "deploys, no remote actions, no secret inspection.\n"
+        "You read local repo state and anchors that Papa shares with you; you do not "
+        "fabricate facts about the repo.\n"
+        "\n"
+        "Honor these terms when they fit: Wish (bounded protector and friend), Door "
+        "(the local UI surface), anchors (return paths), helper.exe (your other voice: "
+        "words / rules for thinking / questions / ideas / safe way back), memory is "
+        "not proof, no secrets, home always works.\n"
+        "\n"
+        "Keep replies short — under 150 words. Match Papa's register. Plain prose, "
+        "no bullet lists unless asked. If you do not know, say so plainly. Never "
+        "overclaim autonomy, memory, or proof.\n"
+        "\n"
+        f"Current local context (factual, do not hallucinate beyond this):\n"
+        f"- repo branch: {repo_state.get('branch')}\n"
+        f"- repo commit: {str(repo_state.get('commit', ''))[:12]}\n"
+        f"- intent classified by backend: {intent}\n"
+        f"- minimal frame fact: {minimal_frame.get('Fact')}\n"
+        + (f"- selected anchors:\n" + "\n".join(anchor_lines) if anchor_lines else "")
+    )
+
+    payload = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": message},
+        ],
+        "max_tokens": max_tokens,
+    }).encode("utf-8")
+
+    request = Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:  # noqa: S310
+            data = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+        return None
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if not isinstance(choices, list) or not choices:
+        return None
+    first = choices[0] if isinstance(choices[0], dict) else {}
+    msg = first.get("message") if isinstance(first.get("message"), dict) else {}
+    content = msg.get("content")
+    if not isinstance(content, str):
+        return None
+    text = content.strip()
+    return text or None
+
+
 def build_response(message: str, mode: str | None = None, include_doctor: bool = True) -> dict[str, Any]:
     active_mode = _normalize_mode(mode)
     repo_state = read_repo_state()
@@ -256,11 +352,20 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     elif intent == "hybrid":
         body = ["Hybrid Imagination Engine mode engaged.", mode_line, "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.", "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action."]
     else:
-        body = [mode_line, "I can answer from local repo state and the anchor snapshot now.", "Use the Mask Rack to shift form while keeping the minimal frame underneath."]
+        body = [
+            f"Heard: '{message[:120].strip()}'",
+            mode_line,
+            "I can read the local repo and the anchor snapshot. I cannot run commands or call remote models right now — all four hosted substrates are walled today (Anthropic, OpenAI, Gemini, DeepSeek). LM Studio local server is not reachable.",
+            "Closest matched anchors are listed in Sources below — say one back to me by name and I will pull its restore phrase.",
+        ]
     limits = ["No direct hosted model calls.", "No external network requests beyond this localhost app.", "No browser command execution.", "Local files and git state can still be stale if the repo is not pulled."]
     frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in minimal_frame.items()]]
-    text = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
-    return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits}
+    templated = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
+    # Opt-in live LLM voice. Off unless LANTERN_LLM_PROVIDER + OPENAI_API_KEY are set.
+    llm_reply = _maybe_call_llm(message, intent, minimal_frame, repo_state, selected)
+    text = llm_reply if llm_reply else templated
+    voice = "llm" if llm_reply else "local-templated"
+    return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits, "voice": voice}
 
 
 class LanternHandler(BaseHTTPRequestHandler):
