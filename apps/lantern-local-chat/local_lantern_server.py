@@ -284,6 +284,9 @@ def _maybe_call_llm(
     model = os.environ.get("LANTERN_OPENAI_MODEL", "gpt-5").strip() or "gpt-5"
     max_tokens = int(os.environ.get("LANTERN_LLM_MAX_TOKENS", "400"))
     timeout = float(os.environ.get("LANTERN_LLM_TIMEOUT", "30"))
+    # Base URL is configurable — point at LM Studio (http://127.0.0.1:1234/v1) for
+    # fully offline operation. Defaults to OpenAI's hosted endpoint.
+    base_url = os.environ.get("LANTERN_OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
 
     anchor_lines = []
     for anchor in selected_anchors[:5]:
@@ -326,7 +329,7 @@ def _maybe_call_llm(
     }).encode("utf-8")
 
     request = Request(
-        "https://api.openai.com/v1/chat/completions",
+        f"{base_url}/chat/completions",
         data=payload,
         headers={
             "Authorization": f"Bearer {api_key}",
