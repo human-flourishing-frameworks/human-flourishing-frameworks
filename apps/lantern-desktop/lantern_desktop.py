@@ -31,6 +31,13 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+try:
+    import customtkinter as ctk
+    _CTK = True
+except ImportError:
+    ctk = None  # type: ignore
+    _CTK = False
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_SCRIPT = REPO_ROOT / "apps" / "lantern-local-chat" / "local_lantern_server.py"
@@ -41,6 +48,34 @@ INTERNAL_BACKEND_MODE = "engineer"
 # Optional operator-supplied branding image. If present, used as the Lantern
 # avatar at the top of the window. Falls back to a canvas-drawn glyph.
 AVATAR_PATH = Path.home() / ".lantern" / "avatar.png"
+
+# Optional Wish-scene painting. If present, shown as a hero strip above the chat.
+WISH_SCENE_PATH = Path.home() / ".lantern" / "state" / "wish-scene.png"
+
+# Hints surfaced when an operator clicks a multimodal button before installs landed.
+#
+# VOICE RULE: Lantern speaks ONLY by PLAYING sounds real beings already made —
+# songs by people, birdsong, whale song, rain, Binx purring, any field recording
+# from the operator's library. Bumblebee-style — Lantern carries what the world
+# already sang. NOT allowed: synthetic TTS, cloned voices, agentic-AI voice.
+# Lantern is a curator, not a speaker. Artists and creatures keep their rights.
+MULTIMODAL_INSTALL = (
+    "Multimodal install for offline operation:\n"
+    "  pip install pyaudio vosk opencv-python pygame\n"
+    "\n"
+    "What each unlocks:\n"
+    "  pyaudio          mic capture (Windows backend for speech_recognition)\n"
+    "  vosk             offline speech-to-text engine\n"
+    "  opencv-python    camera capture and frames\n"
+    "  pygame           local audio playback for the sound-as-voice path\n"
+    "\n"
+    "Voice rule: Lantern speaks only by PLAYING sounds real beings already made —\n"
+    "songs by people, birdsong, whale song, rain, cat purring, field recordings.\n"
+    "No synthetic TTS. No cloned voices. No agentic-AI voice. Lantern is a\n"
+    "curator, not a speaker — artists and creatures keep their rights.\n"
+    "\n"
+    "All offline. No cloud. No quota. Approval required before install."
+)
 
 # Palette drawn from Gage's yacht art + Captain Lantern Blinkbug imagery.
 # Safe = legible, predictable, bounded. Fun = bright sky, warm glow, cartoon energy.
@@ -230,7 +265,45 @@ def _pick_font(preferred: list[str], size: int, weight: str = "normal") -> tuple
     return ("TkDefaultFont", size, weight)
 
 
-class LanternChat(tk.Tk):
+def _make_button(parent, text: str, command, accent: bool = False, font=None):
+    """Create a button — modern CTkButton if customtkinter is available,
+    else a flat ttk.Button. Used at all button sites in the window so the
+    UI raises its standard in one place."""
+    if _CTK:
+        if accent:
+            return ctk.CTkButton(
+                parent, text=text, command=command,
+                fg_color=PALETTE["accent_lantern"],
+                hover_color="#b46f00",
+                text_color="#fff8ec",
+                corner_radius=10,
+                height=44, width=110,
+                font=("Segoe UI Variable", 14, "bold"),
+            )
+        return ctk.CTkButton(
+            parent, text=text, command=command,
+            fg_color=PALETTE["bg_chat"],
+            hover_color=PALETTE["divider"],
+            text_color=PALETTE["fg_body"],
+            corner_radius=8,
+            height=34, width=86,
+            border_width=1,
+            border_color=PALETTE["divider"],
+            font=font or ("Segoe UI", 11),
+        )
+    style = "Accent.TButton" if accent else "TButton"
+    return ttk.Button(parent, text=text, command=command, style=style)
+
+
+if _CTK:
+    ctk.set_appearance_mode("light")
+    ctk.set_default_color_theme("blue")
+    _BaseWindow = ctk.CTk
+else:
+    _BaseWindow = tk.Tk
+
+
+class LanternChat(_BaseWindow):  # type: ignore[misc,valid-type]
     """Persistent local desktop chat for Lantern and the repo."""
 
     def __init__(self) -> None:
@@ -238,7 +311,10 @@ class LanternChat(tk.Tk):
         self.title("Lantern Chat")
         self.geometry("1040x760")
         self.minsize(820, 560)
-        self.configure(bg=PALETTE["bg_canvas"])
+        if _CTK:
+            self.configure(fg_color=PALETTE["bg_canvas"])
+        else:
+            self.configure(bg=PALETTE["bg_canvas"])
 
         self.client = LocalLantern()
         self.events: queue.Queue[tuple[str, Any]] = queue.Queue()
@@ -250,6 +326,18 @@ class LanternChat(tk.Tk):
         self.status_dot: tk.Canvas | None = None
         self.avatar_image: tk.PhotoImage | None = None
 
+        # The Door — live state surface, refreshed each poll
+        self.door_repo    = tk.StringVar(value="repo: —")
+        self.door_backend = tk.StringVar(value="backend: —")
+        self.door_anchors = tk.StringVar(value="anchors: —")
+        self.door_time    = tk.StringVar(value="time: —")
+
+        # The Anchors — operator vantage points loaded from local snapshot
+        self.anchors: list[dict[str, Any]] = self._load_anchors()
+
+        # Wish-scene painting (None until _load_wish_scene runs)
+        self.wish_scene_image: tk.PhotoImage | None = None
+
         # Fonts — graceful fallback chain.
         self.font_title  = _pick_font(["Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", "Helvetica"], 22, "bold")
         self.font_h2     = _pick_font(["Segoe UI Variable", "Segoe UI", "Helvetica"], 11, "bold")
@@ -260,6 +348,7 @@ class LanternChat(tk.Tk):
 
         self._install_theme()
         self._load_avatar()
+        self._load_wish_scene()
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._build()
         self.after(100, self._poll)
@@ -297,6 +386,25 @@ class LanternChat(tk.Tk):
         style.map("Accent.TButton",
                   background=[("active", "#b46f00"), ("pressed", "#9d6000")])
 
+    def _load_anchors(self) -> list[dict[str, Any]]:
+        """Load operator anchors from the local snapshot.
+
+        Each anchor is a vantage point: source_surface + short_meaning look
+        back, allowed_use + restore_phrase look forward, boundary fences both.
+        """
+        path = REPO_ROOT / "apps" / "lantern-local-chat" / "anchor-snapshot.json"
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return []
+        if isinstance(raw, list):
+            return [a for a in raw if isinstance(a, dict)]
+        if isinstance(raw, dict):
+            anchors = raw.get("anchors")
+            if isinstance(anchors, list):
+                return [a for a in anchors if isinstance(a, dict)]
+        return []
+
     def _load_avatar(self) -> None:
         if AVATAR_PATH.exists():
             try:
@@ -308,6 +416,36 @@ class LanternChat(tk.Tk):
                     self.avatar_image = self.avatar_image.subsample(factor, factor)
             except tk.TclError:
                 self.avatar_image = None
+
+    def _load_wish_scene(self) -> None:
+        """Load the painted Wish scene as a hero image for the chat surface.
+
+        The painting IS the app — operator instruction. Scaled with PIL to a
+        fixed 200 px hero strip so it never crowds the input row.
+        """
+        if not WISH_SCENE_PATH.exists():
+            return
+        target_h = 200
+        try:
+            from PIL import Image, ImageTk  # type: ignore
+            img = Image.open(WISH_SCENE_PATH)
+            ratio = target_h / img.height
+            target_w = max(1, int(img.width * ratio))
+            img = img.resize((target_w, target_h), Image.LANCZOS)
+            self.wish_scene_image = ImageTk.PhotoImage(img)
+            return
+        except ImportError:
+            pass
+        # Fallback when Pillow is unavailable
+        try:
+            img2 = tk.PhotoImage(file=str(WISH_SCENE_PATH))
+            h = img2.height()
+            if h > target_h:
+                factor = max(1, h // target_h)
+                img2 = img2.subsample(factor, factor)
+            self.wish_scene_image = img2
+        except tk.TclError:
+            self.wish_scene_image = None
 
     # ----------------------------------------------------------------- layout
 
@@ -346,6 +484,12 @@ class LanternChat(tk.Tk):
         # ---- divider ----
         tk.Frame(outer, height=1, bg=PALETTE["divider"]).pack(fill=tk.X, pady=(14, 10))
 
+        # ---- the Wish scene (the painting IS the app) ----
+        if self.wish_scene_image is not None:
+            hero = ttk.Label(outer, image=self.wish_scene_image,
+                             background=PALETTE["bg_canvas"])
+            hero.pack(fill=tk.X, pady=(0, 10))
+
         # ---- meta row ----
         meta = ttk.Frame(outer)
         meta.pack(fill=tk.X)
@@ -353,14 +497,14 @@ class LanternChat(tk.Tk):
 
         toolbar = ttk.Frame(meta)
         toolbar.pack(side=tk.RIGHT)
-        ttk.Button(toolbar, text="Status",  command=self.show_status).pack(side=tk.LEFT)
-        ttk.Button(toolbar, text="Clear",   command=self.clear).pack(side=tk.LEFT, padx=(6, 0))
+        _make_button(toolbar, "Status", self.show_status).pack(side=tk.LEFT)
+        _make_button(toolbar, "Clear",  self.clear).pack(side=tk.LEFT, padx=(6, 0))
 
         # ---- chat surface ----
         chat_wrap = ttk.Frame(outer, style="Card.TFrame")
         chat_wrap.pack(fill=tk.BOTH, expand=True, pady=(12, 0))
         self.output = scrolledtext.ScrolledText(
-            chat_wrap, wrap=tk.WORD, height=22,
+            chat_wrap, wrap=tk.WORD, height=12,
             font=self.font_chat,
             background=PALETTE["bg_chat"],
             foreground=PALETTE["fg_body"],
@@ -394,8 +538,16 @@ class LanternChat(tk.Tk):
         self.input.bind("<Control-Return>", self._on_control_enter)
         self.input.focus_set()
 
-        self.send_button = ttk.Button(input_wrap, text="Send", style="Accent.TButton", command=self.ask)
+        self.send_button = _make_button(input_wrap, "Send", self.ask, accent=True)
         self.send_button.pack(side=tk.RIGHT, fill=tk.Y, padx=(10, 0))
+
+        # Mic button — voice in. Spawns a Vosk capture worker; transcript
+        # lands in the input box so Papa can review and Send. Voice rule
+        # stays: Lantern hears, but doesn't synthesize voice out.
+        self.mic_button = _make_button(input_wrap, "Talk", self._on_mic_click)
+        self.mic_button.pack(side=tk.RIGHT, fill=tk.Y, padx=(8, 0))
+        self.mic_state = "idle"  # idle | listening | transcribing
+        self.mic_stop_event: threading.Event | None = None
 
         ttk.Label(
             outer,
@@ -573,6 +725,23 @@ class LanternChat(tk.Tk):
                     self.waiting_for_reply = False
                     self._set_send_enabled(True)
                     self._append_lantern(value)
+                elif kind == "transcript":
+                    self.mic_state = "idle"
+                    self.mic_button.configure(text="Talk")
+                    if isinstance(value, str) and value.strip():
+                        current = self.input.get("1.0", tk.END).strip()
+                        if current:
+                            self.input.insert(tk.END, " " + value.strip())
+                        else:
+                            self.input.insert("1.0", value.strip())
+                        self.input.focus_set()
+                        self._append_system(f"Heard: \"{value.strip()}\" (review and Send)")
+                    else:
+                        self._append_system("Mic stopped — nothing transcribed.")
+                elif kind == "voice_error":
+                    self.mic_state = "idle"
+                    self.mic_button.configure(text="Talk")
+                    self._append_system(f"Voice error: {value}")
         except queue.Empty:
             pass
         self.after(100, self._poll)
@@ -596,6 +765,87 @@ class LanternChat(tk.Tk):
 
     def _ask_thread(self, message: str) -> None:
         self.events.put(("answer", plain_chat_answer(self.client.chat(message))))
+
+    # ------------------------------------------------------------------ voice in
+
+    def _on_mic_click(self) -> None:
+        if self.mic_state == "idle":
+            self._start_listening()
+        elif self.mic_state == "listening":
+            self._stop_listening()
+
+    def _start_listening(self) -> None:
+        try:
+            import sounddevice  # noqa: F401
+            import vosk  # noqa: F401
+        except ImportError as exc:
+            self._append_system(f"Voice in not available: {exc}\n\n{MULTIMODAL_INSTALL}")
+            return
+        model_path = Path.home() / ".lantern" / "models" / "vosk-model-small-en-us-0.15"
+        if not model_path.exists():
+            self._append_system(
+                f"Vosk model missing at {model_path}.\n"
+                "Run: python .lantern-multimodal-setup.py from the repo root."
+            )
+            return
+        self.mic_state = "listening"
+        self.mic_button.configure(text="Listening… (click stop)")
+        self.mic_stop_event = threading.Event()
+        threading.Thread(target=self._listen_thread, args=(model_path,), daemon=True).start()
+        self._append_system("Mic on. Speak. Click the button again to stop.")
+
+    def _stop_listening(self) -> None:
+        if self.mic_stop_event is not None:
+            self.mic_stop_event.set()
+
+    def _listen_thread(self, model_path: Path) -> None:
+        try:
+            import sounddevice as sd
+            import vosk
+            import numpy as np
+        except ImportError as exc:
+            self.events.put(("voice_error", f"import failed: {exc}"))
+            return
+        sample_rate = 16000
+        block_size = 4000
+        model = vosk.Model(str(model_path))
+        recognizer = vosk.KaldiRecognizer(model, sample_rate)
+        recognizer.SetWords(False)
+        audio_queue: queue.Queue[bytes] = queue.Queue()
+
+        def callback(indata, frames, time_info, status):  # type: ignore[no-untyped-def]
+            if status:
+                pass  # input overflow / underflow — ignore for now
+            # indata is float32 in [-1, 1]; convert to int16 PCM bytes for Vosk
+            pcm16 = (indata[:, 0] * 32767).astype(np.int16).tobytes()
+            audio_queue.put(pcm16)
+
+        text_parts: list[str] = []
+        try:
+            with sd.InputStream(samplerate=sample_rate, channels=1, dtype="float32",
+                                blocksize=block_size, callback=callback):
+                assert self.mic_stop_event is not None
+                while not self.mic_stop_event.is_set():
+                    try:
+                        chunk = audio_queue.get(timeout=0.1)
+                    except queue.Empty:
+                        continue
+                    if recognizer.AcceptWaveform(chunk):
+                        partial = json.loads(recognizer.Result()).get("text", "")
+                        if partial:
+                            text_parts.append(partial)
+            # drain any remaining and finalize
+            while not audio_queue.empty():
+                chunk = audio_queue.get_nowait()
+                recognizer.AcceptWaveform(chunk)
+            final = json.loads(recognizer.FinalResult()).get("text", "")
+            if final:
+                text_parts.append(final)
+        except Exception as exc:  # pragma: no cover - UI surface.
+            self.events.put(("voice_error", f"mic capture: {type(exc).__name__}: {exc}"))
+            return
+        transcript = " ".join(p for p in text_parts if p).strip()
+        self.events.put(("transcript", transcript))
 
     def show_status(self) -> None:
         health = self.client.health()
