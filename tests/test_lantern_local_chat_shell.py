@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 import unittest
+import importlib.util
 from pathlib import Path
 
 
@@ -138,6 +141,31 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertIn("Sources:", payload["answer"])
         self.assertIn("anchor rule:", payload["answer"])
         self.assertGreaterEqual(len(payload["selectedAnchors"]), 1)
+
+    def test_backend_journal_is_opt_in_not_raw_transcript_default(self) -> None:
+        spec = importlib.util.spec_from_file_location("local_lantern_server_under_test", LOCAL_BACKEND)
+        self.assertIsNotNone(spec)
+        self.assertIsNotNone(spec.loader)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            journal_path = Path(tmpdir) / "journal.jsonl"
+            module.JOURNAL_PATH = journal_path
+            old_value = os.environ.pop("LANTERN_ENABLE_JOURNAL", None)
+            try:
+                module.build_response("private raw transcript should not be stored by default", mode="engineer")
+                self.assertFalse(journal_path.exists())
+
+                os.environ["LANTERN_ENABLE_JOURNAL"] = "true"
+                module.build_response("operator explicitly enabled local journal", mode="engineer")
+                self.assertTrue(journal_path.exists())
+                self.assertIn("operator explicitly enabled local journal", journal_path.read_text(encoding="utf-8"))
+            finally:
+                if old_value is None:
+                    os.environ.pop("LANTERN_ENABLE_JOURNAL", None)
+                else:
+                    os.environ["LANTERN_ENABLE_JOURNAL"] = old_value
 
     def test_backend_doctor_smoke(self) -> None:
         result = subprocess.run([sys.executable, str(LOCAL_BACKEND), "--doctor"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)

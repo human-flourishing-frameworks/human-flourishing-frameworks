@@ -28,6 +28,7 @@ ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
 # back at the last few. Anchors are vantage points; the journal gives them
 # a past to view from. Operator-readable JSONL, deletable any time.
 JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
+JOURNAL_ENV = "LANTERN_ENABLE_JOURNAL"
 
 # Loaded doctrine — Lantern carries these in every response so they shape her,
 # not just sit in /docs/. The short constants below are the always-loaded layer;
@@ -372,8 +373,14 @@ def _maybe_stop_sound() -> bool:
     return False
 
 
+def _journal_enabled() -> bool:
+    return os.environ.get(JOURNAL_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _append_journal(entry: dict[str, Any]) -> None:
-    """Append a single turn to the local journal. Silent on any write error."""
+    """Append a single turn to the opt-in local journal. Silent on write error."""
+    if not _journal_enabled():
+        return
     try:
         JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
         with JOURNAL_PATH.open("a", encoding="utf-8") as fh:
@@ -383,7 +390,9 @@ def _append_journal(entry: dict[str, Any]) -> None:
 
 
 def _read_recent_journal(n: int = 3) -> list[dict[str, Any]]:
-    """Return the last n journal entries. Empty list on any read error."""
+    """Return the last n opt-in journal entries. Empty list when disabled."""
+    if not _journal_enabled():
+        return []
     if not JOURNAL_PATH.exists():
         return []
     try:
@@ -592,7 +601,7 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
             voice = "local-templated:no-key"
         else:
             voice = "local-templated:substrate-error"
-    # Append this turn to the local journal so the next turn can look back at it.
+    # Append this turn only when the operator explicitly enabled local journaling.
     _append_journal({
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "kind": "chat",
