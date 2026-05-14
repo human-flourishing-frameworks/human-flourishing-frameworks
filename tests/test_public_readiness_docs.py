@@ -71,6 +71,26 @@ class PublicReadinessDocsTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_contains_phrase(policy, phrase)
 
+    def test_public_surface_policy_classifies_p0_webcam_and_discord_routes(self):
+        policy = self.read("docs/public-surface-policy.md")
+        required_phrases = [
+            "Operator webcam session",
+            "Private / operator-only",
+            "P0 readiness, not public by default",
+            "visible preview",
+            "hard off switch",
+            "fresh consent each session",
+            "Discord Lantern adapter",
+            "Private / permissioned room",
+            "P0 route, not public by default",
+            "explicit allowed guild",
+            "explicit allowed channel",
+            "Do not join their room without their all permission",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(policy, phrase)
+
     def test_public_surface_policy_protects_minor_device_pilots(self):
         policy = self.read("docs/public-surface-policy.md")
         required_phrases = [
