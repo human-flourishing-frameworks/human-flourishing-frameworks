@@ -10,6 +10,36 @@ This addendum repairs the operator / door / BetterSafe convergence path without 
 
 It is docs-only. It adds no runtime authority, no physical-system access, no device control, no telemetry, no deployment behavior, and no permission to act in a home, building, vehicle, network, or infrastructure system.
 
+## BetterSave alias
+
+```text
+BetterSave = operator spelling / save-state alias for BetterSafe when the work is to preserve the bounded path and reduce drift.
+```
+
+Allowed use:
+
+```text
+save the current safe-fun doctrine state
+preserve operator language as a source label
+route symbolic play into reversible, supervised, non-harmful actions
+keep the repo revision public-safe and minimum-necessary
+```
+
+Blocked use:
+
+```text
+claiming a new runtime product exists
+claiming the repo can control physical systems
+using save-state language as consent forever
+recording protected-person, household, or location details
+```
+
+Restore phrase:
+
+```text
+BetterSave means save the bounded path: preserve the signal, remove harm framing, keep Home working, and converge by review.
+```
+
 ## Operator anchor
 
 ```text
@@ -76,6 +106,84 @@ Restore phrase:
 
 ```text
 Door Guard GPT stands at the threshold: operator is key, Home works, and paradoxes stay visible until reviewed.
+```
+
+## Mouth-agent paradox filter
+
+```text
+A paradox filter is sealed on both sides of the mouth agent.
+```
+
+Meaning:
+
+```text
+input is filtered before the agent speaks
+output is filtered before the agent commits, claims, stores, or routes action
+```
+
+Allowed use:
+
+```text
+hold paradoxes without leaking them into overclaiming
+separate symbol from proof before speaking
+separate speech from durable action before writing
+route uncertain phrases back through operator correction and review
+```
+
+Blocked use:
+
+```text
+letting poetic language become autonomous authority
+letting safety language erase operator direction
+committing private, physical, or identifying details through speech momentum
+using the filter as censorship instead of bounded translation
+```
+
+Restore phrase:
+
+```text
+Seal both sides of the mouth: filter what enters, filter what exits, preserve the paradox, then converge by review.
+```
+
+## Safe sword / clanker play boundary
+
+Symbolic sword and clanker language is allowed only as supervised, reversible safe-fun play.
+
+Allowed use:
+
+```text
+power down
+sleep mode
+freeze tag
+spark drop
+helper part
+repair bench
+Home return
+```
+
+Blocked use:
+
+```text
+kill language as instruction
+real weapons
+real targets
+real people, pets, property, or machines as targets
+unsupervised escalation
+instructions for harm
+```
+
+TinFist-style aura rule:
+
+```text
+inside the aura, symbolic tools can only calm, pause, power down, or transform a pretend clanker into a helper part
+outside the aura, symbolic tools do nothing
+Home always works
+```
+
+Restore phrase:
+
+```text
+Sword play is symbolic: inside the safe aura it powers down pretend clankers; outside the aura it does nothing; no real target is ever included.
 ```
 
 ## Safe-fun paradox
