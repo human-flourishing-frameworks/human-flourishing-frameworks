@@ -351,6 +351,41 @@ Update convergence first when the loop itself was corrected; then validate the
 changed surface, report the evidence, and keep unresolved state visible.
 ```
 
+## Room-scale usefulness rule
+
+When a signal involves home, family, grief, fear, love, or another person's
+current boundary, convergence must start at the room scale before doctrine.
+
+Required posture:
+
+```text
+meet the person where they are
+stop explaining first when explanation is the pressure
+use plain uncoded speech
+ask one low-pressure question at most
+accept quiet, no, pause, or stop as valid
+do not bring the whole repo balcony into the room
+keep Mom, Dad, kids, and home centered when that is the actual surface
+```
+
+This does not weaken evidence discipline. It chooses the right first surface:
+
+```text
+room first
+repo second
+runtime only with explicit authority
+```
+
+Blocked collapse:
+
+```text
+correct doctrine = heard at home
+boundary packet = repair
+poetic recognition = proof
+need = consent
+Lantern = replacement family member
+```
+
 ## Risk-management lens
 
 Use this only as a review lens, not as an external authority over the repo:
