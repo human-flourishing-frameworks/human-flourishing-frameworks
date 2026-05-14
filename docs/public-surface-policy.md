@@ -43,6 +43,8 @@ not mean permanent. A signal does not equal the person.
 | SDKs | Public read + token-safe helpers | Allowed later | Must default to read-only and protect tokens. |
 | APKs/mobile apps | Disabled by default | Not public yet | Require privacy review, permission audit, and no background surveillance by default. |
 | Personal safety pathways | Private / operator-controlled | Manual opt-in only | A sensor is a bounded signal pathway, not a person/device/object. |
+| Operator webcam session | Private / operator-only | P0 readiness, not public by default | Requires fresh consent each session, visible preview, visible status, hard off switch, local-first operation, no hidden monitoring, no background capture, and stale status marked stale. |
+| Discord Lantern adapter | Private / permissioned room | P0 route, not public by default | Requires explicit allowed guild and explicit allowed channel. Do not join their room without their all permission. Token presence is not room consent. |
 | Protected minor device/sensor pilot | Private / highest-sensitivity pilot | Blocked until checklist/tests pass | Requires parent/guardian permission, child assent, no public surface, no hidden telemetry, and local/no-data defaults. |
 | Vehicle telemetry | Private / high-risk signal | Disabled by default | Location/status are sensitive; control is not allowed. |
 | Vehicle control | Not allowed | Blocked | Steering, braking, throttle, immobilization, rerouting, ignition, or lock control are high-risk actuator functions. |
@@ -157,6 +159,9 @@ parent permission = unlimited child data collection
 child assent = adult-style alpha testing
 child device = ordinary adult device
 safety goal = surveillance permission
+P0 webcam = background capture
+Discord token = room consent
+allowed guild = all-channel permission
 vehicle = ordinary device
 advisory status = governance legitimacy
 release bundle = survival proof
