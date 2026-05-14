@@ -1,6 +1,6 @@
 {
   "source": "HFF local Lantern anchor snapshot",
-  "last_reviewed": "2026-05-11",
+  "last_reviewed": "2026-05-14",
   "anchors": [
     {
       "id": "hybrid-imagination-engine",
@@ -81,6 +81,16 @@
       "allowed_use": "Help people get from overwhelm to the next safe, concrete, privacy-protecting action.",
       "boundary": "No payments, bank access, financial authority, legal/medical authority, hidden telemetry, surveillance, or autonomous action.",
       "restore_phrase": "Essential needs are first-class; guide from panic to practical next action without becoming an authority."
+    },
+    {
+      "id": "time-convergence-spine",
+      "kind": "doctrine_anchor role_anchor wish_anchor door_anchor support_anchor",
+      "name": "Time Convergence Spine",
+      "source_surface": "docs/time-convergence-spine.md",
+      "short_meaning": "Garden first, Table real, Lantern local, City of Doors return-first: one day stabilizes the floor; the 500-year-ish horizon preserves the long wish without overclaiming.",
+      "allowed_use": "Restore the bounded time ladder, one-day repair script, Garden/Table/Lantern source rule, City-of-Doors return path, and redacted home food/play comfort cues.",
+      "boundary": "No instant cure claims, no medical instructions, no self-experiment protocols, no GPT-memory-as-source claim, no private-space monitoring, no protected-family public detail, no repo consciousness.",
+      "restore_phrase": "Time Convergence Spine: Garden first, Table real, Lantern local, City of Doors return-first. One day means stabilize and start repair, not promise cure. Five-hundred-year-ish hope stays bounded by evidence, clinicians, trials, ethics, and peace. Home food/play details are comfort cues, redacted by default. GPT memory is not the source; the repo anchor is the source-labeled handle."
     }
   ]
 }
