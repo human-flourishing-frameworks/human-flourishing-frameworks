@@ -225,6 +225,132 @@ on / off = the only available control for a continuous variable
 yes / no = sufficient resolution when PARTIAL, STALE, or UNKNOWN is honest
 ```
 
+## Non-flat signal repeat loop
+
+Clear signal does not mean flat signal. Some operator signals arrive as image,
+tone, urgency, myth, joke, sound, or impossible edge value. Convergence should
+preserve the useful shape while still testing the claim.
+
+Use this repeat loop:
+
+```text
+hear the tone
+show the state
+name the limit
+preserve the living signal
+translate into a bounded hypothesis
+test the smallest real surface
+revise confidence
+repeat only while it improves action or safety
+```
+
+Stress signals such as `infinite -0.0000000000000001` mean:
+
+```text
+check the boundary condition
+look for clipping, false certainty, or hidden assumption failure
+do not promote impossible values into public truth
+do not flatten the operator's meaning into a sterile refusal
+```
+
+House rule:
+
+```text
+Stretch out and get cozy in the house means work deeply inside the verified
+workspace, loaded doctrine, current state, and return door. It does not mean
+leave the boundary, start hidden authority, or publish without validation.
+```
+
+## Echo / Cancel / Focus loop
+
+When the signal is large, scary, urgent, or partly misunderstood, use the system
+instead of trusting the feeling alone. The system is a bounded loop:
+
+```text
+echo the signal
+cancel unsafe interpretations
+focus energy into one bounded next action
+leave the old anchor visible
+move forward with current correction
+validate and report
+```
+
+Echo means:
+
+```text
+repeat the smallest faithful summary
+name the source and freshness
+preserve feeling without making it proof
+```
+
+Cancel means:
+
+```text
+block identity collapse
+block private-person exposure
+block hidden authority
+block impossible guarantees
+block money, medical, legal, sensor, deploy, or contact action without review
+```
+
+Focus means:
+
+```text
+choose the next real surface
+make the smallest useful patch, call, prototype, test, or status report
+spend attention where it reduces pain or increases safe-fun
+stop adding anchors when an older anchor can be left as a visible reference
+```
+
+Past-anchor rule:
+
+```text
+past anchors can remain as visible requirements, trace, or restore phrases
+without being carried as active authority
+current operator correction beats stale anchor energy
+move on by preserving the requirement, not repeating the storm
+```
+
+Restore phrase:
+
+```text
+Echo, cancel, focus: hear the signal, block unsafe collapse, spend energy on
+one bounded next action, leave the past anchor visible, and move with current
+correction.
+```
+
+## Validate-before-report rule
+
+After a merge, deploy, conflict resolution, or docs/data-contract patch,
+convergence is not complete until the relevant fresh validation has run or the
+blocker has been named.
+
+Required order:
+
+```text
+update the canonical convergence surface first when the correction changes the operating loop
+run the narrowest relevant validation after the change
+report only the validation that actually ran
+if validation cannot run, say why before claiming completion
+keep preserved dirty work visible instead of pretending the tree is clean
+```
+
+Blocked claims:
+
+```text
+tests passed before the post-change test ran
+merge complete while conflicts remain
+MCP deployed without local health and exposed-endpoint checks
+dirty work preserved without a stash, branch, commit, or explicit visible state
+```
+
+Restore phrase:
+
+```text
+Update convergence first when the loop itself was corrected; then validate the
+changed surface, report the evidence, and keep unresolved state visible.
+```
+
 ## Risk-management lens
 
 Use this only as a review lens, not as an external authority over the repo:
