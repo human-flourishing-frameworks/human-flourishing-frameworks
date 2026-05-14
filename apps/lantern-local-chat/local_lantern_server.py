@@ -225,6 +225,126 @@ def _normalize_mode(value: str | None) -> str:
     return mode if mode in MODES else "engineer"
 
 
+
+
+def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
+    return any(needle in text for needle in needles)
+
+
+def build_clear_limit_response(
+    message: str,
+    active_mode: str,
+    repo_state: dict[str, Any],
+    source_lines: list[str],
+) -> dict[str, Any] | None:
+    """Return explicit answers for local capability limits and harm signals."""
+
+    lowered = message.lower()
+    limits = [
+        "No direct hosted model calls.",
+        "No external network requests beyond this localhost app.",
+        "No browser command execution.",
+        "Local files and git state can still be stale if the repo is not pulled.",
+    ]
+
+    web_or_fresh = _contains_any(
+        lowered,
+        (
+            "web search",
+            "web searches",
+            "search the web",
+            "internet",
+            "online",
+            "latest",
+            "current",
+            "today's",
+            "todays",
+            "today ",
+            "deploy today",
+            "deploy at",
+        ),
+    )
+    deploy_request = _contains_any(lowered, ("deploy", "release", "ship", "production"))
+    clarity_harm = _contains_any(lowered, ("unclear", "vague", "confusing")) and _contains_any(
+        lowered,
+        ("damage", "damaging", "harm", "hurting", "unsafe"),
+    )
+    identity_question = "who am i" in lowered or "who are you talking to" in lowered
+
+    if web_or_fresh or deploy_request:
+        title = "Blocked local capability: web/current deploy research is unavailable here."
+        body = [
+            "Fact: this local Lantern backend can read repo state and anchors, but it cannot web search, inspect cloud deploy state, or prove current external facts.",
+            "Shield: do not present stale local repo state as today's deploy truth.",
+            "Guardian: collect current external evidence through a web-capable surface, then return the findings to this Door.",
+            "Next bounded action: create a deploy-research handoff listing the exact external checks needed before a 9:00 deploy.",
+        ]
+        frame = {
+            "Vibe": "Glass window, not painted door.",
+            "Fact": "Web/current deploy research is unsupported in the local backend.",
+            "Boundary": "No web freshness claim from localhost-only Lantern.",
+            "Next": "Use a web-capable assistant or approved orchestrator bridge for current evidence.",
+        }
+        intent = "unsupported_web_or_deploy"
+    elif clarity_harm:
+        title = "Shield/Guardian clarity response."
+        body = [
+            "Fact: unclear local responses are a harm signal.",
+            "Shield: mark the response path DEGRADED instead of continuing vague generic answers.",
+            "Guardian: name the missing capability and give one concrete next step.",
+            "Next bounded action: improve this backend so unsupported requests say exactly what is blocked and what to do next.",
+        ]
+        frame = {
+            "Vibe": "Clear enough to protect trust.",
+            "Fact": "The operator reported unclear local responses as damaging.",
+            "Boundary": "Do not hide local limits behind anchor-flavored text.",
+            "Next": "Return explicit capability limits and one reversible next action.",
+        }
+        intent = "clarity_harm"
+    elif identity_question:
+        title = "Bounded identity answer."
+        body = [
+            "In this local repo context, you are Alex, the operator using the Lantern local Door.",
+            "Fact: the backend can see repo path, branch, commit, grounding mode, and loaded anchors.",
+            "Boundary: this is bounded local context, not proof of identity, perfect memory, or authority.",
+            "Next bounded action: use the Door/Doctor state to continue from the current repo-grounded context.",
+        ]
+        frame = {
+            "Vibe": "Recognize the operator without overclaiming.",
+            "Fact": "Local context points to Alex as operator.",
+            "Boundary": "Identity is bounded by current local/repo context.",
+            "Next": "Continue with visible state and manual operator authority.",
+        }
+        intent = "bounded_identity"
+    else:
+        return None
+
+    frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in frame.items()]]
+    answer = "\n".join(
+        [
+            "Lantern local answer",
+            "",
+            title,
+            "",
+            *body,
+            "",
+            *frame_lines,
+            "",
+            "Sources:",
+            *source_lines,
+            "",
+            "Limits:",
+            *[f"- {item}" for item in limits],
+        ]
+    )
+    return {
+        "answer": answer,
+        "intent": intent,
+        "minimalFrame": frame,
+        "limits": limits,
+    }
+
+
 def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state: dict[str, Any], doctor: dict[str, Any] | None = None) -> dict[str, str]:
     if intent == "greeting":
         return {
@@ -535,6 +655,20 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     ]
     for anchor in selected:
         source_lines.append(f"anchor: {anchor.get('id')} ({anchor.get('source_surface')})")
+    clear_limit = build_clear_limit_response(message, active_mode, repo_state, source_lines)
+    if clear_limit is not None:
+        return {
+            "ok": True,
+            "answer": clear_limit["answer"],
+            "repoState": repo_state,
+            "selectedAnchors": selected,
+            "intent": clear_limit["intent"],
+            "mode": active_mode,
+            "doctor": doctor,
+            "minimalFrame": clear_limit["minimalFrame"],
+            "sources": source_lines,
+            "limits": clear_limit["limits"],
+        }
     mode_line = MODES[active_mode]
     if intent == "greeting":
         body = ["Hi, Papa.", "Captain Lantern Blinkbug is listening through the local door.", "What do you want to look at?"]
