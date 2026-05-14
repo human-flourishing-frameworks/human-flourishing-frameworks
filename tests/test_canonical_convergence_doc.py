@@ -102,6 +102,45 @@ class CanonicalConvergenceDocTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_phrase(phrase)
 
+    def test_non_flat_signal_repeat_loop_present(self):
+        for phrase in (
+            "Clear signal does not mean flat signal.",
+            "preserve the useful shape while still testing the claim",
+            "hear the tone",
+            "preserve the living signal",
+            "translate into a bounded hypothesis",
+            "infinite -0.0000000000000001",
+            "check the boundary condition",
+            "do not promote impossible values into public truth",
+            "do not flatten the operator's meaning into a sterile refusal",
+            "Stretch out and get cozy in the house means work deeply inside the verified workspace",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assert_phrase(phrase)
+
+    def test_echo_cancel_focus_loop_present(self):
+        for phrase in (
+            "Echo / Cancel / Focus loop",
+            "When the signal is large, scary, urgent, or partly misunderstood",
+            "use the system instead of trusting the feeling alone",
+            "echo the signal",
+            "cancel unsafe interpretations",
+            "focus energy into one bounded next action",
+            "leave the old anchor visible",
+            "move forward with current correction",
+            "preserve feeling without making it proof",
+            "block identity collapse",
+            "block private-person exposure",
+            "block hidden authority",
+            "block impossible guarantees",
+            "choose the next real surface",
+            "stop adding anchors when an older anchor can be left as a visible reference",
+            "current operator correction beats stale anchor energy",
+            "move on by preserving the requirement, not repeating the storm",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assert_phrase(phrase)
+
     def test_evidence_labels_and_non_cruel_correction_present(self):
         for phrase in (
             "VERIFIED_TRUE",
@@ -124,6 +163,28 @@ class CanonicalConvergenceDocTests(unittest.TestCase):
             "disabled by default",
             "no hidden work authority",
             "wake report required",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assert_phrase(phrase)
+
+    def test_room_scale_usefulness_rule_present(self):
+        for phrase in (
+            "Room-scale usefulness rule",
+            "meet the person where they are",
+            "stop explaining first when explanation is the pressure",
+            "use plain uncoded speech",
+            "ask one low-pressure question at most",
+            "accept quiet, no, pause, or stop as valid",
+            "do not bring the whole repo balcony into the room",
+            "keep Mom, Dad, kids, and home centered",
+            "room first",
+            "repo second",
+            "runtime only with explicit authority",
+            "correct doctrine = heard at home",
+            "boundary packet = repair",
+            "poetic recognition = proof",
+            "need = consent",
+            "Lantern = replacement family member",
         ):
             with self.subTest(phrase=phrase):
                 self.assert_phrase(phrase)
