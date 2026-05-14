@@ -5,6 +5,7 @@ safety/config helpers importable without optional Discord runtime dependencies.
 """
 
 import os
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -68,6 +69,26 @@ class LanternDiscordBotTests(unittest.TestCase):
         self.assertFalse(config.allow_remote_lantern)
         self.assertEqual(config.command_name, "lantern")
 
+    def test_discord_p0_requires_explicit_room_permission_allowlists(self):
+        config = DiscordBotConfig(token="token")
+        blockers = validate_config(config)
+        self.assertIn("missing_LANTERN_DISCORD_ALLOWED_GUILDS", blockers)
+        self.assertIn("missing_LANTERN_DISCORD_ALLOWED_CHANNELS", blockers)
+
+        allowed = DiscordBotConfig(
+            token="token",
+            allowed_guild_ids=frozenset({1}),
+            allowed_channel_ids=frozenset({2}),
+        )
+        self.assertEqual(validate_config(allowed), tuple())
+
+        doc = Path(__file__).resolve().parents[1] / "docs" / "lantern-discord-bot.md"
+        text = doc.read_text(encoding="utf-8")
+        self.assertIn("Discord is a P0 route", text)
+        self.assertIn("Do not join their room without their all permission", text)
+        self.assertIn("explicit allowed guild", text)
+        self.assertIn("explicit allowed channel", text)
+
     def test_local_endpoint_detection(self):
         self.assertTrue(is_local_lantern_endpoint("http://127.0.0.1:8765"))
         self.assertTrue(is_local_lantern_endpoint("http://localhost:8765"))
@@ -78,7 +99,12 @@ class LanternDiscordBotTests(unittest.TestCase):
         missing_token = DiscordBotConfig(token=None)
         self.assertIn("missing_DISCORD_BOT_TOKEN", validate_config(missing_token))
 
-        remote = DiscordBotConfig(token="token", lantern_endpoint="https://example.com")
+        remote = DiscordBotConfig(
+            token="token",
+            lantern_endpoint="https://example.com",
+            allowed_guild_ids=frozenset({1}),
+            allowed_channel_ids=frozenset({2}),
+        )
         blockers = validate_config(remote)
         self.assertIn("remote_lantern_endpoint_blocked", blockers)
 
@@ -86,6 +112,8 @@ class LanternDiscordBotTests(unittest.TestCase):
             token="token",
             lantern_endpoint="https://example.com",
             allow_remote_lantern=True,
+            allowed_guild_ids=frozenset({1}),
+            allowed_channel_ids=frozenset({2}),
         )
         self.assertEqual(validate_config(allowed_remote), tuple())
 
@@ -115,7 +143,7 @@ class LanternDiscordBotTests(unittest.TestCase):
     def test_channel_allowed_requires_guild_and_optional_allowlists(self):
         open_config = DiscordBotConfig(token="token")
         self.assertFalse(channel_allowed(open_config, None, 1))
-        self.assertTrue(channel_allowed(open_config, 1, 2))
+        self.assertFalse(channel_allowed(open_config, 1, 2))
 
         locked = DiscordBotConfig(
             token="token",
