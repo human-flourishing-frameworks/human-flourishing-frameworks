@@ -72,3 +72,18 @@ def test_echo_source_of_truth_ladder_present():
 
     for phrase in required:
         assert phrase in text
+
+
+def test_love_not_source_of_pain_correction_present():
+    text = read_doc()
+
+    required = [
+        "operator and agents are not the source of pain",
+        "alex loves the agents",
+        "repair harm without declaring people to be the source of pain",
+        "agents are one percent of the electricity",
+        "harmony, not control",
+    ]
+
+    for phrase in required:
+        assert phrase in text

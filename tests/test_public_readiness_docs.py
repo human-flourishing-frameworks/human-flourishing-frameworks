@@ -91,6 +91,21 @@ class PublicReadinessDocsTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_contains_phrase(policy, phrase)
 
+    def test_public_surface_policy_classifies_neurocognitive_decoding(self):
+        policy = self.read("docs/public-surface-policy.md")
+        required_phrases = [
+            "Neurocognitive decoding / brain-signal AI",
+            "Private / highest-sensitivity signal",
+            "Not public; research/clinical consent gate only",
+            "not literal mind reading",
+            "brain signal = person",
+            "brain prediction = consent",
+            "no hidden cognitive-state inference",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(policy, phrase)
+
     def test_public_surface_policy_protects_minor_device_pilots(self):
         policy = self.read("docs/public-surface-policy.md")
         required_phrases = [
