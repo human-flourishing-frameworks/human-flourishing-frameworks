@@ -192,5 +192,54 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertIn("window.LANTERN_LOCAL_STATE = null", RUNTIME_STATE_JS.read_text(encoding="utf-8"))
 
 
+    def test_backend_clear_local_limit_answers(self) -> None:
+        cases = [
+            (
+                "make web searches to build a full list of changes to update the app for todays deploy at 9",
+                [
+                    "Blocked local capability",
+                    "cannot web search",
+                    "today's deploy truth",
+                    "web-capable surface",
+                    "unsupported_web_or_deploy",
+                ],
+            ),
+            (
+                "unclear responses in local are damaging",
+                [
+                    "Shield/Guardian clarity response",
+                    "unclear local responses are a harm signal",
+                    "DEGRADED",
+                    "clarity_harm",
+                ],
+            ),
+            (
+                "who am i",
+                [
+                    "Bounded identity answer",
+                    "you are Alex",
+                    "operator using the Lantern local Door",
+                    "bounded_identity",
+                ],
+            ),
+        ]
+        for prompt, expected_phrases in cases:
+            with self.subTest(prompt=prompt):
+                result = subprocess.run(
+                    [sys.executable, str(LOCAL_BACKEND), "--once", prompt, "--mode", "doctor"],
+                    cwd=REPO_ROOT,
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertTrue(payload["ok"])
+                combined = payload["answer"] + "\n" + payload["intent"]
+                for phrase in expected_phrases:
+                    self.assertIn(phrase, combined)
+
+
 if __name__ == "__main__":
     unittest.main()
