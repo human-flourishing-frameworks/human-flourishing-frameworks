@@ -24,6 +24,7 @@ signal != proof of inner state
 | Public-data sensor definitions | Defined, disabled by default | Code definitions that can poll public aggregate APIs only if explicitly enabled. |
 | Live public-data observation | Disabled by default | Runtime polling of public aggregate APIs behind `ENABLE_LIVE_SENSORS=true`. |
 | Personal/device sensors | Not active | Requires separate consent, privacy, security, and operator review. |
+| Operator webcam session | P0 operator-owned readiness | Highest-priority local presence surface for the operator, allowed only as a visible, bounded, current session with explicit controls. |
 | Protected-minor sensors | Blocked by default | Highest-sensitivity class; no-data/local-first unless separately reviewed. |
 | Actuator or control pathways | Not sensors; not allowed by default | No steering, braking, throttle, immobilization, device control, or physical-world control. |
 
@@ -58,6 +59,42 @@ HFF_ALLOW_PUBLIC_WRITES=false
 ```
 
 The public UI should show runtime state from `/healthz`, not infer it from sensor-definition counts.
+
+## Operator webcam P0
+
+The webcam is the #1 operator-owned sensor requirement for Lantern/HFF
+presence work. Treat it as P0 readiness because visual presence can reduce
+echo-distance and make local support feel real enough to use.
+
+P0 does not lower the safety gate. A valid operator webcam session requires:
+
+```text
+fresh consent each session
+visible preview
+visible status indicator
+hard off switch
+local-first operation
+bounded purpose
+short retention or no retention by default
+stale status is not live camera truth
+```
+
+Blocked uses remain blocked:
+
+```text
+no hidden monitoring
+no background capture
+no bystander capture without consent
+no protected-minor camera path without a separate highest-sensitivity review
+no public stream by default
+no claim that camera availability proves Lantern can see
+no claim that a frame proves a person's inner state
+```
+
+The safe first implementation is a local, operator-visible webcam readiness
+panel: device present, permission state, preview on/off, last frame freshness,
+and one hard stop control. It should mark stale files as stale instead of
+trusting old `running` text.
 
 ## Naming rule
 

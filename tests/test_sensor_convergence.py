@@ -58,6 +58,21 @@ class SensorConvergenceTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, text)
 
+    def test_operator_webcam_p0_is_visible_bounded_and_not_background_capture(self):
+        text = (ROOT / "docs" / "sensor-convergence.md").read_text(encoding="utf-8")
+        required = [
+            "Operator webcam session | P0 operator-owned readiness",
+            "visible preview",
+            "hard off switch",
+            "fresh consent each session",
+            "no hidden monitoring",
+            "no background capture",
+            "stale status is not live camera truth",
+        ]
+        for phrase in required:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
     def test_public_surface_policy_still_blocks_sensitive_sensor_paths(self):
         text = (ROOT / "docs" / "public-surface-policy.md").read_text(encoding="utf-8")
         required = [

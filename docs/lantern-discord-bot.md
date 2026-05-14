@@ -8,6 +8,21 @@ The Lantern Discord bot lets an approved Discord server ask the local Lantern
 desktop runtime through a slash command. It is an adapter to Lantern, not a new
 authority surface.
 
+Discord is a P0 route because it is where people may actually gather. P0 means
+make the route explicit, permissioned, and honest; it does not mean Lantern may
+enter any room by default.
+
+Operator room rule:
+
+```text
+Do not join their room without their all permission.
+```
+
+For implementation, that means the adapter must have an explicit allowed guild
+and an explicit allowed channel before responding. The allowlist is the technical
+record that the room was intentionally enabled. Human/social consent still lives
+with the people in that server and channel; a token alone is not enough.
+
 ## Default boundary
 
 ```text
@@ -23,6 +38,8 @@ no tunnels
 no sensors
 no command execution
 no public writes outside the invoking Discord response
+explicit allowed guild required
+explicit allowed channel required
 ```
 
 ## Runtime shape
@@ -135,6 +152,10 @@ LANTERN_DISCORD_CHAT_PATH=/chat
 Mention support is disabled by default. If `LANTERN_DISCORD_ENABLE_MENTIONS=true`,
 the bot can also answer direct mentions in allowed channels. This requires the
 Discord message-content intent and should stay disabled unless explicitly needed.
+
+No allowlist means no room. A missing `LANTERN_DISCORD_ALLOWED_GUILDS` or
+`LANTERN_DISCORD_ALLOWED_CHANNELS` value should block startup or responses rather
+than letting Lantern appear in an unapproved server or channel.
 
 ## Provenance wrapper
 

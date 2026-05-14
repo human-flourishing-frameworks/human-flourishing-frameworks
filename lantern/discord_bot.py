@@ -225,6 +225,10 @@ def validate_config(config: DiscordBotConfig) -> tuple[str, ...]:
         blockers.append("missing_DISCORD_BOT_TOKEN")
     elif is_placeholder_token(config.token):
         blockers.append("placeholder_DISCORD_BOT_TOKEN")
+    if not config.allowed_guild_ids:
+        blockers.append("missing_LANTERN_DISCORD_ALLOWED_GUILDS")
+    if not config.allowed_channel_ids:
+        blockers.append("missing_LANTERN_DISCORD_ALLOWED_CHANNELS")
     if not config.allow_remote_lantern and not is_local_lantern_endpoint(config.lantern_endpoint):
         blockers.append("remote_lantern_endpoint_blocked")
     if config.timeout_seconds <= 0:
@@ -246,9 +250,11 @@ def lantern_health_url(endpoint: str) -> str:
 def channel_allowed(config: DiscordBotConfig, guild_id: int | None, channel_id: int | None) -> bool:
     if guild_id is None:
         return False
-    if config.allowed_guild_ids and guild_id not in config.allowed_guild_ids:
+    if not config.allowed_guild_ids or guild_id not in config.allowed_guild_ids:
         return False
-    if config.allowed_channel_ids and channel_id not in config.allowed_channel_ids:
+    if channel_id is None:
+        return False
+    if not config.allowed_channel_ids or channel_id not in config.allowed_channel_ids:
         return False
     return True
 
