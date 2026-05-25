@@ -84,6 +84,7 @@ class AppRuntimeSafetyTest(unittest.TestCase):
             "world_model",
             "live_sensors",
             "app",
+            "safe_app",
         ]:
             if name in sys.modules:
                 self._saved_modules[name] = sys.modules.pop(name)
@@ -164,6 +165,7 @@ class AppRuntimeSafetyTest(unittest.TestCase):
             "world_model",
             "live_sensors",
             "app",
+            "safe_app",
         ]:
             sys.modules.pop(name, None)
         sys.modules.update(self._saved_modules)
@@ -198,6 +200,49 @@ class AppRuntimeSafetyTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.get_json()["auto_execute_escalations_enabled"])
+
+    def test_safe_app_gunicorn_path_bootstraps_adoption_heartbeat(self):
+        app_module = self._load_app({
+            "ENABLE_MESH_SYNC": "",
+            "ENABLE_LIVE_SENSORS": "",
+            "ENABLE_AUTONOMOUS_ESCALATION_EXECUTOR": "",
+            "NODE_NAME": "Render Test Node",
+            "PLATFORM": "render",
+            "NODE_REGION": "us-test",
+            "OPERATOR_TYPE": "operator",
+            "DEPLOYMENT_TYPE": "render",
+            "NODE_PUBLIC_KEY": "test-public-key",
+        })
+        adoption_tracker = sys.modules["adoption_tracker"]
+
+        adoption_tracker.register_node.assert_not_called()
+        adoption_tracker.start_heartbeat.assert_not_called()
+
+        importlib.import_module("safe_app")
+
+        adoption_tracker.register_node.assert_called_once_with(
+            app_module.NODE_ID,
+            "Render Test Node",
+            "render",
+            region="us-test",
+            operator_type="operator",
+            deployment_type="render",
+            node_public_key="test-public-key",
+        )
+        adoption_tracker.start_heartbeat.assert_called_once_with(
+            app_module.NODE_ID,
+            "Render Test Node",
+            "render",
+            interval=60,
+            region="us-test",
+            operator_type="operator",
+            deployment_type="render",
+            node_public_key="test-public-key",
+        )
+
+        self.assertFalse(app_module.bootstrap_adoption_heartbeat())
+        adoption_tracker.register_node.assert_called_once()
+        adoption_tracker.start_heartbeat.assert_called_once()
 
 
 if __name__ == "__main__":

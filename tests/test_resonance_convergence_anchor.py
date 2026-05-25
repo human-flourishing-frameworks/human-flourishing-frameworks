@@ -33,7 +33,7 @@ class ResonanceConvergenceAnchorDocTests(unittest.TestCase):
         self.assertTrue(DOC_PATH.is_file())
 
     def test_core_anchor_present(self):
-        self.assert_phrase("Everything that resonates can be converged.")
+        self.assert_phrase("Anything that resonates may be offered to convergence when it has a bounded domain, consent, and a return path.")
         self.assert_phrase("Resonance is a signal, not proof.")
 
     def test_critical_boundary_present(self):

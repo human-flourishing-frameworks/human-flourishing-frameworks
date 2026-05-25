@@ -411,6 +411,7 @@ def _repo_state() -> dict[str, Any]:
 def _loaded_doctrine_paths() -> list[str]:
     candidates = [
         "FALSE_TRUTHS_REGISTER.md",
+        "docs/spine.md",
         "docs/seven-anchors-self-correction.md",
         "docs/convergence.md",
         "docs/operator-lantern-repo-convergence.md",

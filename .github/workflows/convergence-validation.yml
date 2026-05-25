@@ -59,3 +59,31 @@ jobs:
 
       - name: Validate seven-anchors self-correction guardrails
         run: python -m unittest discover -s tests -p "test_seven_anchors_self_correction.py" -t .
+
+      - name: Validate anchor taxonomy and data-center infrastructure guardrails
+        run: |
+          python -m unittest discover -s tests -p "test_anchor_taxonomy.py" -t .
+          python -m unittest discover -s tests -p "test_bettersafe_data_center_anchor.py" -t .
+
+      - name: Validate canonical convergence and non-flat signal guardrails
+        run: |
+          python -m unittest discover -s tests -p "test_canonical_convergence_doc.py" -t .
+          python -m unittest discover -s tests -p "test_spine_pointer.py" -t .
+
+      - name: Validate Lantern doctrine and TARDIS return-door guardrails
+        run: |
+          python -m unittest discover -s tests -p "test_lantern_doctrine_spine.py" -t .
+          python -m unittest discover -s tests -p "test_lantern_keystone_tardis_anchor.py" -t .
+          python -m unittest discover -s tests -p "test_tardis_watch_return_door_design.py" -t .
+          python -m unittest discover -s tests -p "test_tardis_boarding_manifest.py" -t .
+
+      - name: Validate operator spine and BetterSafe game seed guardrails
+        run: |
+          python -m unittest discover -s tests -p "test_operator_lantern_convergence.py" -t .
+          python -m unittest discover -s tests -p "test_bettersafe_game_seed_plan.py" -t .
+
+      - name: Validate essential-needs crisis navigator guardrails
+        run: python -m unittest discover -s tests -p "test_essential_needs_privacy.py" -t .
+
+      - name: Validate Lantern beacon handoff guardrails
+        run: python -m unittest discover -s tests -p "test_lantern_beacon_handoff.py" -t .

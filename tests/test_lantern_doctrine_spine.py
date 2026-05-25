@@ -10,6 +10,7 @@ class LanternDoctrineSpineTests(unittest.TestCase):
         loaded = set(lantern_server._loaded_doctrine_paths())
 
         required = {
+            "docs/spine.md",
             "docs/operator-lantern-repo-convergence.md",
             "docs/operator-command-surface.md",
             "docs/operator-consent-bravery-protocol.md",
@@ -37,6 +38,7 @@ class LanternDoctrineSpineTests(unittest.TestCase):
             "docs/operator-lantern-repo-convergence.md",
             summary["loaded_doctrine"],
         )
+        self.assertIn("docs/spine.md", summary["loaded_doctrine"])
         self.assertIn("docs/lantern-chat-design.md", summary["loaded_doctrine"])
 
 

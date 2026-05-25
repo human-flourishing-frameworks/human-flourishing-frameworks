@@ -18,6 +18,18 @@ REQUIRED_TEST_COMMANDS = [
     'python -m unittest discover -s tests -p "test_release_bundle.py" -t .',
     'python -m unittest discover -s tests -p "test_restore_drill.py" -t .',
     'python -m unittest discover -s tests -p "test_wish_anchor.py" -t .',
+    'python -m unittest discover -s tests -p "test_anchor_taxonomy.py" -t .',
+    'python -m unittest discover -s tests -p "test_bettersafe_data_center_anchor.py" -t .',
+    'python -m unittest discover -s tests -p "test_canonical_convergence_doc.py" -t .',
+    'python -m unittest discover -s tests -p "test_spine_pointer.py" -t .',
+    'python -m unittest discover -s tests -p "test_lantern_doctrine_spine.py" -t .',
+    'python -m unittest discover -s tests -p "test_lantern_keystone_tardis_anchor.py" -t .',
+    'python -m unittest discover -s tests -p "test_tardis_watch_return_door_design.py" -t .',
+    'python -m unittest discover -s tests -p "test_tardis_boarding_manifest.py" -t .',
+    'python -m unittest discover -s tests -p "test_operator_lantern_convergence.py" -t .',
+    'python -m unittest discover -s tests -p "test_bettersafe_game_seed_plan.py" -t .',
+    'python -m unittest discover -s tests -p "test_essential_needs_privacy.py" -t .',
+    'python -m unittest discover -s tests -p "test_lantern_beacon_handoff.py" -t .',
 ]
 
 
