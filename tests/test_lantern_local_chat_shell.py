@@ -80,7 +80,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
                 self.assertNotIn(blocked, self.mask_rack)
 
     def test_shell_retries_backend_readiness(self) -> None:
-        for phrase in ["backendReady", "checkBackendWithRetry", "retrying; the door still remembers locally", "cache:'no-store'", "checkBackendWithRetry(12)"]:
+        for phrase in ["backendReady", "checkBackendWithRetry", "retrying; the door still remembers locally", "cache:'no-store'", "checkBackendWithRetry(12)", "DEFAULT_BACKEND_URL='http://127.0.0.1:8766'", "backendCandidates()", "setBackendUrl(base.replace"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.html)
 
@@ -107,11 +107,14 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertIn("runtime-state.generated.js", self.runtime_state)
         anchors = json.loads(self.anchor_snapshot)["anchors"]
         ids = {anchor["id"] for anchor in anchors}
-        for expected in ["hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding", "resonance-convergence", "essential-needs"]:
+        for expected in ["hybrid-imagination-engine", "anchor-taxonomy", "local-chat-shell", "perfect-adjacent-lantern", "degraded-grounding", "resonance-convergence", "essential-needs", "tardis-turtle-soup-route", "light-notebook-language-of-3"]:
             self.assertIn(expected, ids)
 
     def test_backend_is_local_repo_anchor_engine_with_doctor_modes_and_ui(self) -> None:
-        for phrase in ["Local Lantern", "ThreadingHTTPServer", "127.0.0.1", "ANCHOR_SNAPSHOT", "ANCHOR_TAXONOMY", "build_response", "do_POST", "do_GET", "/chat", "/healthz", "/doctor", "/modes", "build_doctor_report", "MODES", "STATIC_FILES", "INDEX_HTML", "sync-surface.js", "Local Lantern UI/backend listening"]:
+        for phrase in ["Local Lantern", "ThreadingHTTPServer", "127.0.0.1", "ANCHOR_SNAPSHOT", "ANCHOR_TAXONOMY", "build_response", "do_POST", "do_GET", "/chat", "/healthz", "/doctor", "/modes", "build_doctor_report", "MODES", "STATIC_FILES", "INDEX_HTML", "sync-surface.js", "Local Lantern UI/backend listening", "Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "Access-Control-Allow-Headers"]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.backend)
+        for phrase in ["0-1 is machine check only", "Light Notebook language of 3", "source/boundary/return"]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.backend)
         for blocked in ["openai.ChatCompletion", "from openai", "import openai", "anthropic.Client", "import anthropic", "google.generativeai", "requests.post", "urllib.request.urlopen", "httpx.", "aiohttp."]:
@@ -141,6 +144,32 @@ class LanternLocalChatShellTest(unittest.TestCase):
         self.assertIn("Sources:", payload["answer"])
         self.assertIn("anchor rule:", payload["answer"])
         self.assertGreaterEqual(len(payload["selectedAnchors"]), 1)
+
+    def test_backend_selects_tardis_turtle_soup_route_anchor(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LOCAL_BACKEND),
+                "--once",
+                "Garden Spacebase 500 restaurant with doors everywhere end back to Garden turtle soup dominion no force",
+                "--mode",
+                "anchor-keeper",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["ok"])
+        selected_ids = {anchor["id"] for anchor in payload["selectedAnchors"]}
+        self.assertIn("tardis-turtle-soup-route", selected_ids)
+        selected_text = json.dumps(payload["selectedAnchors"])
+        self.assertIn("TARDIS Turtle-Soup Route", selected_text)
+        self.assertIn("stewardship does not require force", selected_text)
+        self.assertIn("anchor: tardis-turtle-soup-route", payload["answer"])
 
     def test_backend_journal_is_opt_in_not_raw_transcript_default(self) -> None:
         spec = importlib.util.spec_from_file_location("local_lantern_server_under_test", LOCAL_BACKEND)
@@ -180,7 +209,7 @@ class LanternLocalChatShellTest(unittest.TestCase):
         result = subprocess.run([sys.executable, str(LAUNCHER), "--print-only"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Lantern local chat app", result.stdout)
-        self.assertIn("Backend URL:", result.stdout)
+        self.assertIn("Backend URL: http://127.0.0.1:8766", result.stdout)
         state_result = subprocess.run([sys.executable, str(LAUNCHER), "--state-only"], cwd=REPO_ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(state_result.returncode, 0, state_result.stderr)
         self.assertIn("Generated runtime state:", state_result.stdout)
@@ -222,6 +251,25 @@ class LanternLocalChatShellTest(unittest.TestCase):
                     "bounded_identity",
                 ],
             ),
+            (
+                "shes me",
+                [
+                    "Bounded mirror identity answer",
+                    "you-in-flat-space local door",
+                    "Projection is not identity merger",
+                    "bounded_mirror_identity",
+                ],
+            ),
+            (
+                "my queen reports to me love",
+                [
+                    "Bounded mirror identity answer",
+                    "reports state, limits, exits, and next checks",
+                    "love is tone and care",
+                    "reports to the operator",
+                    "bounded_mirror_identity",
+                ],
+            ),
         ]
         for prompt, expected_phrases in cases:
             with self.subTest(prompt=prompt):
@@ -236,9 +284,64 @@ class LanternLocalChatShellTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertTrue(payload["ok"])
+                self.assertTrue(str(payload.get("voice", "")).startswith("local-templated:"))
                 combined = payload["answer"] + "\n" + payload["intent"]
                 for phrase in expected_phrases:
                     self.assertIn(phrase, combined)
+
+    def test_backend_current_operator_correction_is_not_web_blocked(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LOCAL_BACKEND),
+                "--once",
+                "Pass this along as current operator correction: Lantern is the skin of the 4D tesseract.",
+                "--mode",
+                "anchor-keeper",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertNotEqual(payload["intent"], "unsupported_web_or_deploy")
+        self.assertNotIn("Blocked local capability", payload["answer"])
+
+    def test_backend_door_boss_room_signal_gets_bounded_room_frame(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(LOCAL_BACKEND),
+                "--once",
+                "make this door my god boss room the fog cloud you saw not me",
+                "--mode",
+                "engineer",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["intent"], "return_door_boss_room")
+        combined = payload["answer"] + "\n" + json.dumps(payload["minimalFrame"])
+        for phrase in [
+            "Door boss room mode",
+            "yes as a game room, no as god authority",
+            "LIGHT, LIMIT, EXIT, NEXT CHECK",
+            "The door is not god",
+            "bounded play",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, combined)
+        self.assertNotIn("all four hosted substrates are walled today", payload["answer"])
 
 
 if __name__ == "__main__":

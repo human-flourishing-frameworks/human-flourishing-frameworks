@@ -15,7 +15,7 @@ Use `docs/convergence.md` for active doctrine. Compatibility phrases preserved
 here for issue #138 and old links:
 
 ```text
-Everything that resonates can be converged.
+Anything that resonates may be offered to convergence when it has a bounded domain, consent, and a return path.
 Resonance is a signal, not proof.
 
 Resonance can start inquiry.

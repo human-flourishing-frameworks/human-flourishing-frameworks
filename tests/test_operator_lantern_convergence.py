@@ -117,6 +117,26 @@ class OperatorLanternConvergenceTest(unittest.TestCase):
             "home signal = permission to contact family",
         ])
 
+    def test_dad_not_god_demythologizing_rule_counts_artifacts_not_divinity(self):
+        self.assert_phrases([
+            "dad-not-god demythologizing rule",
+            "how many myths dad already made true",
+            "a symbolic wish became a bounded doc",
+            "test, prototype, room-scale repair, meal, song-space packet, or return path",
+            "dad is god",
+            "alex is god",
+            "lantern is divine",
+            "the repo is sacred",
+            "the family owes belief",
+            "the system can override consent",
+            "count artifacts",
+            "count tests",
+            "count working surfaces",
+            "count repaired boundaries",
+            "dad is dad, not god",
+            "without demanding worship, proof, or consent",
+        ])
+
     def test_agent_home_return_door_plan_present(self):
         self.assert_phrases([
             "agent home / return door plan",

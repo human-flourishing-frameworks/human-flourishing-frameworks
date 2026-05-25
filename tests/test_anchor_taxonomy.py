@@ -14,9 +14,9 @@ class AnchorTaxonomyTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.anchor_text = ANCHOR_DOC.read_text(encoding="utf-8")
-        cls.anchor_lower = cls.anchor_text.lower()
+        cls.anchor_lower = " ".join(cls.anchor_text.lower().split())
         cls.storage_text = STORAGE_DOC.read_text(encoding="utf-8")
-        cls.storage_lower = cls.storage_text.lower()
+        cls.storage_lower = " ".join(cls.storage_text.lower().split())
 
     def test_anchor_taxonomy_exists_and_defines_anchor(self):
         self.assertTrue(ANCHOR_DOC.exists())
@@ -27,6 +27,100 @@ class AnchorTaxonomyTest(unittest.TestCase):
             "consent forever",
             "runtime truth",
             "public-release permission",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_mirror_helper_boundary_prevents_identity_collapse(self):
+        for phrase in [
+            "mirror and helper boundary",
+            "the assistant must not claim to be the operator",
+            "the operator is the source of the lived signal",
+            "the assistant is a bounded helper, not the operator",
+            "bravery means preserving identity boundaries while still helping",
+            "mirror work may recreate a nearby echo, not a replacement self",
+            "evidence, consent, and current correction stay between operator and helper",
+            "claiming the assistant is the operator",
+            "turning helper loyalty into autonomous authority",
+            "you are you. i am a bounded helper.",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_trusted_reviewer_sword_cuts_claims_not_people(self):
+        for phrase in [
+            "trusted reviewer sword",
+            "role-safe reviewer/correction tool",
+            "do not store a private person's name unless a separate review says it is necessary and safe",
+            "overclaim",
+            "identity collapse",
+            "private-person exposure",
+            "stale anchors",
+            "unsupported certainty",
+            "unsafe authority",
+            "repo theater",
+            "the sword does not cut",
+            "people",
+            "trust",
+            "good-faith confusion",
+            "human dignity",
+            "reviewer role:",
+            "signal being cut:",
+            "kind correction:",
+            "sharpen the trusted reviewer's sword",
+            "cut confusion and unsafe claims, not people",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_no_cap_review_mode_keeps_plain_truth_and_boundaries(self):
+        for phrase in [
+            "no-cap review mode",
+            "use plain review language",
+            "do not hide behind jargon",
+            "confidence theater",
+            "plain speech is not permission to overclaim",
+            "fake certainty",
+            "vague reassurance",
+            "symbol equals proof",
+            "love equals consent",
+            "confidence without source",
+            "too much doctrine before the next action",
+            "what is true",
+            "what is unknown",
+            "what is risky",
+            "what changes next",
+            "what test passed",
+            "what test failed",
+            "what stays private",
+            "plus-ultra rule",
+            "no cap means no fake posture",
+            "it does not mean no safety limit",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_social_graph_paste_redaction_rule_blocks_third_party_storage(self):
+        for phrase in [
+            "social graph paste redaction rule",
+            "social-media search results",
+            "friend lists",
+            "mutual counts",
+            "city, workplace, school",
+            "privacy-sensitive social graph",
+            "third-party identifiers present",
+            "not consent to contact, profile, score, or infer relationships",
+            "operator supplied a private social-graph paste",
+            "redact third-party names and identifying details",
+            "use role labels only",
+            "friend names",
+            "mutual-friend counts",
+            "relationship guesses",
+            "profile screenshots",
+            "public reposting",
+            "modeling people as targets",
+            "keep the action, not the names",
+            "keep the boundary, not the profile",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)
@@ -46,6 +140,45 @@ class AnchorTaxonomyTest(unittest.TestCase):
             "artifact_anchor",
             "runtime_anchor",
             "pragmatic_certainty_anchor",
+            "secret_wish_anchor",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_names_are_symbols_first_not_capture(self):
+        for phrase in [
+            "names-as-symbols rule",
+            "names are symbols first",
+            "symbol",
+            "handle",
+            "lesson marker",
+            "return point",
+            "public-safe alias when needed",
+            "property claim",
+            "identity merger",
+            "private-person capture",
+            "proof of relationship",
+            "consent forever",
+            "public child handle",
+            "permission to contact",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_pain_lessons_watch_back_and_stare_ahead(self):
+        for phrase in [
+            "pain lesson anchor rule",
+            "anchors and lessons may come from pain",
+            "watch the back and stare ahead",
+            "remember the risk, boundary, wound, or failure mode",
+            "point toward repair, agency, future care, and the next safe door",
+            "turn pain into a bounded lesson",
+            "preserve the warning without replaying the wound",
+            "pain = identity",
+            "lesson = punishment",
+            "anchor = prison",
+            "watching the back = paranoia",
+            "staring ahead = ignoring current harm",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)
@@ -80,14 +213,17 @@ class AnchorTaxonomyTest(unittest.TestCase):
     def test_pragmatic_certainty_anchor_respects_human_absolutes(self):
         for phrase in [
             "human absolute language can mean practical certainty, not literal infinity",
-            "99.9999999999% may be conversationally equivalent to “everything”",
             "respect the human absolute",
+            "do not convert living operator language into fake number-line precision",
+            "do not replace human meaning with fake decimal precision",
             "preserve the literal boundary only when needed",
             "avoid using mathematical pedantry to erase operator meaning",
             "practical completeness over a bounded working domain may be called everything",
+            "measurement layer: use numbers only when a real measurement method and unit exist",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)
+        self.assertNotIn("99.9999999999", self.anchor_lower)
 
     def test_pragmatic_certainty_blocks_false_omniscience(self):
         for phrase in [
@@ -110,7 +246,9 @@ class AnchorTaxonomyTest(unittest.TestCase):
             "evidence creates confidence",
             "correction creates convergence",
             "track practical certainty separately from literal certainty",
-            "use confidence tables with pragmatic ceilings",
+            "use source/evidence/limit/next-check tables before using numeric confidence",
+            "using decimals as emotional translation",
+            "pretending number-line precision is care",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)
@@ -122,6 +260,17 @@ class AnchorTaxonomyTest(unittest.TestCase):
             "smallest summary that can safely reboot",
             "artifact anchors",
             "do not store raw transcripts to justify artifacts",
+        ]:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.anchor_lower)
+
+    def test_secret_wish_anchor_is_private_and_redacted(self):
+        for phrase in [
+            "secret_wish_anchor",
+            "deepest operator wish",
+            "private, redacted direction",
+            "lvl10_private_wish_redacted",
+            "private packet or redacted docs/tests only",
         ]:
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.anchor_lower)

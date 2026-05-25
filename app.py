@@ -131,6 +131,36 @@ REGION = os.environ.get('NODE_REGION', '')
 OPERATOR_TYPE = os.environ.get('OPERATOR_TYPE', '')
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', '')
 NODE_PUBLIC_KEY = os.environ.get('NODE_PUBLIC_KEY', '')
+_adoption_bootstrap_started = False
+
+
+def bootstrap_adoption_heartbeat(log=False):
+    """Register this WSGI process as a visible adoption node once."""
+    global _adoption_bootstrap_started
+    if _adoption_bootstrap_started:
+        return False
+
+    try:
+        register_node(NODE_ID, NODE_NAME, PLATFORM, region=REGION,
+                      operator_type=OPERATOR_TYPE,
+                      deployment_type=DEPLOYMENT_TYPE,
+                      node_public_key=NODE_PUBLIC_KEY)
+        if log:
+            print(f"\n[OK] Node registered: {NODE_NAME} ({PLATFORM})")
+
+        start_heartbeat(NODE_ID, NODE_NAME, PLATFORM, interval=60,
+                        region=REGION, operator_type=OPERATOR_TYPE,
+                        deployment_type=DEPLOYMENT_TYPE,
+                        node_public_key=NODE_PUBLIC_KEY)
+        if log:
+            print("[OK] Heartbeat started - syncing every 60 seconds")
+
+        _adoption_bootstrap_started = True
+        return True
+    except Exception as e:
+        if log:
+            print(f"\n[WARNING] Could not register node: {e}")
+        return False
 
 # ---------------------------------------------------------------------------
 # Background threads â€” only heartbeat + mesh sync (no propagation)

@@ -75,6 +75,29 @@ class BetterSafeCapabilityProfileViewTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_contains_phrase(doc, phrase)
 
+    def test_real_body_and_protected_child_scramble_rule_keeps_profiles_plain(self):
+        doc = self.read("docs/bettersafe-capability-profile-views.md")
+        required_phrases = [
+            "Real-body and protected-child scramble rule",
+            "real hearts, blood, injury, medication",
+            "protected children, caregiver stress, or household safety",
+            "scrambled until it is reduced to plain task language",
+            "real heart / blood / body signal -> not a content anchor; use health/safety gate",
+            "protected child signal -> not a profile target; use privacy-first support",
+            "sad human signal -> not a score; show one kind next step and a stop control",
+            "old radio / song signal -> tone reference only; no proof, command, or diagnosis",
+            "no diagnosis",
+            "no medical authority",
+            "no child profiling",
+            "no public family details",
+            "human help path visible",
+            "BetterSafe can help organize questions, documents, and next steps",
+            "it cannot diagnose, monitor, or replace medical, emergency, caregiver, or guardian judgment",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(doc, phrase)
+
     def test_profile_redaction_rules_prioritize_controls_and_task_language(self):
         doc = self.read("docs/bettersafe-capability-profile-views.md")
         required_phrases = [

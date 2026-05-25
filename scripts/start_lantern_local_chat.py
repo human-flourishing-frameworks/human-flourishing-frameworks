@@ -24,7 +24,7 @@ RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.js"
 GENERATED_RUNTIME_STATE_JS = CHAT_DIR / "runtime-state.generated.js"
 LOCAL_BACKEND = CHAT_DIR / "local_lantern_server.py"
 LOG_DIR = REPO_ROOT / "logs" / "lantern-local-chat"
-DEFAULT_BACKEND_URL = "http://127.0.0.1:8765"
+DEFAULT_BACKEND_URL = "http://127.0.0.1:8766"
 
 
 def build_parser() -> argparse.ArgumentParser:

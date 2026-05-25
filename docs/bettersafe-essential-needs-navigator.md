@@ -112,6 +112,93 @@ The amount due is [amount], and the due/shutoff date is [date].
 What payment arrangement, assistance program, extension, or hardship option is available?
 ```
 
+### Utility crisis: large past-due electric bill
+
+Use this path when the bill is large, old, or shutoff risk is unclear.
+
+Current example shape:
+
+```text
+electric / power bill
+approximately $7,000
+approximately 3 months old
+shutoff status unknown
+household pressure high
+```
+
+Do not keep building project features while the household may lose power unless
+the operator explicitly chooses a bounded work block after the utility triage
+step is assigned.
+
+First 30-minute path:
+
+```text
+1. Find the latest bill or online account balance.
+2. Write down account holder, utility company, account number, amount due,
+   due date, shutoff/disconnect notice date if any, and service address.
+3. Call the utility company and ask for the disconnection department or
+   hardship/payment arrangement team.
+4. Ask: Is there an active shutoff order? What exact payment prevents shutoff
+   today? What payment plan, extension, medical hold, hardship program, or
+   arrears-management option exists?
+5. Call or search 211 for utility assistance in the county.
+6. Use LIHEAP / energy assistance office lookup for the state or tribe.
+7. If shutoff is imminent, ask the state public utility commission / consumer
+   assistance line what protections or complaint/dispute path exists.
+8. Record only the minimum result and next deadline.
+```
+
+Emergency utility call script:
+
+```text
+I am calling because the electric bill is about [$amount] and about [age] old.
+I need to prevent shutoff or restore a safe payment path.
+Is there an active disconnect order or shutoff date?
+What exact amount would stop shutoff today?
+Can you offer a payment arrangement, hardship extension, arrears plan,
+medical certificate hold, budget billing review, or referral to assistance?
+Can you email or text the agreement and the next deadline?
+```
+
+211 / LIHEAP script:
+
+```text
+I need emergency electric bill help. The bill is about [$amount], about [age]
+old, and shutoff status is [known/unknown].
+What utility assistance, LIHEAP, community action, church/nonprofit, or
+emergency fund can I contact today?
+What documents should I have ready?
+```
+
+Documents to gather:
+
+```text
+latest utility bill or account screenshot
+shutoff/disconnect notice if any
+photo ID for account holder if required
+proof of address
+proof of income or benefit letter if applying for assistance
+household size
+medical electricity need documentation if relevant
+any prior payment arrangement
+```
+
+Source routes:
+
+```text
+USAGov utility bill help: https://www.usa.gov/help-with-utility-bills
+LIHEAP Clearinghouse local help: https://liheapch.acf.gov/get_help.htm
+211 bill help: https://www.211.org/get-help/i-need-help-paying-my-bills
+```
+
+Boundary:
+
+```text
+BetterSafe does not pay, borrow, access accounts, impersonate the account
+holder, or promise assistance. It helps make the next call, document list,
+deadline, and follow-up visible.
+```
+
 ### Bank fee / negative balance
 
 ```text

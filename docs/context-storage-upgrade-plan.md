@@ -102,7 +102,7 @@ blocked:
   - future consent without fresh supervision
 restore_phrase: >
   Windows XP is private, supervised, play-only, no-data, and return-first.
-  Home always works.
+  Home stays visible, stoppable, and repairable.
 review_trigger:
   - public release request
   - device/network/runtime request
