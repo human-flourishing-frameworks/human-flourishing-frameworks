@@ -1,53 +1,61 @@
-# Human Flourishing Frameworks
+# Lantern — Local-First AI Chat + Media Curator for Households
 
-**An experimental advisory and orchestration framework for source-backed modeling, safety boundaries, and human-flourishing system design.**
+Privacy-first chat stack with integrated media curation: desktop, browser, and dashboard surfaces. Local STT (Vosk), bounded Discord adapter, CC-licensed + synthetic audio library, educational audiobooks + podcasts, and Lantern Kids edition with parental review.
 
-> **Status:** early development experimental software. A public deployment is validated only by fresh, surface-specific smoke evidence; it is not production authority infrastructure. Measurements carry uncertainty, node counts are self-reported unless explicitly verified, and GitHub changes are code proposals until deliberately deployed and validated.
+→ **[Foundry Master Plan](../gm-agent-orchestrator/FOUNDRY-PLAN.md)** — shared org model, revenue model, 22 product streams (Lantern is streams #1–4)
 
-Plain-language summary:
+## Product Editions
 
-HFF is a research and advisory framework for testing source-backed modeling, recovery workflows, deployment boundaries, and human-centered system design. It is not a government, enforcement system, autonomous authority, or production critical infrastructure.
+- **Lantern Desktop** — full chat + media curator, CustomTkinter + Vosk STT
+- **Lantern Browser** — same chat, no install required
+- **Lantern Dashboard** — local Flask service + Anthropic API bridge
+- **Lantern Kids** — age-gated, parental review, no external bridges
+- **Lantern Media Curator** — CC-licensed audio, audiobooks, podcasts, video (internet archive + Wikimedia + public domain)
 
-## Current deployment
+## What it does
 
-Primary cloud URL:
+- Local AI chat (no cloud by default; optional Anthropic bridge)
+- Continuous speech-to-text (Vosk, bounded window)
+- Curated media library: bird calls (Xeno-Canto), classical music (IMSLP), public domain audiobooks (Gutenberg)
+- Synthetic soundscapes (stdlib procedural generation, zero ML)
+- Parental controls (Kids edition) with explicit curation
+- Works offline, respects privacy
 
-```text
-https://human-flourishing-frameworks.onrender.com/
-```
-
-Health/status checks:
+## Quick start
 
 ```bash
-curl -i https://human-flourishing-frameworks.onrender.com/health
-curl -i https://human-flourishing-frameworks.onrender.com/api/status
+python apps/lantern-desktop/lantern_desktop.py
 ```
 
-The container is started with gunicorn and binds to the injected `PORT`, falling back to `5000` for local Docker runs.
+Or run the browser version (if Flask service is running):
+```
+http://localhost:8765
+```
 
-Railway may appear in older logs or historical deploys, but Render is the primary public surface currently covered by the repo smoke scripts.
+## Media Library Attribution
 
-Public deployment claims should always be backed by fresh smoke evidence because deployments, routes, and hosting providers can drift over time.
+See `~/.lantern/sounds/ATTRIBUTION.md` for full CC-license provenance, source URLs, and recordist credits for all audio files.
 
-## Capability and authority boundary
+**Real recordings:** Blue Whale (Wikimedia), Brown Thrasher (Xeno-Canto XC136055), Frogs, Red Fox, Bach BWV 543, Mozart Eine kleine Nachtmusik, regional music  
+**Synthetic:** 12 procedural pads (stdlib: scipy, numpy, wave module — no ML, no voice cloning)
 
-HFF can support more than passive research workflows, but capability is not authority.
+## What is intentionally NOT here
 
-HFF can help:
+- No autonomous medical, legal, or financial advice surfaces
+- No covert resource usage
+- No production cloud deployment claims
+- No overstated IP or patent claims
+- No private household content
+- No mental health therapy framing
 
-- model sources, uncertainty, evidence, risks, and candidate actions;
-- run bounded local or deployment-support workflows when explicitly enabled and operator-reviewed;
-- support operator-reviewed decisions with logs, tests, and audit evidence;
-- expose status, beliefs, synthetic demos, and advisory results;
-- test safety boundaries, release posture, and system convergence.
+## License
 
-HFF does not have public authority over people, communities, institutions, or living systems.
+[TBD — AGPL base + proprietary for Kids edition]
 
-Public-facing use should remain:
+---
 
-```text
-source-backed
-uncertainty-aware
+**Status:** TRL 4 (desktop + browser functional; Kids edition TRL 2)  
+**Next:** [Read FOUNDRY-PLAN.md for full org model and revenue plan](../gm-agent-orchestrator/FOUNDRY-PLAN.md)
 operator-reviewed
 bounded by explicit grants
 challengeable
