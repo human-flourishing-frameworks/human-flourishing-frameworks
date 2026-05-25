@@ -98,6 +98,41 @@ class BetterSafeDataCenterAnchorTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assert_contains_phrase(doc, phrase)
 
+    def test_geodata_whitepaper_intake_cross_checks_source_classes(self):
+        doc = self.read("docs/bettersafe-data-center-physical-infrastructure-anchor.md")
+        required_phrases = [
+            "Geodata and whitepaper intake",
+            "source candidates for siting and infrastructure analysis",
+            "PNNL Data Center Atlas article",
+            "NREL data-center infrastructure map references",
+            "FracTracker National Data Centers Tracker",
+            "DataCenterMap",
+            "Commercial directories are useful leads, not complete public-interest analysis.",
+            "Local planning record",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(doc, phrase)
+
+    def test_geodata_axes_include_power_water_risk_and_confidence(self):
+        doc = self.read("docs/bettersafe-data-center-physical-infrastructure-anchor.md")
+        required_phrases = [
+            "facility status: existing / proposed / permitted / under construction / unknown",
+            "power demand and interconnection",
+            "transmission constraints",
+            "fiber/connectivity",
+            "water source and cooling method",
+            "heat, drought, flood, wildfire, seismic, and storm risk",
+            "air/noise/community impact",
+            "ratepayer and public-infrastructure burden",
+            "source date and confidence label",
+            "Map layers are evidence inputs.",
+            "not permission, proof of safety, proof of harm",
+        ]
+        for phrase in required_phrases:
+            with self.subTest(phrase=phrase):
+                self.assert_contains_phrase(doc, phrase)
+
     def test_anchor_preserves_responsibility_without_moral_dismissal(self):
         doc = self.read("docs/bettersafe-data-center-physical-infrastructure-anchor.md")
         required_phrases = [

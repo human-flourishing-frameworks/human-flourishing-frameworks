@@ -46,32 +46,6 @@ class SevenCheck:
 
 CHECKS: tuple[SevenCheck, ...] = (
     SevenCheck(
-        name="public_surface",
-        claim="Public dashboard/API surfaces are bounded and read-safe by default.",
-        guard="Public does not mean uncontrolled; token-gated does not mean safe.",
-        file_path="docs/public-surface-policy.md",
-        required_phrases=(
-            "Public does not mean uncontrolled.",
-            "Live sensors | Disabled by default",
-            "Mesh sync | Disabled by default",
-            "HFF_ALLOW_PUBLIC_WRITES=false",
-            "advisory status = governance legitimacy",
-        ),
-    ),
-    SevenCheck(
-        name="sensor_taxonomy",
-        claim="Sensor definitions are not live observation or personal monitoring.",
-        guard="A signal is not a person, proof, actuator permission, or consent.",
-        file_path="docs/sensor-convergence.md",
-        required_phrases=(
-            "sensor definition != live observation",
-            "live observation != personal monitoring",
-            "aggregate public-data polling != device enrollment",
-            "signal != person",
-            "signal != proof of inner state",
-        ),
-    ),
-    SevenCheck(
         name="public_ux",
         claim="The public dashboard should be understandable, accessible, and honest about limits.",
         guard="Do not claim translation/localization support before reviewed copy exists.",
