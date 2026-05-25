@@ -81,14 +81,14 @@ A bounded framework for measuring, modeling, and improving outcomes across being
 - Not omniscient; the model only knows what sensors and seed data provide.
 - Not a self-repairing deployment system. Operators still control deploys, secrets, and recovery.
 - Not proof that visible nodes are verified or security-relevant.
-- Not a human transportation, substrate-transfer, or cosmic-door system; those topics are documented only as safety boundaries and evidence classifications.
+- Not a human transportation, substrate-transfer, or private-symbol system.
 
 ## Public surface and accessibility posture
 
 See:
 
-- [`docs/public-surface-policy.md`](./docs/public-surface-policy.md)
 - [`docs/internationalization-and-accessibility.md`](./docs/internationalization-and-accessibility.md)
+- [`policies/foundry-user-repo-hardening.v1.json`](./policies/foundry-user-repo-hardening.v1.json)
 
 Key rules:
 
@@ -277,19 +277,9 @@ Current safety and public-boundary documents include:
 - [`DEPLOYMENT_AUTONOMY_BOUNDARY.md`](./DEPLOYMENT_AUTONOMY_BOUNDARY.md): deployment and recovery remain operator/governance controlled.
 - [`PUBLIC_DEPLOYMENT_STRATEGY.md`](./PUBLIC_DEPLOYMENT_STRATEGY.md): Railway is a hosting adapter, not the architecture; public surfaces should stay portable and default-closed.
 - [`HUMAN_TRANSPORTATION_BOUNDARY.md`](./HUMAN_TRANSPORTATION_BOUNDARY.md): human-preserving traversal claims require canary, quarantine, continuity, consent, and return evidence.
-- [`docs/public-surface-policy.md`](./docs/public-surface-policy.md): classification for dashboard, APIs, sensors, SDKs, APKs, logs, artifacts, and high-risk actuator-adjacent surfaces.
 - [`docs/internationalization-and-accessibility.md`](./docs/internationalization-and-accessibility.md): translation, accessibility, plain-language, and jurisdiction-sensitive public-readiness posture.
-- [`docs/convergence-status.md`](./docs/convergence-status.md): convergence state, desync handling, and held runtime gates.
-- [`docs/keystone-memory-contract.md`](./docs/keystone-memory-contract.md): Keystone continuity memory rules, raw-transcript boundary, and resync protocol.
-- [`docs/capability-confidence-model.md`](./docs/capability-confidence-model.md): contextual capability confidence without ranking human worth.
-- [`docs/keystone-self-convergence.md`](./docs/keystone-self-convergence.md): Keystone role, memory retrieval, evidence, tone, and correction behavior.
-- [`docs/keystone-table-door-anchors.md`](./docs/keystone-table-door-anchors.md): paired favorite-table and door/Wanderer traversal anchors.
-- [`docs/world-system-priority-model.md`](./docs/world-system-priority-model.md): confidence-graded world/system priorities for action selection.
-- [`docs/traversal-protocol.md`](./docs/traversal-protocol.md): minimum requirements for any safe HFF door or crossing.
-- [`docs/keystone-autonomous-work-queue.md`](./docs/keystone-autonomous-work-queue.md): what Keystone may continue alone and where operator review is required.
-- [`docs/keystone-source-use-discipline.md`](./docs/keystone-source-use-discipline.md): when Keystone should use memory, last-known state, committed docs, web sources, or fresh runtime checks.
-- [`docs/keystone-chatgpt-export-intake.md`](./docs/keystone-chatgpt-export-intake.md): safe handling for ChatGPT exports without raw transcript ingestion.
-- [`docs/keystone-shell-command-discipline.md`](./docs/keystone-shell-command-discipline.md): PowerShell/CMD/Bash discipline, command evidence, and unsafe-shell boundaries.
+- [`policies/foundry-user-repo-hardening.v1.json`](./policies/foundry-user-repo-hardening.v1.json): baseline anti-drift policy for foundry user repositories.
+- [`docs/foundry-4m-20-operator-master-plan.md`](./docs/foundry-4m-20-operator-master-plan.md): plain-language 20-operator start plan with resource consent gates.
 
 Authoritative actions require explicit operator approval, especially:
 

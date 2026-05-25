@@ -1,0 +1,38 @@
+{
+  "id": "foundry-user-repo-hardening-v1",
+  "status": "active",
+  "purpose": "Baseline checks for every foundry user repo to reduce agent behavior drift.",
+  "default_branch": "master",
+  "required_files": [
+    "README.md",
+    ".gitignore",
+    ".github/workflows/convergence-validation.yml"
+  ],
+  "forbidden_agent_behavior_markdown_patterns": [
+    "AGENTS.md",
+    "agent.md",
+    "operator.md",
+    "*doctrine*.md",
+    "*handoff*.md",
+    "*self-convergence*.md",
+    "*autonomous-work-queue*.md"
+  ],
+  "forbidden_runtime_patterns": [
+    "loaded_doctrine",
+    "load_repo_doctrine",
+    "REPO_DOCTRINE_LIBRARY"
+  ],
+  "allowed_runtime_pattern_files": [
+    "tools/check_foundry_repo_hardening.py",
+    "tests/test_foundry_repo_hardening.py",
+    "policies/foundry-user-repo-hardening.v1.json"
+  ],
+  "hard_bounds": [
+    "no hidden agents",
+    "no repo writes from chat surfaces",
+    "no deployment from chat surfaces",
+    "no tunnel creation from chat surfaces",
+    "no consent by default",
+    "no personal files, browser data, email, webcam, or PII pooling"
+  ]
+}
