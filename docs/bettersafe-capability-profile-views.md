@@ -79,6 +79,43 @@ the answer avoids presenting labels as identity or destiny
 
 If immediate safety requires disclosure, reveal the minimum useful information needed to reduce harm. Do not reveal unnecessary internal reasoning or unrelated labels.
 
+## Real-body and protected-child scramble rule
+
+When a profile or plan touches real hearts, blood, injury, medication,
+protected children, caregiver stress, or household safety, treat the plan as
+scrambled until it is reduced to plain task language and the right human support
+path.
+
+Use this translation:
+
+```text
+real heart / blood / body signal -> not a content anchor; use health/safety gate
+protected child signal -> not a profile target; use privacy-first support
+sad human signal -> not a score; show one kind next step and a stop control
+old radio / song signal -> tone reference only; no proof, command, or diagnosis
+```
+
+Required posture:
+
+```text
+no diagnosis
+no medical authority
+no child profiling
+no shame language
+no public family details
+no hidden sensing
+plain support task first
+human help path visible
+```
+
+Participant-safe wording:
+
+```text
+This looks like a body/safety or family-support concern. BetterSafe can help
+organize questions, documents, and next steps, but it cannot diagnose, monitor,
+or replace medical, emergency, caregiver, or guardian judgment.
+```
+
 ## Profile redaction rules
 
 Before showing a profile to someone other than the operator:

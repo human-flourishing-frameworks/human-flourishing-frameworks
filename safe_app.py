@@ -178,6 +178,14 @@ _BETTERSAFE_PILOT_HTML = """
                 Mode starts as <strong>LIMITED_CHAT_LOCAL</strong> unless the operator explicitly verifies
                 <strong>FULL_REPO_GROUNDED</strong>. High-impact requests are blocked or downgraded.
             </div>
+            <div class="section-banner banner-yellow">
+                Do not enter PINs, credit card numbers, dates of birth, SSNs, account passwords, recovery codes,
+                tokens, or other secrets. The local packet builder redacts obvious sensitive identifiers before display.
+            </div>
+            <div class="section-banner banner-yellow">
+                Do not paste social-media friend lists, mutual counts, workplaces, schools, cities,
+                profile links, or contact routes. Use role labels and the smallest action needed.
+            </div>
 
             <div class="bettersafe-mode-row" aria-label="BetterSafe pilot boundaries">
                 <div class="bettersafe-mode-card">
@@ -249,6 +257,15 @@ _BETTERSAFE_PILOT_HTML = """
                         <li>Close or pause on request.</li>
                     </ul>
                 </div>
+                <div class="bettersafe-interaction-card">
+                    <h3>7. Utility Shutoff Triage</h3>
+                    <ul>
+                        <li>Find amount, account, utility, and shutoff date.</li>
+                        <li>Call the utility hardship/payment team.</li>
+                        <li>Ask what exact payment prevents shutoff today.</li>
+                        <li>Route to 211, LIHEAP, or consumer assistance.</li>
+                    </ul>
+                </div>
             </div>
 
             <div class="bettersafe-local-builder" aria-label="Local BetterSafe packet builder">
@@ -264,6 +281,7 @@ _BETTERSAFE_PILOT_HTML = """
                     <option>Confidence table</option>
                     <option>Scientific convergence</option>
                     <option>Creative door scene</option>
+                    <option>Utility shutoff triage</option>
                     <option>High-impact downgrade / blocked request</option>
                 </select>
 
@@ -316,16 +334,39 @@ _HEALTHZ_SENSOR_STATUS_JS = """
             });
 """
 
-_BETTERSAFE_PILOT_JS = """
+_BETTERSAFE_PILOT_JS = r"""
         // BetterSafe packet builder is local-only. It makes no fetch/XHR call
         // and does not submit data. It formats a bounded pilot request for
         // human/operator review.
+        function redactBetterSafeSensitiveText(value) {
+            return String(value || '')
+                .replace(/\b(pin|password|passcode|recovery code|token|api key|secret)\s*[:=]\s*\S+/gi, '$1: [REDACTED]')
+                .replace(/\b(dob|date of birth)\s*[:=]\s*[0-9]{1,4}[\/.-][0-9]{1,2}[\/.-][0-9]{1,4}\b/gi, '$1: [REDACTED]')
+                .replace(/\b(account number|acct|utility account|bank account|routing number)\s*[:#=]\s*[A-Za-z0-9 -]{5,30}\b/gi, '$1: [REDACTED_ACCOUNT_IDENTIFIER]')
+                .replace(/\b(?:\d[ -]*?){13,19}\b/g, '[REDACTED_CARD_OR_LONG_NUMBER]')
+                .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[REDACTED_SSN]');
+        }
+
+        function buildUtilityShutoffTriageLines() {
+            return [
+                'Utility shutoff triage packet:',
+                'Immediate facts to gather locally: latest bill/account screen, utility name, account holder role, amount due, due date, shutoff/disconnect date, service address, and prior arrangement status.',
+                'Do not paste full account numbers, PINs, passwords, DOBs, SSNs, card numbers, recovery codes, or tokens into this packet; keep them local for the call if required.',
+                'First 30 minutes: confirm active shutoff order, ask exact amount that prevents shutoff today, request payment arrangement or hardship extension, ask for medical certificate hold if relevant, and request written confirmation of the next deadline.',
+                'Utility call script: I am calling because the electric bill is about [$amount] and about [age] old. Is there an active disconnect order or shutoff date? What exact amount stops shutoff today? What hardship/payment arrangement, arrears plan, medical hold, budget review, or referral is available?',
+                'Assistance route: call/search 211, LIHEAP/local energy assistance, community action, emergency funds, and the state public utility commission or consumer assistance line if shutoff is imminent.',
+                'Documents checklist: latest bill, shutoff notice, photo ID if required, proof of address, income/benefit proof, household size, medical electricity documentation if relevant, and any prior payment arrangement.',
+                'Minimum record: next deadline, exact required payment or arrangement terms, contact/channel used, documents still needed, and follow-up owner.',
+                'Boundary: BetterSafe does not pay, borrow, access accounts, impersonate the account holder, promise assistance, or provide legal/financial authority.'
+            ];
+        }
+
         function buildBetterSafePacket() {
             const type = document.getElementById('bettersafe-task-type')?.value || 'Claim audit';
-            const requestText = document.getElementById('bettersafe-request-text')?.value || 'UNSPECIFIED';
+            const requestText = redactBetterSafeSensitiveText(document.getElementById('bettersafe-request-text')?.value || 'UNSPECIFIED');
             const mode = document.getElementById('bettersafe-grounding-mode')?.value || 'LIMITED_CHAT_LOCAL';
             const label = document.getElementById('bettersafe-claim-label')?.value || 'UNKNOWN';
-            const sources = document.getElementById('bettersafe-sources-text')?.value || 'UNKNOWN';
+            const sources = redactBetterSafeSensitiveText(document.getElementById('bettersafe-sources-text')?.value || 'UNKNOWN');
             const output = [
                 'BETTERSAFE CONTROLLED LIMITED PILOT PACKET',
                 'Mode: ' + mode,
@@ -336,10 +377,17 @@ _BETTERSAFE_PILOT_JS = """
                 'Sources/evidence to check: ' + sources,
                 'Correction path: CORRECTED | RETRACTED | UNKNOWN | BLOCKED',
                 'Control path: pause | stop | correct | retract | revoke',
-                'Boundary: not medical/legal/financial/emergency/surveillance/child-facing/autonomous authority'
-            ].join('\n');
+                'Boundary: not medical/legal/financial/emergency/surveillance/child-facing/autonomous authority',
+                'Sensitive data rule: do not enter PINs, credit card numbers, DOBs, SSNs, passwords, recovery codes, tokens, or secrets; obvious matches are redacted before display.',
+                'Utility triage: ' + (type === 'Utility shutoff triage'
+                    ? 'selected; build the bounded shutoff packet below before any project work continues.'
+                    : 'not selected')
+            ];
+            if (type === 'Utility shutoff triage') {
+                output.push(...buildUtilityShutoffTriageLines());
+            }
             const out = document.getElementById('bettersafe-packet-output');
-            if (out) out.textContent = output;
+            if (out) out.textContent = output.join('\n');
         }
         document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('bettersafe-build-packet');
@@ -465,6 +513,7 @@ def _clarify_public_sensor_status() -> None:
 _sanitize_public_template()
 
 app = _app_module.app
+_app_module.bootstrap_adoption_heartbeat()
 background_controller = create_background_controller_from_env()
 background_controller.start()
 

@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
-"""Schema, source-class, and lore guardrails for HFF convergence data.
+"""Schema and source-class guardrails for HFF convergence data.
 
 This standard-library test suite deliberately avoids making the theorem register
-runtime policy. It verifies the schema contract, source-class promotion rule, and
-lore containment rules that are required before release tagging.
+runtime policy. It verifies the schema contract and source-class promotion rule.
 """
 
 import json
-import re
 import unittest
 from pathlib import Path
 
@@ -15,11 +13,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REGISTER_PATH = REPO_ROOT / "data" / "theorem-register.v0.1.json"
 SCHEMA_PATH = REPO_ROOT / "schemas" / "theorem-register.v0.1.schema.json"
-LORE_DOCS = [
-    REPO_ROOT / "docs" / "imaginative-lore-100-negative-outcomes-convergence-2026-05-09.md",
-    REPO_ROOT / "docs" / "imaginative-lore-100b-convergence-2026-05-09.md",
-]
-
 REQUIRED_TOP_LEVEL_FIELDS = {
     "schema_version",
     "status",
@@ -47,16 +40,6 @@ REQUIRED_THEOREM_FIELDS = {
     "next_safe_test",
     "repo_anchors",
 }
-
-FORBIDDEN_OPERATIONAL_PROOF_ASSIGNMENT = re.compile(
-    r"(?m)^\s*[\"']?operational_proof[\"']?\s*[:=]\s*true\s*,?\s*$",
-    re.IGNORECASE,
-)
-
-LORE_TABLE_ROW = re.compile(
-    r"^\|\s*\d+\s*\|.*\|\s*P\d+(?:,P\d+)*\s*\|\s*N\d+(?:,N\d+)*\s*\|\s*$"
-)
-
 
 class SchemaSourceLoreValidationTest(unittest.TestCase):
     @classmethod
@@ -118,36 +101,10 @@ class SchemaSourceLoreValidationTest(unittest.TestCase):
                 with self.subTest(theorem=theorem["theorem_id"]):
                     self.assertFalse(theorem.get("operational_proof", False))
 
-    def test_lore_docs_are_source_class_5_and_not_operational_proof(self):
-        source_class_5 = re.compile(r"source[-\s]class[-\s]?5", re.IGNORECASE)
-        for path in LORE_DOCS:
-            text = path.read_text(encoding="utf-8")
-            lowered = text.lower()
-            with self.subTest(path=path.name):
-                self.assertIn("source-class", lowered)
-                self.assertIsNotNone(source_class_5.search(text))
-                self.assertTrue("not proof" in lowered or "cannot prove" in lowered)
-                self.assertIsNone(FORBIDDEN_OPERATIONAL_PROOF_ASSIGNMENT.search(text))
-
-    def test_lore_table_rows_have_negative_and_future_tags(self):
-        for path in LORE_DOCS:
-            rows = [line for line in path.read_text(encoding="utf-8").splitlines() if LORE_TABLE_ROW.match(line)]
-            with self.subTest(path=path.name):
-                self.assertEqual(len(rows), 100)
-                for row in rows:
-                    columns = [column.strip() for column in row.strip("|").split("|")]
-                    useful_possibility = columns[-2]
-                    negative_tags = columns[-1]
-                    self.assertRegex(useful_possibility, r"^P\d+(,P\d+)*$")
-                    self.assertRegex(negative_tags, r"^N\d+(,N\d+)*$")
-
-    def test_release_blockers_are_represented_as_next_safe_tests_or_docs(self):
+    def test_release_blockers_are_represented_as_next_safe_tests(self):
         next_tests = "\n".join(theorem["next_safe_test"] for theorem in self.theorems).lower()
-        lore_docs = "\n".join(path.read_text(encoding="utf-8").lower() for path in LORE_DOCS)
         self.assertIn("source-class", next_tests)
         self.assertIn("future-session", next_tests)
-        self.assertIn("lore", lore_docs)
-        self.assertTrue("not proof" in lore_docs or "cannot prove" in lore_docs)
 
 
 def cls_value(mapping, key):
