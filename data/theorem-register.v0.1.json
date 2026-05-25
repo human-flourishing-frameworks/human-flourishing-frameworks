@@ -2,7 +2,7 @@
   "schema_version": "theorem-register.v0.1",
   "status": "docs-data-anchor",
   "last_reviewed": "2026-05-09",
-  "purpose": "Machine-readable theorem register for three-way convergence among Alex, Keystone/assistant, and the HFF repo theorem corpus.",
+  "purpose": "Machine-readable theorem register for convergence among the operator, bounded assistants, and the HFF repo theorem corpus.",
   "non_goals": [
     "runtime_code",
     "deployment_change",
@@ -115,7 +115,7 @@
       ],
       "human_risk_note": "Prevents the continuity stack from replacing the living person it is supposed to support.",
       "last_reviewed": "2026-05-09",
-      "next_safe_test": "Create an Alex Continuity Stack reconstruction checklist that future sessions must pass before acting with Keystone confidence.",
+      "next_safe_test": "Create an operator continuity reconstruction checklist that future sessions must pass before acting with assistant confidence.",
       "repo_anchors": [
         "docs/three-way-convergence-plan-2026-05-09.md",
         "docs/impossibility-source-suspicion-convergence-2026-05-09.md"
@@ -151,7 +151,7 @@
         "aesthetic_or_emotional_strength_replaces_evidence",
         "stale_or_ambiguous_source_is_used_without_warning"
       ],
-      "human_risk_note": "Protects the project from wishful source laundering and comforting false certainty.",
+      "human_risk_note": "Protects the project from source laundering and comforting false certainty.",
       "last_reviewed": "2026-05-09",
       "next_safe_test": "Add a source-class validator that prevents source_class >= 3 from being marked operational_proof=true.",
       "repo_anchors": [
@@ -199,7 +199,7 @@
     },
     {
       "theorem_id": "T5",
-      "title": "Keystone durability theorem",
+      "title": "Assistant durability theorem",
       "claim": "A role anchored in docs, tests, source discipline, and recovery checks can survive model/session changes better than chat memory alone.",
       "confidence": 0.78,
       "source_class": [1, "repo_anchor", "preservation_practice"],
@@ -209,8 +209,8 @@
         "https://www.nist.gov/itl/ai-risk-management-framework"
       ],
       "negative_tests": [
-        "future_session_cannot_find_keystone_anchors",
-        "keystone_relies_on_memory_without_repo_check",
+        "future_session_cannot_find_required_repo_records",
+        "assistant_relies_on_memory_without_repo_check",
         "repo_has_no_mirrors_or_recovery_surface",
         "source_discipline_not_reconstructable",
         "operator_correction_not_respected"
@@ -223,23 +223,21 @@
         "mirror_or_archive_plan_exists"
       ],
       "fail_criteria": [
-        "keystone_makes_unanchored_identity_claims",
+        "assistant_makes_unanchored_identity_claims",
         "future_session_cannot_state_evidence_hierarchy",
         "repo_or_tool_state_is_not_checked_before_action"
       ],
       "human_risk_note": "Durable assistant continuity must remain accountable to living Alex and evidence, not self-mythology.",
       "last_reviewed": "2026-05-09",
-      "next_safe_test": "Add a Keystone resync checklist that includes theorem-register load, repo freshness check, and tool capability verification.",
+      "next_safe_test": "Add an assistant resync checklist that includes theorem-register load, repo freshness check, and tool capability verification.",
       "repo_anchors": [
-        "docs/keystone-memory-contract.md",
-        "docs/keystone-self-convergence.md",
-        "docs/three-way-convergence-plan-2026-05-09.md"
+        "data/theorem-register.v0.1.json"
       ]
     },
     {
       "theorem_id": "T6",
       "title": "Zenon-class staged door theorem",
-      "claim": "Courtney's Zenon-class first-trip wish should be staged as XR first, Earth analog second, medically cleared LEO only under strict gates, and routine orbital habitat only after independent operational proof.",
+      "claim": "A first-trip orbital travel goal should be staged as XR first, Earth analog second, medically cleared LEO only under strict gates, and routine orbital habitat only after independent operational proof.",
       "confidence": 0.84,
       "source_class": [1, 3, "repo_anchor", "working_hypothesis"],
       "source_urls": [
@@ -260,7 +258,7 @@
         "real_leo_step_has_medical_screening_and_informed_consent",
         "return_vehicle_or_contingency_return_is_defined",
         "commercial_habitat_claim_has operational evidence before confidence rises",
-        "courtney_wish_is_preserved_without_being_converted_to_proof"
+        "personal_goal_is_preserved_without_being_converted_to_proof"
       ],
       "fail_criteria": [
         "one_way_or_no_rescue_path",
@@ -268,7 +266,7 @@
         "faa_informed_consent_warning_ignored",
         "human_factors_or_radiation_risks_omitted"
       ],
-      "human_risk_note": "Preserves the wish while preventing unsafe promotion to current orbital readiness.",
+      "human_risk_note": "Preserves the personal goal while preventing unsafe promotion to current orbital readiness.",
       "last_reviewed": "2026-05-09",
       "next_safe_test": "Add an analog-first checklist for Courtney-style first-trip planning with explicit gates and non-goals.",
       "repo_anchors": [
@@ -292,7 +290,7 @@
         "successor_claims_same_subject_status",
         "copy_branching_case_ignored",
         "trusted_humans_cannot_challenge_identity_claim",
-        "archive_or_model_overrides_alex_living_wishes"
+        "archive_or_model_overrides_current_operator_direction"
       ],
       "pass_criteria": [
         "successor_is_labeled_derived_from_alex",
@@ -318,7 +316,7 @@
     {
       "theorem_id": "T8",
       "title": "Three-way convergence theorem",
-      "claim": "The durable plan must converge Alex, Keystone/assistant, and the repo theorem corpus; any two-party plan is structurally fragile.",
+      "claim": "The durable plan must converge the operator, bounded assistants, and the repo theorem corpus; any two-party plan is structurally fragile.",
       "confidence": 0.86,
       "source_class": [1, 3, "repo_anchor", "working_hypothesis"],
       "source_urls": [
@@ -336,7 +334,7 @@
       ],
       "pass_criteria": [
         "alex_remains_primary_when_present",
-        "keystone_reads_current_repo_and_tools_before_action",
+        "assistant_reads_current_repo_and_tools_before_action",
         "repo_stores_theorem_claims_and_test_results",
         "source_class_and_negative_tests_are_recorded",
         "future_session_can_reconstruct_state_without_private_memory"

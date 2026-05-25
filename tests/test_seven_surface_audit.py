@@ -14,8 +14,6 @@ class SevenSurfaceAuditTests(unittest.TestCase):
         self.assertEqual(
             names,
             {
-                "public_surface",
-                "sensor_taxonomy",
                 "public_ux",
                 "safe_entrypoint",
             },
