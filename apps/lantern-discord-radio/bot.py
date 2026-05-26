@@ -5,12 +5,18 @@ Auto-connect, stay connected, play music in Lounge
 """
 
 import os
+import sys
+import io
 import discord
 from discord.ext import commands, tasks
 from pathlib import Path
 import asyncio
 import json
 from datetime import datetime
+
+# Fix Windows UTF-8 console encoding
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 token = os.environ.get('DISCORD_BOT_TOKEN')
 intents = discord.Intents.default()
@@ -43,9 +49,9 @@ def log_event(action, detail=""):
 @bot.event
 async def on_ready():
     global current_voice
-    print(f'✓ Bot ready: {bot.user}')
+    print(f'[+] Bot ready: {bot.user}')
     load_playlist()
-    print(f'✓ Loaded {len(playlist)} tracks')
+    print(f'[+] Loaded {len(playlist)} tracks')
     log_event('bot_ready', f'Loaded {len(playlist)} tracks')
 
     # Find and join Lounge
@@ -59,7 +65,7 @@ async def join_lounge():
         for channel in guild.voice_channels:
             print(f'  Voice channel: {channel.name}')
             if 'lounge' in channel.name.lower():
-                print(f'✓ Found Lounge: {channel.name}')
+                print(f'[+] Found Lounge: {channel.name}')
 
                 # Disconnect if already connected somewhere
                 if current_voice and current_voice.is_connected():
@@ -68,14 +74,14 @@ async def join_lounge():
 
                 try:
                     current_voice = await channel.connect(reconnect=True)
-                    print(f'✓ Connected to {channel.name}')
+                    print(f'[+] Connected to {channel.name}')
                     log_event('connected', channel.name)
 
                     # Start playing
                     await play_track_by_idx(0)
                     return
                 except Exception as e:
-                    print(f'✗ Connection failed: {e}')
+                    print(f'[-] Connection failed: {e}')
                     log_event('connection_failed', str(e))
 
 async def play_track_by_idx(idx):
@@ -91,12 +97,12 @@ async def play_track_by_idx(idx):
         if current_voice.is_playing():
             current_voice.stop()
 
-        print(f'▶ Playing: {track["name"]}')
+        print(f'> Playing: {track["name"]}')
         audio = discord.FFmpegPCMAudio(track['path'])
         current_voice.play(audio, after=lambda e: asyncio.run_coroutine_threadsafe(on_playback_end(), bot.loop).result())
         log_event('track_playing', track['name'])
     except Exception as e:
-        print(f'✗ Playback error: {e}')
+        print(f'[-] Playback error: {e}')
 
 async def on_playback_end():
     """Auto-play next track when current ends"""
@@ -108,7 +114,7 @@ async def on_voice_state_update(member, before, after):
     """Handle voice state changes"""
     if member == bot.user:
         if after.channel is None:
-            print(f'✗ Disconnected from voice')
+            print(f'[-] Disconnected from voice')
             log_event('disconnected', '')
             await asyncio.sleep(2)
             await join_lounge()
@@ -116,12 +122,12 @@ async def on_voice_state_update(member, before, after):
 @bot.command()
 async def next(ctx):
     await play_track_by_idx(current_track_idx + 1)
-    await ctx.send(f'▶ {playlist[current_track_idx]["name"]}')
+    await ctx.send(f'> {playlist[current_track_idx]["name"]}')
 
 @bot.command()
 async def prev(ctx):
     await play_track_by_idx(current_track_idx - 1)
-    await ctx.send(f'▶ {playlist[current_track_idx]["name"]}')
+    await ctx.send(f'> {playlist[current_track_idx]["name"]}')
 
 @bot.command()
 async def stop(ctx):
@@ -131,7 +137,7 @@ async def stop(ctx):
             current_voice.stop()
         await current_voice.disconnect()
         current_voice = None
-    await ctx.send('⏹ Stopped')
+    await ctx.send('[STOP] Stopped')
 
 @bot.command()
 async def radio(ctx):
@@ -155,6 +161,6 @@ async def status(ctx):
 try:
     asyncio.run(bot.start(token))
 except Exception as e:
-    print(f'✗ Fatal: {e}')
+    print(f'[-] Fatal: {e}')
     import traceback
     traceback.print_exc()
