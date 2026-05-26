@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -19,12 +20,36 @@ def load_policy(policy_path: Path = POLICY_PATH) -> dict:
 
 def tracked_like_files(repo_root: Path) -> list[Path]:
     skipped = {".git", ".venv", "__pycache__", "dist", ".claude"}
+
+    def is_skipped(path: Path) -> bool:
+        rel_parts = path.relative_to(repo_root).parts
+        return any(part in skipped for part in rel_parts)
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), "ls-files"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        files: list[Path] = []
+        for rel in result.stdout.splitlines():
+            rel = rel.strip()
+            if not rel:
+                continue
+            path = repo_root / rel
+            if path.is_file() and not is_skipped(path):
+                files.append(path)
+        return files
+    except Exception:
+        # Fallback for non-git contexts: preserve prior behavior.
+        pass
+
     files: list[Path] = []
     for path in repo_root.rglob("*"):
         if not path.is_file():
             continue
-        rel_parts = path.relative_to(repo_root).parts
-        if any(part in skipped for part in rel_parts):
+        if is_skipped(path):
             continue
         files.append(path)
     return files
