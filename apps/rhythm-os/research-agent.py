@@ -10,7 +10,13 @@ import asyncio
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
-import anthropic
+
+try:
+    import anthropic
+except ImportError:
+    print("[-] Warning: anthropic library not installed")
+    print("    Install with: pip install anthropic")
+    anthropic = None
 
 # Configuration
 RESEARCH_DIR = Path.home() / '.lantern' / 'research'
@@ -20,11 +26,18 @@ KNOWLEDGE_FILE = RESEARCH_DIR / 'knowledge-base.jsonl'
 RECOMMENDATIONS_FILE = RESEARCH_DIR / 'work-items.json'
 SEARCH_HISTORY_FILE = RESEARCH_DIR / 'searches.jsonl'
 
-# Initialize Anthropic client
-client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+# Anthropic client initialized in ResearchAgent.__init__()
 
 class ResearchAgent:
     def __init__(self):
+        if not anthropic:
+            raise RuntimeError(
+                "Anthropic library not installed. Install with: pip install anthropic\n"
+                "Also set: $env:ANTHROPIC_API_KEY = 'your_api_key_here'"
+            )
+        self.client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+        if not os.environ.get('ANTHROPIC_API_KEY'):
+            raise RuntimeError("ANTHROPIC_API_KEY environment variable not set")
         self.knowledge = self.load_knowledge()
         self.searches_performed = self.load_search_history()
 
@@ -84,7 +97,7 @@ Generate 5 NEW research queries that would:
 Format as JSON array of strings.
 """
 
-        message = client.messages.create(
+        message = self.client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=500,
             messages=[{
@@ -133,7 +146,7 @@ Format as JSON array of strings.
         print(f"[+] Searching: {query}")
 
         # Use Claude's web browsing capability
-        message = client.messages.create(
+        message = self.client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=1000,
             messages=[{
@@ -213,7 +226,7 @@ Format as JSON array with:
 }}
 """
 
-        message = client.messages.create(
+        message = self.client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=1500,
             messages=[{
