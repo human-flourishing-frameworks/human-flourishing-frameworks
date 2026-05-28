@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lantern OS — Live Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New',monospace;background:#080c1a;color:#0f0;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* TASKBAR */
+.taskbar{background:#0a0e22;border-bottom:2px solid #0f0;padding:4px 10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;flex-shrink:0}
+.taskbar .logo{color:#00d4ff;font-weight:bold;font-size:12px;letter-spacing:2px}
+.taskbar .clock{color:#888}
+.taskbar .running{display:flex;gap:6px}
+.taskbar .app-pill{background:rgba(0,255,0,.1);border:1px solid #0f0;padding:2px 8px;border-radius:3px;font-size:9px;cursor:pointer}
+.taskbar .app-pill:hover{background:rgba(0,255,0,.2)}
+.taskbar .app-pill.active{background:rgba(0,212,255,.15);border-color:#00d4ff;color:#00d4ff}
+
+/* SITE NAV */
+.sitenav{background:#06091a;border-bottom:1px solid #1a2040;padding:0;display:flex;align-items:stretch;font-size:11px;flex-shrink:0}
+.sitenav a{flex:none;padding:8px 16px;color:#666;text-decoration:none;letter-spacing:1px;border-right:1px solid #0e1230;transition:all .15s}
+.sitenav a:hover{color:#00d4ff;background:rgba(0,212,255,.06)}
+.sitenav a.active{color:#0f0;background:rgba(0,255,0,.06);font-weight:bold}
+.sitenav .nav-spacer{flex:1}
+.sitenav .nav-src{color:#444;font-size:10px}
+
+/* MAIN GRID */
+.os-grid{display:grid;grid-template-columns:180px 1fr 200px;grid-template-rows:1fr;flex:1;overflow:hidden;gap:0}
+
+/* SIDEBAR */
+.sidebar{background:#0c1025;border-right:1px solid #1a2040;padding:8px;overflow-y:auto;font-size:10px}
+.sidebar h3{color:#00d4ff;font-size:10px;letter-spacing:1px;margin:8px 0 4px;border-bottom:1px solid #1a2040;padding-bottom:3px}
+.sidebar .nav-item{padding:4px 6px;cursor:pointer;border-radius:3px;margin:1px 0;display:flex;align-items:center;gap:6px}
+.sidebar .nav-item:hover{background:rgba(0,212,255,.1)}
+.sidebar .nav-item.active{background:rgba(0,212,255,.15);color:#00d4ff}
+.sidebar .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sidebar .dot.green{background:#0f0}
+.sidebar .dot.yellow{background:#ff0}
+.sidebar .dot.red{background:#f00}
+.sidebar .dot.gray{background:#555}
+
+/* CENTER */
+.center{overflow-y:auto;padding:8px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto;gap:8px;align-content:start}
+
+/* TILES */
+.tile{border:1px solid;padding:10px;font-size:10px;background:rgba(0,0,0,.3);border-radius:4px}
+.tile.green{border-color:#0f0}
+.tile.cyan{border-color:#00d4ff}
+.tile.yellow{border-color:#ff0}
+.tile.red{border-color:#f44}
+.tile.purple{border-color:#a855f7}
+.tile .tile-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.tile .tile-title{font-weight:bold;font-size:11px}
+.tile .tile-badge{font-size:8px;padding:1px 5px;border-radius:2px;font-weight:bold}
+.tile .tile-badge.ok{background:rgba(0,255,0,.15);color:#0f0}
+.tile .tile-badge.warn{background:rgba(255,255,0,.15);color:#ff0}
+.tile .tile-badge.off{background:rgba(255,0,0,.1);color:#f44}
+.tile .row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.tile .row .k{color:#888}
+.tile .row .v{color:#ccc}
+.tile .bar{height:4px;background:rgba(255,255,255,.05);border-radius:2px;margin-top:4px}
+.tile .bar .fill{height:100%;border-radius:2px}
+
+/* WIDE TILE */
+.tile.wide{grid-column:1/-1}
+
+/* GAME LIST */
+.game-row{display:flex;align-items:center;gap:8px;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,.03)}
+.game-row .game-icon{width:18px;height:18px;border:1px solid #333;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.game-row .game-name{flex:1;color:#ccc;font-size:10px}
+.game-row .game-hrs{color:#555;font-size:9px}
+.game-row .game-status{font-size:8px;padding:1px 4px;border-radius:2px}
+.game-row .game-status.installed{background:rgba(0,255,0,.1);color:#0f0}
+.game-row .game-status.running{background:rgba(0,212,255,.15);color:#00d4ff}
+
+/* RIGHT PANEL */
+.right-panel{background:#0c1025;border-left:1px solid #1a2040;padding:8px;overflow-y:auto;font-size:9px}
+.right-panel h3{color:#00d4ff;font-size:10px;letter-spacing:1px;margin:8px 0 4px;border-bottom:1px solid #1a2040;padding-bottom:3px}
+.note{background:rgba(255,255,0,.04);border:1px solid #332;padding:6px;margin:4px 0;border-radius:3px;font-size:9px;color:#aa8}
+.note .note-title{color:#dd0;font-weight:bold;margin-bottom:3px;font-size:10px}
+.media-item{display:flex;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);align-items:center}
+.media-item .thumb{width:28px;height:18px;background:#1a1a2e;border:1px solid #333;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#555;flex-shrink:0}
+.media-item .info{flex:1}
+.media-item .info .name{color:#ccc;font-size:9px}
+.media-item .info .meta{color:#555;font-size:8px}
+
+/* BOTTOM STATUS */
+.status-bar{background:#0a0e22;border-top:2px solid #0f0;padding:4px 10px;display:flex;justify-content:space-between;font-size:9px;color:#555;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- SITE NAV -->
+<nav class="sitenav" aria-label="Site navigation">
+<a href="/">Dashboard</a>
+<a href="/os" class="active">Lantern OS</a>
+<a href="/art">Art Panels</a>
+<a href="/api/status">API Status</a>
+<span class="nav-spacer"></span>
+<a class="nav-src" href="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks" target="_blank" rel="noopener">Source</a>
+</nav>
+
+<!-- TASKBAR -->
+<div class="taskbar">
+  <span class="logo">LANTERN OS v1.1</span>
+  <div class="running">
+    <span class="app-pill active">Dashboard</span>
+    <span class="app-pill">Chat</span>
+    <span class="app-pill">Rhythm OS</span>
+    <span class="app-pill active">Suzie Orch</span>
+    <span class="app-pill">GameMaker</span>
+    <span class="app-pill">Notes</span>
+  </div>
+  <span class="clock" id="clock"></span>
+</div>
+
+<div class="os-grid">
+
+<!-- LEFT SIDEBAR -->
+<div class="sidebar">
+  <h3>SYSTEMS</h3>
+  <div class="nav-item active"><span class="dot green"></span> Dashboard</div>
+  <div class="nav-item"><span class="dot green"></span> Chat (Claude)</div>
+  <div class="nav-item"><span class="dot green"></span> Rhythm OS</div>
+  <div class="nav-item"><span class="dot green"></span> Suzie Orchestrator</div>
+  <div class="nav-item"><span class="dot yellow"></span> M5 Attestation</div>
+  <div class="nav-item"><span class="dot gray"></span> Ticker / Brokerage</div>
+
+  <h3>APPS</h3>
+  <div class="nav-item"><span class="dot green"></span> GameMaker Studio</div>
+  <div class="nav-item"><span class="dot green"></span> VS Code</div>
+  <div class="nav-item"><span class="dot green"></span> Discord</div>
+  <div class="nav-item"><span class="dot green"></span> Docker Desktop</div>
+  <div class="nav-item"><span class="dot green"></span> Git / GitHub</div>
+  <div class="nav-item"><span class="dot green"></span> LM Studio</div>
+  <div class="nav-item"><span class="dot gray"></span> Ollama</div>
+
+  <h3>MEDIA</h3>
+  <div class="nav-item"><span class="dot green"></span> Music Library</div>
+  <div class="nav-item"><span class="dot gray"></span> Movies</div>
+  <div class="nav-item"><span class="dot green"></span> Art Panels</div>
+
+  <h3>GAMES</h3>
+  <div class="nav-item"><span class="dot green"></span> Steam Library</div>
+  <div class="nav-item"><span class="dot green"></span> Primordialis</div>
+  <div class="nav-item"><span class="dot green"></span> Mewgenics</div>
+  <div class="nav-item"><span class="dot green"></span> RetroArch</div>
+
+  <h3>DESKTOP</h3>
+  <div class="nav-item"><span class="dot green"></span> Lantern Desktop</div>
+  <div class="nav-item"><span class="dot green"></span> Lantern Local Chat</div>
+  <div class="nav-item"><span class="dot green"></span> Return Door Watch</div>
+</div>
+
+<!-- CENTER CONTENT -->
+<div class="center">
+
+  <!-- ORCHESTRATOR TILE -->
+  <div class="tile cyan wide">
+    <div class="tile-head">
+      <span class="tile-title">SUZIE ORCHESTRATOR</span>
+      <span class="tile-badge ok">LIVE</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin:6px 0">
+      <div style="background:rgba(0,255,0,.2);border:1px solid #0f0;padding:3px;text-align:center;font-size:8px;border-radius:2px">A01<br><span style="color:#0f0">RUN</span></div>
+      <div style="background:rgba(0,255,0,.2);border:1px solid #0f0;padding:3px;text-align:center;font-size:8px;border-radius:2px">A02<br><span style="color:#0f0">RUN</span></div>
+      <div style="background:rgba(0,212,255,.15);border:1px solid #00d4ff;padding:3px;text-align:center;font-size:8px;border-radius:2px">A03<br><span style="color:#00d4ff">QUE</span></div>
+      <div style="background:rgba(255,255,0,.1);border:1px solid #ff0;padding:3px;text-align:center;font-size:8px;border-radius:2px">A04<br><span style="color:#ff0">WAIT</span></div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid #333;padding:3px;text-align:center;font-size:8px;border-radius:2px;color:#555">A05<br>IDLE</div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid #333;padding:3px;text-align:center;font-size:8px;border-radius:2px;color:#555">A06<br>IDLE</div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid #333;padding:3px;text-align:center;font-size:8px;border-radius:2px;color:#555">A07<br>IDLE</div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid #333;padding:3px;text-align:center;font-size:8px;border-radius:2px;color:#555">A08<br>IDLE</div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid #333;padding:3px;text-align:center;font-size:8px;border-radius:2px;color:#555">A09<br>IDLE</div>
+      <div style="background:rgba(0,0,0,.2);border:1px solid #333;padding:3px;text-align:center;font-size:8px;border-radius:2px;color:#555">A10<br>IDLE</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:4px">
+      <div class="row"><span class="k">Agents:</span><span class="v">2 running</span></div>
+      <div class="row"><span class="k">Queue:</span><span class="v">1 pending</span></div>
+      <div class="row"><span class="k">Worktrees:</span><span class="v">3 active</span></div>
+      <div class="row"><span class="k">MCP:</span><span class="v">connected</span></div>
+    </div>
+  </div>
+
+  <!-- CHAT TILE -->
+  <div class="tile green">
+    <div class="tile-head">
+      <span class="tile-title">CHAT (CLAUDE)</span>
+      <span class="tile-badge ok">LIVE</span>
+    </div>
+    <div class="row"><span class="k">Provider:</span><span class="v">Anthropic</span></div>
+    <div class="row"><span class="k">Model:</span><span class="v">opus-4.6</span></div>
+    <div class="row"><span class="k">Messages:</span><span class="v">142</span></div>
+    <div class="row"><span class="k">Autonomy:</span><span class="v" style="color:#0f0">FULL</span></div>
+    <div class="bar"><div class="fill" style="width:72%;background:#0f0"></div></div>
+    <div style="color:#555;margin-top:3px">Context: 72% used</div>
+  </div>
+
+  <!-- MUSIC TILE -->
+  <div class="tile green">
+    <div class="tile-head">
+      <span class="tile-title">RHYTHM OS</span>
+      <span class="tile-badge ok">PLAYING</span>
+    </div>
+    <div class="row"><span class="k">Now:</span><span class="v">Mozart - Eine kleine</span></div>
+    <div class="row"><span class="k">Tracks:</span><span class="v">27 loaded</span></div>
+    <div class="row"><span class="k">Discord:</span><span class="v" style="color:#5865f2">Lounge</span></div>
+    <div class="row"><span class="k">Source:</span><span class="v">CC-Licensed</span></div>
+    <div class="bar"><div class="fill" style="width:45%;background:#00d4ff"></div></div>
+    <div style="color:#555;margin-top:3px">3:45 / 5:12</div>
+  </div>
+
+  <!-- GAMES TILE -->
+  <div class="tile purple">
+    <div class="tile-head">
+      <span class="tile-title">GAMES LIBRARY</span>
+      <span class="tile-badge ok">STEAM</span>
+    </div>
+    <div class="game-row"><div class="game-icon" style="background:#1a0a2e;color:#a855f7">P</div><div class="game-name">Primordialis</div><div class="game-hrs">dev</div><div class="game-status running">BUILDING</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#2a1a0a;color:#dd9933">B</div><div class="game-name">Baldur's Gate 3</div><div class="game-hrs">120h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a1a0a;color:#22aa44">R</div><div class="game-name">RimWorld</div><div class="game-hrs">340h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a1a0a;color:#aaaa22">S</div><div class="game-name">Satisfactory</div><div class="game-hrs">85h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a0a1a;color:#4488cc">T</div><div class="game-name">Terraria / tModLoader</div><div class="game-hrs">210h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a0a0a;color:#cc4444">M</div><div class="game-name">Mewgenics</div><div class="game-hrs">dev</div><div class="game-status running">BUILDING</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a1a1a;color:#44aaaa">O</div><div class="game-name">Oxygen Not Included</div><div class="game-hrs">95h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a0a1a;color:#aa44aa">N</div><div class="game-name">Nuclear Throne</div><div class="game-hrs">45h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a0a1a;color:#00d4ff">R</div><div class="game-name">RetroArch</div><div class="game-hrs">multi</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a0a0a;color:#ff6644">L</div><div class="game-name">League of Legends</div><div class="game-hrs">---</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a1a0a;color:#44cc44">G</div><div class="game-name">Garry's Mod</div><div class="game-hrs">60h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a1a1a;color:#aaaaaa">RL</div><div class="game-name">Rocket League</div><div class="game-hrs">75h</div><div class="game-status installed">INSTALLED</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a0a2a;color:#6688ff">P2</div><div class="game-name">Path of Exile 2</div><div class="game-hrs">15h</div><div class="game-status installed">INSTALLED</div></div>
+  </div>
+
+  <!-- APPS TILE -->
+  <div class="tile green">
+    <div class="tile-head">
+      <span class="tile-title">RUNNING APPS</span>
+      <span class="tile-badge ok">6 ACTIVE</span>
+    </div>
+    <div class="game-row"><div class="game-icon" style="background:#0a1a2e;color:#00d4ff">C</div><div class="game-name">Claude Code</div><div class="game-hrs">PID 4821</div><div class="game-status running">ACTIVE</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a2a0a;color:#0f0">V</div><div class="game-name">VS Code</div><div class="game-hrs">PID 2340</div><div class="game-status running">ACTIVE</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a1a3e;color:#5865f2">D</div><div class="game-name">Discord</div><div class="game-hrs">PID 5102</div><div class="game-status running">ACTIVE</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a1a1a;color:#0db7ed">K</div><div class="game-name">Docker Desktop</div><div class="game-hrs">PID 1844</div><div class="game-status running">ACTIVE</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#1a1a0a;color:#aaaa22">G</div><div class="game-name">GameMaker Studio</div><div class="game-hrs">PID 6720</div><div class="game-status running">ACTIVE</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a0a1a;color:#888">L</div><div class="game-name">LM Studio</div><div class="game-hrs">PID 3310</div><div class="game-status running">ACTIVE</div></div>
+    <div class="game-row"><div class="game-icon" style="background:#0a0a0a;color:#555">O</div><div class="game-name">Ollama</div><div class="game-hrs">---</div><div class="game-status" style="background:rgba(255,0,0,.1);color:#f44">STOPPED</div></div>
+  </div>
+
+  <!-- M5 / SYSTEM HEALTH -->
+  <div class="tile yellow">
+    <div class="tile-head">
+      <span class="tile-title">M5 ATTESTATION</span>
+      <span class="tile-badge warn">PARTIAL</span>
+    </div>
+    <div class="row"><span class="k">Status:</span><span class="v" style="color:#ff0">Interval check</span></div>
+    <div class="row"><span class="k">Last ping:</span><span class="v">12s ago</span></div>
+    <div class="row"><span class="k">Uptime:</span><span class="v">4h 38m</span></div>
+    <div class="row"><span class="k">Claims verified:</span><span class="v">3 / 5</span></div>
+    <div class="bar"><div class="fill" style="width:60%;background:#ff0"></div></div>
+  </div>
+
+  <!-- LANTERN DESKTOP (RESTORED) -->
+  <div class="tile cyan">
+    <div class="tile-head">
+      <span class="tile-title">LANTERN DESKTOP</span>
+      <span class="tile-badge ok">RESTORED</span>
+    </div>
+    <div class="row"><span class="k">App:</span><span class="v">Tkinter + CustomTkinter</span></div>
+    <div class="row"><span class="k">Backend:</span><span class="v">local_lantern_server.py</span></div>
+    <div class="row"><span class="k">Voice:</span><span class="v">Vosk (offline STT)</span></div>
+    <div class="row"><span class="k">LLM:</span><span class="v">qwen2.5-coder (Ollama)</span></div>
+    <div class="row"><span class="k">Palette:</span><span class="v">Captain Blinkbug sky-blue</span></div>
+    <div class="row"><span class="k">Lines:</span><span class="v">1073 (desktop) + 932 (server)</span></div>
+    <div class="row"><span class="k">Launch:</span><span class="v">START_LANTERN_CHAT.bat</span></div>
+  </div>
+
+  <!-- OLD CHAT HISTORY -->
+  <div class="tile yellow">
+    <div class="tile-head">
+      <span class="tile-title">OLD LANTERN CHATS</span>
+      <span class="tile-badge warn">ARCHIVE</span>
+    </div>
+    <div style="max-height:120px;overflow-y:auto;font-size:9px;color:#aaa;margin-top:4px" id="old-chats">
+      <div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)"><span style="color:#e8a73d">Lantern:</span> Oh, the last day. It feels like a long time ago now, doesn't it?</div>
+      <div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)"><span style="color:#e8a73d">Lantern:</span> It sounds like you might be feeling a bit tired. How about a quick snack?</div>
+      <div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)"><span style="color:#e8a73d">Lantern:</span> Something exciting is about to unfold. Let's keep an eye on things.</div>
+    </div>
+    <div class="row" style="margin-top:6px"><span class="k">Source:</span><span class="v">convo-stream.jsonl</span></div>
+    <div class="row"><span class="k">Voice model:</span><span class="v">qwen2.5-coder-7b</span></div>
+    <div class="row"><span class="k">Input:</span><span class="v">Vosk offline STT</span></div>
+  </div>
+
+  <!-- RETROARCH -->
+  <div class="tile purple wide">
+    <div class="tile-head">
+      <span class="tile-title">RETROARCH</span>
+      <span class="tile-badge ok">INSTALLED</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px;margin-top:6px">
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);padding:6px;border-radius:4px;text-align:center;font-size:9px"><div style="color:#a855f7;font-weight:bold">NES</div><div style="color:#666;margin-top:2px">FCEUmm</div></div>
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);padding:6px;border-radius:4px;text-align:center;font-size:9px"><div style="color:#a855f7;font-weight:bold">SNES</div><div style="color:#666;margin-top:2px">Snes9x</div></div>
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);padding:6px;border-radius:4px;text-align:center;font-size:9px"><div style="color:#a855f7;font-weight:bold">GBA</div><div style="color:#666;margin-top:2px">mGBA</div></div>
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);padding:6px;border-radius:4px;text-align:center;font-size:9px"><div style="color:#a855f7;font-weight:bold">N64</div><div style="color:#666;margin-top:2px">Mupen64</div></div>
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);padding:6px;border-radius:4px;text-align:center;font-size:9px"><div style="color:#a855f7;font-weight:bold">PS1</div><div style="color:#666;margin-top:2px">Beetle PSX</div></div>
+      <div style="background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.3);padding:6px;border-radius:4px;text-align:center;font-size:9px"><div style="color:#a855f7;font-weight:bold">Genesis</div><div style="color:#666;margin-top:2px">Genesis Plus</div></div>
+    </div>
+  </div>
+
+  <!-- ART PANELS TILE -->
+  <div class="tile cyan wide">
+    <div class="tile-head">
+      <span class="tile-title">ART STREAM — PIXEL PANELS</span>
+      <span class="tile-badge ok">4 RENDERED</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px" id="art-strip"></div>
+  </div>
+
+</div>
+
+<!-- RIGHT PANEL: Notes + Media -->
+<div class="right-panel">
+  <h3>NOTES</h3>
+  <div class="note">
+    <div class="note-title">RAG House Status</div>
+    /sources/ /chunks/ /indexes/ structure defined. Ingest pipeline pending. Metadata contract: source_path, commit_sha, confidence, pii_classification.
+  </div>
+  <div class="note">
+    <div class="note-title">COMET LEAP v2.1</div>
+    Master plan updated. 30-day execution model active. AM: objective + state. PM: evidence + transition review.
+  </div>
+  <div class="note">
+    <div class="note-title">Primordialis Build</div>
+    GameMaker project compiling. Agent slots A01-A02 assigned to sprite pipeline and room editor validation.
+  </div>
+  <div class="note">
+    <div class="note-title">Discord Radio</div>
+    Bot connected to Lounge. Token validated. CC-licensed tracks only. Auto-reconnect active.
+  </div>
+
+  <h3>MOVIES / MEDIA</h3>
+  <div class="media-item"><div class="thumb">VLC</div><div class="info"><div class="name">Downloaded queue</div><div class="meta">0 items</div></div></div>
+  <div class="media-item"><div class="thumb">YT</div><div class="info"><div class="name">Watch Later</div><div class="meta">12 items</div></div></div>
+  <div class="media-item"><div class="thumb">TV</div><div class="info"><div class="name">Local library</div><div class="meta">3 files</div></div></div>
+
+  <h3>QUICK ACTIONS</h3>
+  <div style="display:flex;flex-direction:column;gap:3px;margin-top:4px">
+    <div class="nav-item" style="color:#00d4ff;border:1px solid #1a2040;justify-content:center">Open Art Panels</div>
+    <div class="nav-item" style="color:#0f0;border:1px solid #1a2040;justify-content:center">Refresh Orch</div>
+    <div class="nav-item" style="color:#ff0;border:1px solid #1a2040;justify-content:center">Run QA Suite</div>
+    <div class="nav-item" style="color:#a855f7;border:1px solid #1a2040;justify-content:center">Launch Primordialis</div>
+  </div>
+</div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <span>Lantern OS v1.1 | Local-First | Privacy-First | Family A Production</span>
+  <span>CPU: 23% | RAM: 8.2/32 GB | GPU: 12% | Disk: 420/1000 GB | Starlink: 142ms</span>
+</div>
+
+<script>
+// Clock
+function tick(){document.getElementById('clock').textContent=new Date().toISOString().replace('T',' ').slice(0,19)}
+tick();setInterval(tick,1000);
+
+// Mini pixel art thumbnails in the art strip
+const strip=document.getElementById('art-strip');
+const panels=[
+  {name:'Lantern Glow',w:16,h:16,sz:3,paint:(x,y)=>{
+    const cx=7.5,cy=6.5,dx=x-cx,dy=y-cy,d=Math.sqrt(dx*dx+dy*dy);
+    if(x>=6&&x<=9&&y>=5&&y<=11){if(y===5||y===11)return'#7a4a1a';if(x===6||x===9)return'#7a4a1a';if(x>=7&&x<=8&&y>=7&&y<=9)return'#ffd700';return'#2a1a0a'}
+    if(d<3)return'#2a1a0a';if(d<5)return'#0a1628';return'#0a0a12'}},
+  {name:'RAG House',w:20,h:14,sz:2,paint:(x,y)=>{
+    if(y<=2)return(x===5&&y===0)||(x===15&&y===1)?'#e8e8f0':'#0a1628';
+    if(y>=3&&y<=5){const l=9-(y-3)*3,r=10+(y-3)*3;if(x>=l&&x<=r)return'#7a4a1a';return'#0a1628'}
+    if(x>=3&&x<=16&&y>=6&&y<=12){if(x===3||x===16||y===6||y===12)return'#007799';if(x===8||x===11)return'#1a1a2e';return'#0d0d18'}
+    if(y>=13)return(x+y)%3===0?'#0f2340':'#0a1628';return'#0a1628'}},
+  {name:'Seven Anchors',w:20,h:12,sz:2,paint:(x,y)=>{
+    const a=[[3,2,'#00d4ff'],[7,1,'#22aa44'],[11,3,'#ffaa00'],[16,1,'#8844cc'],[5,8,'#dd9933'],[10,9,'#00a8cc'],[15,8,'#cc3333']];
+    for(const[ax,ay,c]of a){const d=Math.sqrt((x-ax)**2+(y-ay)**2);if(d<1)return c;if(d<1.8)return'#0f2340'}
+    return'#0a0a12'}},
+  {name:'Convergence',w:24,h:12,sz:2,paint:(x,y)=>{
+    const cx=21,cy=6,dx=x-cx,dy=y-cy,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<1)return'#e8e8f0';if(d<2)return'#00d4ff';
+    const streams=[{sy:1,c:'#00d4ff'},{sy:3,c:'#22aa44'},{sy:6,c:'#ffaa00'},{sy:9,c:'#8844cc'},{sy:11,c:'#cc3333'}];
+    const t=x/24;
+    for(const s of streams){const sy2=s.sy+(cy-s.sy)*t*t;if(Math.abs(y-sy2)<.8)return s.c}
+    return'#0a0a12'}}
+];
+
+panels.forEach(p=>{
+  const frame=document.createElement('div');
+  frame.style.cssText='display:flex;flex-direction:column;align-items:center';
+  const grid=document.createElement('div');
+  grid.style.cssText=`display:grid;grid-template-columns:repeat(${p.w},${p.sz}px);grid-template-rows:repeat(${p.h},${p.sz}px);gap:0`;
+  for(let y=0;y<p.h;y++)for(let x=0;x<p.w;x++){const c=document.createElement('div');c.style.cssText=`width:${p.sz}px;height:${p.sz}px;background:${p.paint(x,y)}`;grid.appendChild(c)}
+  const label=document.createElement('div');
+  label.style.cssText='font-size:8px;color:#555;margin-top:3px;letter-spacing:1px';
+  label.textContent=p.name;
+  frame.appendChild(grid);frame.appendChild(label);strip.appendChild(frame);
+});
+</script>
+</body>
+</html>
