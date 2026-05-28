@@ -18,9 +18,23 @@ h1{font-size:1.8em;color:#00d4ff;letter-spacing:3px;margin-bottom:8px}
 .badge.live{background:rgba(0,255,0,.15);color:#0f0;border:1px solid rgba(0,255,0,.3)}
 .badge.static{background:rgba(0,212,255,.15);color:#00d4ff;border:1px solid rgba(0,212,255,.3)}
 .footer{margin-top:40px;color:#333;font-size:.7em;letter-spacing:1px}
+
+/* NAV BAR */
+.topnav{width:100%;max-width:900px;display:flex;align-items:center;border:1px solid #1a2040;border-radius:6px;overflow:hidden;background:rgba(255,255,255,.03);margin-bottom:24px}
+.topnav a{flex:1;text-align:center;padding:10px 12px;color:#888;font-size:.75em;text-decoration:none;letter-spacing:1px;border-right:1px solid #1a2040;transition:all .15s}
+.topnav a:last-child{border-right:none}
+.topnav a:hover{color:#00d4ff;background:rgba(0,212,255,.08)}
+.topnav a.active{color:#00d4ff;background:rgba(0,212,255,.12);font-weight:bold}
 </style>
 </head>
 <body>
+<nav class="topnav" aria-label="Site navigation">
+<a href="https://human-flourishing-frameworks.onrender.com/">Dashboard</a>
+<a href="https://human-flourishing-frameworks.onrender.com/os">Lantern OS</a>
+<a href="https://human-flourishing-frameworks.onrender.com/art">Art Panels</a>
+<a href="https://human-flourishing-frameworks.onrender.com/api/status">API Status</a>
+<a href="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks" target="_blank" rel="noopener">Source</a>
+</nav>
 <h1>LANTERN OS</h1>
 <p class="sub">Human Flourishing Frameworks &middot; Public Hub</p>
 
