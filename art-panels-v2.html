@@ -50,9 +50,23 @@ h1{font-size:1.4em;color:#00d4ff;margin-bottom:6px;letter-spacing:2px}
 .p8 div{width:2px;height:2px}
 
 .footer{margin-top:28px;color:#222;font-size:.6em;letter-spacing:1px}
+
+/* NAV BAR */
+.topnav{width:100%;max-width:760px;display:flex;align-items:center;gap:0;margin-bottom:20px;border:1px solid #1a1a2e;border-radius:6px;overflow:hidden;background:#0d0d18}
+.topnav a{flex:1;text-align:center;padding:10px 12px;color:#888;font-size:.75em;text-decoration:none;letter-spacing:1px;border-right:1px solid #1a1a2e;transition:all .15s}
+.topnav a:last-child{border-right:none}
+.topnav a:hover{color:#00d4ff;background:rgba(0,212,255,.08)}
+.topnav a.active{color:#00d4ff;background:rgba(0,212,255,.12);font-weight:bold}
 </style>
 </head>
 <body>
+<nav class="topnav" aria-label="Site navigation">
+<a href="/">Dashboard</a>
+<a href="/os">Lantern OS</a>
+<a href="/art" class="active">Art Panels</a>
+<a href="/api/status">API Status</a>
+<a href="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks" target="_blank" rel="noopener">Source</a>
+</nav>
 <h1>LANTERN OS ART PANELS v2</h1>
 <p class="subtitle">pixel-level rendering &middot; 2-4px cells &middot; RAG dollhouse art stream</p>
 

@@ -17,6 +17,14 @@ body{font-family:'Courier New',monospace;background:#080c1a;color:#0f0;height:10
 .taskbar .app-pill:hover{background:rgba(0,255,0,.2)}
 .taskbar .app-pill.active{background:rgba(0,212,255,.15);border-color:#00d4ff;color:#00d4ff}
 
+/* SITE NAV */
+.sitenav{background:#06091a;border-bottom:1px solid #1a2040;padding:0;display:flex;align-items:stretch;font-size:11px;flex-shrink:0}
+.sitenav a{flex:none;padding:8px 16px;color:#666;text-decoration:none;letter-spacing:1px;border-right:1px solid #0e1230;transition:all .15s}
+.sitenav a:hover{color:#00d4ff;background:rgba(0,212,255,.06)}
+.sitenav a.active{color:#0f0;background:rgba(0,255,0,.06);font-weight:bold}
+.sitenav .nav-spacer{flex:1}
+.sitenav .nav-src{color:#444;font-size:10px}
+
 /* MAIN GRID */
 .os-grid{display:grid;grid-template-columns:180px 1fr 200px;grid-template-rows:1fr;flex:1;overflow:hidden;gap:0}
 
@@ -82,6 +90,16 @@ body{font-family:'Courier New',monospace;background:#080c1a;color:#0f0;height:10
 </style>
 </head>
 <body>
+
+<!-- SITE NAV -->
+<nav class="sitenav" aria-label="Site navigation">
+<a href="/">Dashboard</a>
+<a href="/os" class="active">Lantern OS</a>
+<a href="/art">Art Panels</a>
+<a href="/api/status">API Status</a>
+<span class="nav-spacer"></span>
+<a class="nav-src" href="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks" target="_blank" rel="noopener">Source</a>
+</nav>
 
 <!-- TASKBAR -->
 <div class="taskbar">
