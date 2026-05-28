@@ -56,6 +56,47 @@ _BETTERSAFE_ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5
 </svg>
 """
 
+_SITE_NAV_CSS = """
+        .site-nav {
+            display: flex;
+            align-items: stretch;
+            background: rgba(15, 12, 41, 0.95);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .site-nav a {
+            flex: 1;
+            text-align: center;
+            padding: 12px 14px;
+            color: #888;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.15s;
+        }
+        .site-nav a:last-child { border-right: none; }
+        .site-nav a:hover { color: #00ffff; background: rgba(0, 255, 255, 0.06); }
+        .site-nav a.active { color: #00ff88; background: rgba(0, 255, 136, 0.1); font-weight: bold; }
+        @media (max-width: 600px) {
+            .site-nav { flex-wrap: wrap; }
+            .site-nav a { flex: none; width: 50%; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        }
+"""
+
+_SITE_NAV_HTML = """
+        <nav class="site-nav" aria-label="Site navigation">
+            <a href="/" class="active">Dashboard</a>
+            <a href="/os">Lantern OS</a>
+            <a href="/art">Art Panels</a>
+            <a href="/api/status">API Status</a>
+            <a href="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks" target="_blank" rel="noopener">Source</a>
+        </nav>
+"""
+
 _SKIP_LINK_CSS = """
         .skip-link {
             position: absolute;
@@ -809,6 +850,14 @@ def _rewrite_public_html(template: str) -> str:
 
     if "apple-mobile-web-app-title" not in template:
         template = template.replace("    <title>Human Flourishing Frameworks</title>", "    <title>Human Flourishing Frameworks</title>" + _IPHONE_APP_META, 1)
+
+    if "site-nav" not in template:
+        template = template.replace("    </style>", _SITE_NAV_CSS + "    </style>", 1)
+        template = template.replace(
+            "        <header>",
+            _SITE_NAV_HTML + "        <header>",
+            1,
+        )
 
     if ".skip-link" not in template:
         template = template.replace("    </style>", _SKIP_LINK_CSS + "    </style>", 1)
