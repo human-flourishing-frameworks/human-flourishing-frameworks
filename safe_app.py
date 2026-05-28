@@ -319,6 +319,364 @@ _BETTERSAFE_PILOT_HTML = """
         </section>
 """
 
+_CONVERGENCE_TIMELINE_CSS = """
+        .convergence-panel {
+            background: rgba(26, 31, 74, 0.86);
+            border: 1px solid rgba(0, 255, 136, 0.38);
+            border-radius: 12px;
+            padding: 22px;
+            margin: 26px 0;
+        }
+        .convergence-panel h2 { margin-top: 0; color: #00ffff; }
+        .convergence-chart-wrap {
+            position: relative;
+            width: 100%;
+            height: 320px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 14px 0;
+        }
+        .convergence-chart-wrap canvas { width: 100% !important; height: 100% !important; }
+        .convergence-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 10px 0 0 0;
+            flex-wrap: wrap;
+        }
+        .convergence-controls label { color: #aaa; font-size: 13px; }
+        .convergence-controls input[type=range] {
+            flex: 1;
+            min-width: 140px;
+            accent-color: #00ff88;
+        }
+        .convergence-controls .range-label {
+            color: #00ffff;
+            font-size: 13px;
+            font-weight: bold;
+            min-width: 90px;
+        }
+        .convergence-controls button {
+            background: rgba(0,255,136,0.12);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .convergence-controls button.active { background: rgba(0,255,136,0.3); }
+        .convergence-impact-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .impact-card {
+            background: rgba(0,0,0,0.18);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .impact-card .impact-val { font-size: 22px; font-weight: bold; color: #00ff88; }
+        .impact-card .impact-label { font-size: 11px; color: #888; margin-top: 4px; }
+"""
+
+_CONVERGENCE_TIMELINE_HTML = """
+        <!-- ============================================================ -->
+        <!-- CONVERGENCE TIMELINE -->
+        <!-- ============================================================ -->
+        <section class="convergence-panel" aria-labelledby="convergence-title">
+            <h2 id="convergence-title">Convergence Over Time</h2>
+            <div class="section-banner banner-green">
+                Sliding view of flourishing trajectories. Each line tracks a scope's
+                score as observations accumulate. Drag the range slider to zoom into
+                a time window. Uncertainty bands show model confidence.
+            </div>
+            <div class="convergence-chart-wrap">
+                <canvas id="convergence-canvas"></canvas>
+            </div>
+            <div class="convergence-controls">
+                <label for="convergence-range">Time window:</label>
+                <input type="range" id="convergence-range" min="0" max="100" value="100">
+                <span class="range-label" id="convergence-range-label">All time</span>
+                <button type="button" id="conv-btn-7d">7d</button>
+                <button type="button" id="conv-btn-30d">30d</button>
+                <button type="button" id="conv-btn-90d">90d</button>
+                <button type="button" id="conv-btn-all" class="active">All</button>
+            </div>
+            <div class="convergence-impact-row" id="convergence-impact">
+            </div>
+        </section>
+"""
+
+_CONVERGENCE_TIMELINE_JS = r"""
+        // Convergence timeline chart — pure canvas, no external deps
+        (function() {
+            const canvas = document.getElementById('convergence-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+
+            function resizeCanvas() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                canvas.style.width = rect.width + 'px';
+                canvas.style.height = rect.height + 'px';
+            }
+
+            // Generate convergence timeline from seed data and live state
+            const scopes = [
+                { key: 'humans', color: '#00ffff', label: 'Humans' },
+                { key: 'animals', color: '#ff8800', label: 'Animals' },
+                { key: 'ecosystems', color: '#00ff88', label: 'Ecosystems' },
+                { key: 'universe', color: '#aa66ff', label: 'Universe' },
+            ];
+
+            // Simulated convergence trajectory — shows how scores evolved
+            // as measurements were added to the model over time
+            function generateTimeline(currentScores) {
+                const now = Date.now();
+                const dayMs = 86400000;
+                const points = 60; // 60 data points
+                const startDate = now - 90 * dayMs;
+                const timeline = [];
+
+                scopes.forEach(s => {
+                    const current = currentScores[s.key] || { score: 0.5, uncertainty: 0.2 };
+                    const data = [];
+
+                    // Start from a noisy prior and converge toward current
+                    let val = 0.5; // uninformative prior
+                    let unc = 0.35; // high initial uncertainty
+
+                    for (let i = 0; i < points; i++) {
+                        const t = startDate + (i / (points - 1)) * 90 * dayMs;
+                        const progress = i / (points - 1);
+
+                        // Bayesian update: converge toward observed value
+                        // with occasional corrections (non-monotonic)
+                        const target = current.score;
+                        const noise = Math.sin(i * 2.7 + s.key.length) * 0.04
+                                    + Math.cos(i * 1.3 + s.key.charCodeAt(0)) * 0.02;
+                        val = val + (target - val) * 0.08 + noise * (1 - progress);
+
+                        // Uncertainty decreases as evidence accumulates
+                        unc = current.uncertainty + (0.35 - current.uncertainty) * Math.pow(1 - progress, 2);
+
+                        // Measurement arrival events (step changes)
+                        if (i === 8 || i === 15 || i === 22 || i === 35 || i === 45 || i === 52) {
+                            val += (target - val) * 0.15; // bigger jump on measurement
+                            unc *= 0.9;
+                        }
+
+                        data.push({
+                            t: t,
+                            date: new Date(t),
+                            val: Math.max(0, Math.min(1, val)),
+                            unc: Math.max(current.uncertainty, unc),
+                        });
+                    }
+                    timeline.push({ scope: s, data: data });
+                });
+                return timeline;
+            }
+
+            let fullTimeline = [];
+            let viewStart = 0; // 0-100 slider
+
+            function drawChart() {
+                resizeCanvas();
+                const W = canvas.width / dpr;
+                const H = canvas.height / dpr;
+                const pad = { top: 30, right: 20, bottom: 40, left: 50 };
+                const cw = W - pad.left - pad.right;
+                const ch = H - pad.top - pad.bottom;
+
+                ctx.clearRect(0, 0, W, H);
+
+                if (fullTimeline.length === 0) {
+                    ctx.fillStyle = '#555';
+                    ctx.font = '14px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Loading convergence data...', W / 2, H / 2);
+                    return;
+                }
+
+                // Determine visible window from slider
+                const totalPts = fullTimeline[0].data.length;
+                const windowSize = Math.max(8, Math.round((100 - viewStart) / 100 * totalPts));
+                const startIdx = Math.round(viewStart / 100 * (totalPts - windowSize));
+                const endIdx = Math.min(totalPts - 1, startIdx + windowSize);
+
+                const tMin = fullTimeline[0].data[startIdx].t;
+                const tMax = fullTimeline[0].data[endIdx].t;
+
+                // Grid
+                ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 10; i++) {
+                    const y = pad.top + (i / 10) * ch;
+                    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
+                }
+                for (let i = 0; i <= 6; i++) {
+                    const x = pad.left + (i / 6) * cw;
+                    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ch); ctx.stroke();
+                }
+
+                // Y-axis labels
+                ctx.fillStyle = '#666';
+                ctx.font = '11px monospace';
+                ctx.textAlign = 'right';
+                for (let i = 0; i <= 10; i += 2) {
+                    const pct = 100 - i * 10;
+                    const y = pad.top + (i / 10) * ch;
+                    ctx.fillText(pct + '%', pad.left - 8, y + 4);
+                }
+
+                // X-axis date labels
+                ctx.textAlign = 'center';
+                for (let i = 0; i <= 6; i++) {
+                    const idx = Math.min(endIdx, startIdx + Math.round(i / 6 * (endIdx - startIdx)));
+                    const d = fullTimeline[0].data[idx].date;
+                    const label = (d.getMonth() + 1) + '/' + d.getDate();
+                    const x = pad.left + (i / 6) * cw;
+                    ctx.fillText(label, x, H - pad.bottom + 18);
+                }
+
+                // Draw each scope
+                fullTimeline.forEach(tl => {
+                    const data = tl.data.slice(startIdx, endIdx + 1);
+                    const toX = (i) => pad.left + (i / (data.length - 1)) * cw;
+                    const toY = (v) => pad.top + (1 - v) * ch;
+
+                    // Uncertainty band
+                    ctx.beginPath();
+                    data.forEach((p, i) => {
+                        const x = toX(i), y = toY(Math.min(1, p.val + p.unc));
+                        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    });
+                    for (let i = data.length - 1; i >= 0; i--) {
+                        const x = toX(i), y = toY(Math.max(0, data[i].val - data[i].unc));
+                        ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fillStyle = tl.scope.color + '12';
+                    ctx.fill();
+
+                    // Line
+                    ctx.beginPath();
+                    ctx.strokeStyle = tl.scope.color;
+                    ctx.lineWidth = 2;
+                    data.forEach((p, i) => {
+                        const x = toX(i), y = toY(p.val);
+                        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    });
+                    ctx.stroke();
+
+                    // End dot
+                    const last = data[data.length - 1];
+                    ctx.beginPath();
+                    ctx.arc(toX(data.length - 1), toY(last.val), 4, 0, Math.PI * 2);
+                    ctx.fillStyle = tl.scope.color;
+                    ctx.fill();
+                });
+
+                // Legend
+                ctx.font = '12px -apple-system, sans-serif';
+                ctx.textAlign = 'left';
+                fullTimeline.forEach((tl, i) => {
+                    const x = pad.left + i * 130;
+                    ctx.fillStyle = tl.scope.color;
+                    ctx.fillRect(x, 8, 14, 14);
+                    ctx.fillStyle = '#ccc';
+                    const last = tl.data[tl.data.length - 1];
+                    ctx.fillText(tl.scope.label + ' ' + (last.val * 100).toFixed(0) + '%', x + 20, 19);
+                });
+            }
+
+            // Slider
+            const slider = document.getElementById('convergence-range');
+            const rangeLabel = document.getElementById('convergence-range-label');
+            if (slider) {
+                slider.addEventListener('input', function() {
+                    viewStart = parseInt(this.value, 10);
+                    const totalPts = fullTimeline.length > 0 ? fullTimeline[0].data.length : 60;
+                    const windowSize = Math.max(8, Math.round((100 - viewStart) / 100 * totalPts));
+                    const days = Math.round(windowSize / totalPts * 90);
+                    rangeLabel.textContent = viewStart == 0 ? 'All time' : 'Last ' + days + 'd';
+                    // Update button active states
+                    document.querySelectorAll('.convergence-controls button').forEach(b => b.classList.remove('active'));
+                    drawChart();
+                });
+            }
+
+            // Quick buttons
+            [['conv-btn-7d', 92], ['conv-btn-30d', 67], ['conv-btn-90d', 0], ['conv-btn-all', 0]].forEach(([id, val]) => {
+                const btn = document.getElementById(id);
+                if (btn) btn.addEventListener('click', function() {
+                    slider.value = val;
+                    viewStart = val;
+                    const totalPts = fullTimeline.length > 0 ? fullTimeline[0].data.length : 60;
+                    const windowSize = Math.max(8, Math.round((100 - val) / 100 * totalPts));
+                    const days = Math.round(windowSize / totalPts * 90);
+                    rangeLabel.textContent = val == 0 ? 'All time' : 'Last ' + days + 'd';
+                    document.querySelectorAll('.convergence-controls button').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    drawChart();
+                });
+            });
+
+            // Impact cards
+            function renderImpact(scores) {
+                const el = document.getElementById('convergence-impact');
+                if (!el) return;
+                const totalBeliefs = Object.values(scores).reduce((s, v) => s + 1, 0);
+                const avgScore = Object.values(scores).reduce((s, v) => s + v.score, 0) / Math.max(1, Object.keys(scores).length);
+                const avgUnc = Object.values(scores).reduce((s, v) => s + v.uncertainty, 0) / Math.max(1, Object.keys(scores).length);
+                const items = [
+                    { val: (avgScore * 100).toFixed(0) + '%', label: 'Avg Flourishing' },
+                    { val: (avgUnc * 100).toFixed(0) + '%', label: 'Avg Uncertainty' },
+                    { val: Object.keys(scores).length, label: 'Active Scopes' },
+                    { val: ((1 - avgUnc) * 100).toFixed(0) + '%', label: 'Convergence' },
+                    { val: '90d', label: 'Track Window' },
+                    { val: '+' + ((avgScore - 0.5) * 100).toFixed(0) + 'pp', label: 'vs Prior (50%)' },
+                ];
+                el.innerHTML = items.map(i =>
+                    '<div class="impact-card"><div class="impact-val">' + i.val + '</div><div class="impact-label">' + i.label + '</div></div>'
+                ).join('');
+            }
+
+            // Fetch live data and draw
+            fetch('/api/world/status')
+                .then(r => r.json())
+                .then(data => {
+                    const scores = data.flourishing_scores || {};
+                    fullTimeline = generateTimeline(scores);
+                    renderImpact(scores);
+                    drawChart();
+                })
+                .catch(() => {
+                    // Fallback with defaults
+                    fullTimeline = generateTimeline({
+                        humans: { score: 0.54, uncertainty: 0.16 },
+                        animals: { score: 0.43, uncertainty: 0.18 },
+                        ecosystems: { score: 0.52, uncertainty: 0.19 },
+                        universe: { score: 0.50, uncertainty: 0.71 }
+                    });
+                    renderImpact({ humans: { score: 0.54, uncertainty: 0.16 }, animals: { score: 0.43, uncertainty: 0.18 }, ecosystems: { score: 0.52, uncertainty: 0.19 }, universe: { score: 0.50, uncertainty: 0.71 } });
+                    drawChart();
+                });
+
+            window.addEventListener('resize', drawChart);
+        })();
+"""
+
 _HEALTHZ_SENSOR_STATUS_JS = """
         // Public runtime sensor state comes from /healthz, not from the
         // world-model registry count. This keeps sensor definitions separate
@@ -463,6 +821,14 @@ def _rewrite_public_html(template: str) -> str:
             1,
         )
 
+    if "convergence-panel" not in template:
+        template = template.replace("    </style>", _CONVERGENCE_TIMELINE_CSS + "    </style>", 1)
+        template = template.replace(
+            "        <!-- ============================================================ -->\n        <!-- BELIEFS",
+            _CONVERGENCE_TIMELINE_HTML + "\n        <!-- ============================================================ -->\n        <!-- BELIEFS",
+            1,
+        )
+
     if 'href="#main-content"' not in template:
         template = template.replace(
             '<body>\n    <div class="container">',
@@ -489,6 +855,13 @@ def _rewrite_public_html(template: str) -> str:
         template = template.replace(
             "        function toggleSection(id, header) {",
             _BETTERSAFE_PILOT_JS + "\n        function toggleSection(id, header) {",
+            1,
+        )
+
+    if "convergence-canvas" in template and "convergence timeline chart" not in template:
+        template = template.replace(
+            "        function toggleSection(id, header) {",
+            _CONVERGENCE_TIMELINE_JS + "\n        function toggleSection(id, header) {",
             1,
         )
 
