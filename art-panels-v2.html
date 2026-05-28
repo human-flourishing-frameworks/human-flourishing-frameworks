@@ -33,6 +33,22 @@ h1{font-size:1.4em;color:#00d4ff;margin-bottom:6px;letter-spacing:2px}
 .p4{display:grid;grid-template-columns:repeat(36,2px);grid-template-rows:repeat(18,2px);gap:0}
 .p4 div{width:2px;height:2px}
 
+/* ---- PANEL 5: Bayesian Belief Map (32x20, 3px cells) ---- */
+.p5{display:grid;grid-template-columns:repeat(32,3px);grid-template-rows:repeat(20,3px);gap:0}
+.p5 div{width:3px;height:3px}
+
+/* ---- PANEL 6: Flourishing Pulse (40x16, 2px cells) ---- */
+.p6{display:grid;grid-template-columns:repeat(40,2px);grid-template-rows:repeat(16,2px);gap:0}
+.p6 div{width:2px;height:2px}
+
+/* ---- PANEL 7: Mesh Network (28x20, 3px cells) ---- */
+.p7{display:grid;grid-template-columns:repeat(28,3px);grid-template-rows:repeat(20,3px);gap:0}
+.p7 div{width:3px;height:3px}
+
+/* ---- PANEL 8: Sensor Grid (36x20, 2px cells) ---- */
+.p8{display:grid;grid-template-columns:repeat(36,2px);grid-template-rows:repeat(20,2px);gap:0}
+.p8 div{width:2px;height:2px}
+
 .footer{margin-top:28px;color:#222;font-size:.6em;letter-spacing:1px}
 </style>
 </head>
@@ -72,6 +88,38 @@ h1{font-size:1.4em;color:#00d4ff;margin-bottom:6px;letter-spacing:2px}
 <div class="p4" id="p4"></div>
 <span class="title">Convergence Stream</span>
 <span class="meta">36&times;18 &middot; 2px cells &middot; 648 pixels</span>
+</div>
+
+<!-- PANEL 5: Bayesian Belief Map — 32x20 grid, 3px cells -->
+<div class="art-frame">
+<span class="label">panel 05</span>
+<div class="p5" id="p5"></div>
+<span class="title">Bayesian Belief Map</span>
+<span class="meta">32&times;20 &middot; 3px cells &middot; 640 pixels</span>
+</div>
+
+<!-- PANEL 6: Flourishing Pulse — 40x16 grid, 2px cells -->
+<div class="art-frame">
+<span class="label">panel 06</span>
+<div class="p6" id="p6"></div>
+<span class="title">Flourishing Pulse</span>
+<span class="meta">40&times;16 &middot; 2px cells &middot; 640 pixels</span>
+</div>
+
+<!-- PANEL 7: Mesh Network — 28x20 grid, 3px cells -->
+<div class="art-frame">
+<span class="label">panel 07</span>
+<div class="p7" id="p7"></div>
+<span class="title">Mesh Network</span>
+<span class="meta">28&times;20 &middot; 3px cells &middot; 560 pixels</span>
+</div>
+
+<!-- PANEL 8: Sensor Grid — 36x20 grid, 2px cells -->
+<div class="art-frame">
+<span class="label">panel 08</span>
+<div class="p8" id="p8"></div>
+<span class="title">Sensor Grid</span>
+<span class="meta">36&times;20 &middot; 2px cells &middot; 720 pixels</span>
 </div>
 
 </div>
@@ -342,6 +390,179 @@ px('p4', 36, 18, (x, y) => {
     if (ring > 0.85) return C.blue1;
   }
 
+  return C.bg;
+});
+
+// --- PANEL 5: Bayesian Belief Map ---
+// Heat map of belief densities with posterior peaks and prior valleys
+px('p5', 32, 20, (x, y) => {
+  // Three belief clusters (posterior peaks)
+  const peaks = [
+    {x: 8,  y: 6,  r: 5, c: [0, 212, 255]},   // cyan — safety belief
+    {x: 20, y: 8,  r: 6, c: [255, 170, 0]},     // amber — evidence belief
+    {x: 14, y: 15, r: 4.5, c: [34, 170, 68]},   // green — trust belief
+  ];
+  let heat = 0;
+  let r = 10, g = 10, b = 18;
+  for (const p of peaks) {
+    const dx = x - p.x, dy2 = y - p.y;
+    const d = Math.sqrt(dx*dx + dy2*dy2);
+    const intensity = Math.max(0, 1 - d / p.r);
+    const w = intensity * intensity;
+    heat += w;
+    r += p.c[0] * w * 0.4;
+    g += p.c[1] * w * 0.4;
+    b += p.c[2] * w * 0.4;
+  }
+  // Prior background gradient
+  const prior = (y / 20) * 0.15;
+  r = Math.min(255, Math.floor(r + prior * 30));
+  g = Math.min(255, Math.floor(g + prior * 15));
+  b = Math.min(255, Math.floor(b + prior * 40));
+  // Contour lines
+  if (heat > 0.01) {
+    const contour = Math.sin(heat * 12) * 0.5 + 0.5;
+    if (contour > 0.92) { r = Math.min(255, r + 40); g = Math.min(255, g + 40); b = Math.min(255, b + 40); }
+  }
+  // Measurement dots
+  const dots = [[5,4],[10,5],[18,6],[22,10],[12,14],[16,16],[26,3],[3,12],[28,15]];
+  for (const d of dots) { if (x === d[0] && y === d[1]) return '#ffffff'; }
+  return `rgb(${r},${g},${b})`;
+});
+
+// --- PANEL 6: Flourishing Pulse ---
+// EKG-style waveforms for 4 flourishing dimensions stacked
+px('p6', 40, 16, (x, y) => {
+  const bands = [
+    {label: 'human',    row: 2,  c: C.cyan,   amp: 2.5, freq: 0.35, phase: 0},
+    {label: 'animal',   row: 6,  c: C.green,  amp: 2,   freq: 0.28, phase: 1.2},
+    {label: 'eco',      row: 10, c: C.amber,  amp: 1.8, freq: 0.4,  phase: 2.5},
+    {label: 'universe', row: 14, c: C.violet,  amp: 1.5, freq: 0.22, phase: 3.8},
+  ];
+  // Grid lines
+  for (const b of bands) {
+    if (y === b.row && x % 5 === 0) return C.blue1;
+  }
+  // Baseline dashes
+  for (const b of bands) {
+    if (y === b.row && x % 3 === 0) return C.mid;
+  }
+  // Waveforms
+  for (const b of bands) {
+    // Pulse spike pattern
+    let waveY;
+    const xn = x % 13;
+    if (xn < 3) {
+      waveY = b.row;
+    } else if (xn === 3) {
+      waveY = b.row - b.amp * 0.3;
+    } else if (xn === 4) {
+      waveY = b.row + b.amp * 0.5;
+    } else if (xn === 5) {
+      waveY = b.row - b.amp;
+    } else if (xn === 6) {
+      waveY = b.row + b.amp * 0.7;
+    } else if (xn === 7) {
+      waveY = b.row - b.amp * 0.2;
+    } else {
+      waveY = b.row + Math.sin(x * b.freq + b.phase) * 0.3;
+    }
+    if (Math.abs(y - Math.round(waveY)) < 0.6) return b.c;
+    // Glow below pulse
+    if (Math.abs(y - Math.round(waveY)) < 1.2 && xn >= 3 && xn <= 7) return C.blue1;
+  }
+  // Score labels on right edge
+  if (x >= 36) {
+    if (y === 2) return C.cyan3;
+    if (y === 6) return '#0a3318';
+    if (y === 10) return C.warm1;
+    if (y === 14) return '#2a1144';
+  }
+  return C.bg;
+});
+
+// --- PANEL 7: Mesh Network ---
+// Nodes connected by lines forming a peer mesh topology
+px('p7', 28, 20, (x, y) => {
+  const nodes = [
+    {x: 4,  y: 3,  c: C.cyan,   s: 1.5},
+    {x: 14, y: 2,  c: C.cyan,   s: 2},
+    {x: 24, y: 4,  c: C.cyan,   s: 1.5},
+    {x: 7,  y: 9,  c: C.green,  s: 1.8},
+    {x: 18, y: 8,  c: C.amber,  s: 1.5},
+    {x: 25, y: 10, c: C.green,  s: 1.3},
+    {x: 3,  y: 15, c: C.violet, s: 1.5},
+    {x: 12, y: 14, c: C.cyan2,  s: 2},
+    {x: 20, y: 16, c: C.warm5,  s: 1.5},
+    {x: 26, y: 17, c: C.red,    s: 1.2},
+    {x: 14, y: 18, c: C.cyan3,  s: 1},
+  ];
+  const edges = [
+    [0,1],[1,2],[0,3],[1,4],[2,5],[3,4],[4,5],[3,6],[3,7],[4,7],[4,8],[5,9],
+    [6,7],[7,8],[8,9],[7,10],[8,10],[6,10]
+  ];
+  // Draw edges
+  for (const [a, b] of edges) {
+    const na = nodes[a], nb = nodes[b];
+    const len = Math.sqrt((nb.x-na.x)**2 + (nb.y-na.y)**2);
+    const t = Math.max(0, Math.min(1, ((x-na.x)*(nb.x-na.x)+(y-na.y)*(nb.y-na.y))/(len*len)));
+    const px2 = na.x + t*(nb.x-na.x), py2 = na.y + t*(nb.y-na.y);
+    const d = Math.sqrt((x-px2)**2 + (y-py2)**2);
+    if (d < 0.45) return C.blue2;
+    if (d < 0.9) return C.blue1;
+  }
+  // Draw nodes
+  for (const n of nodes) {
+    const dx = x - n.x, dy2 = y - n.y;
+    const d = Math.sqrt(dx*dx + dy2*dy2);
+    if (d < 0.8) return n.c;
+    if (d < n.s) return C.blue2;
+    if (d < n.s + 0.6) return C.blue1;
+  }
+  // Data packets (dots moving along edges)
+  const packets = [[0,1,0.3],[1,4,0.6],[3,7,0.5],[4,8,0.4],[7,10,0.7],[2,5,0.5]];
+  for (const [a, b, t] of packets) {
+    const pktX = nodes[a].x + (nodes[b].x - nodes[a].x) * t;
+    const pktY = nodes[a].y + (nodes[b].y - nodes[a].y) * t;
+    if (Math.abs(x - Math.round(pktX)) < 0.6 && Math.abs(y - Math.round(pktY)) < 0.6) return C.white;
+  }
+  return C.bg;
+});
+
+// --- PANEL 8: Sensor Grid ---
+// Grid of sensor cells with varying intensity readings, status indicators
+px('p8', 36, 20, (x, y) => {
+  // Grid border
+  if (x === 0 || x === 35 || y === 0 || y === 19) return C.mid;
+  // Column/row headers
+  if (y === 1 && x >= 3 && x % 4 === 3) return C.cyan3;
+  if (x === 1 && y >= 3 && y % 2 === 1) return C.cyan3;
+  // Sensor cells — 8 columns x 8 rows of 4x2 cells
+  const cellX = Math.floor((x - 2) / 4);
+  const cellY = Math.floor((y - 2) / 2);
+  if (cellX >= 0 && cellX < 8 && cellY >= 0 && cellY < 9 && x >= 2 && y >= 2) {
+    const localX = (x - 2) % 4;
+    const localY = (y - 2) % 2;
+    // Cell border
+    if (localX === 0 || localY === 0) return C.blue1;
+    // Sensor reading — pseudo-random heat
+    const seed = Math.sin(cellX * 127.1 + cellY * 311.7) * 43758.5453;
+    const val = seed - Math.floor(seed);
+    // Color by value: low=blue, mid=green, high=amber, critical=red
+    if (val < 0.25) {
+      const v = Math.floor(val * 4 * 60);
+      return `rgb(${10+v*0.2},${10+v*0.3},${40+v})`;
+    } else if (val < 0.5) {
+      const v = Math.floor((val - 0.25) * 4 * 80);
+      return `rgb(${10},${50+v},${30+v*0.3})`;
+    } else if (val < 0.75) {
+      const v = Math.floor((val - 0.5) * 4 * 100);
+      return `rgb(${80+v},${50+v*0.6},${10})`;
+    } else {
+      const v = Math.floor((val - 0.75) * 4 * 80);
+      return `rgb(${150+v},${30+v*0.2},${20})`;
+    }
+  }
   return C.bg;
 });
 </script>
