@@ -11,7 +11,9 @@ work. This file is a public-copy and presentation guard for the live service.
 
 from __future__ import annotations
 
-from flask import jsonify, Response
+from pathlib import Path
+
+from flask import jsonify, Response, send_from_directory
 
 import app as _app_module
 from background_mode import create_background_controller_from_env
@@ -537,6 +539,18 @@ def bettersafe_icon():
 def background_status():
     """Visible status for the opt-in heartbeat-only background mode."""
     return jsonify({"background_mode": background_controller.snapshot()})
+
+
+@app.route("/os")
+def lantern_os_live():
+    """Lantern OS live dashboard — orchestrator, games, apps, notes, media."""
+    return send_from_directory(Path(__file__).resolve().parent, "lantern-os-live.html")
+
+
+@app.route("/art")
+def art_panels():
+    """Pixel art panels — RAG dollhouse art stream."""
+    return send_from_directory(Path(__file__).resolve().parent, "art-panels-v2.html")
 
 
 @app.route("/deployment/identity")

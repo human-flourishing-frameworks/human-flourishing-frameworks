@@ -24,6 +24,18 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["C:\\Users\\alexp\\.lantern\\lantern-os-m5-daemon.py"],
       "port": 8766
+    },
+    {
+      "name": "art-panels",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8090"],
+      "port": 8090
+    },
+    {
+      "name": "lantern-local-chat",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["apps/lantern-local-chat/local_lantern_server.py"],
+      "port": 8767
     }
   ]
 }

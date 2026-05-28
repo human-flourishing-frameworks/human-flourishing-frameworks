@@ -4,13 +4,26 @@ Privacy-first chat stack with integrated media curation: desktop, browser, and d
 
 → **[Foundry Master Plan](../gm-agent-orchestrator/FOUNDRY-PLAN.md)** — shared org model, revenue model, 22 product streams (Lantern is streams #1–4)
 
+## Live URLs
+
+| Surface | URL |
+|---|---|
+| HFF Dashboard (live) | https://human-flourishing-frameworks.onrender.com/ |
+| Lantern OS Dashboard | https://human-flourishing-frameworks.onrender.com/os |
+| Art Panels v2 | https://human-flourishing-frameworks.onrender.com/art |
+| Health API | https://human-flourishing-frameworks.onrender.com/health |
+| System Status API | https://human-flourishing-frameworks.onrender.com/api/status |
+| Source Code | https://github.com/human-flourishing-frameworks/human-flourishing-frameworks |
+
 ## Product Editions
 
-- **Lantern Desktop** — full chat + media curator, CustomTkinter + Vosk STT
+- **Lantern Desktop** — full chat + media curator, CustomTkinter + Vosk STT (`apps/lantern-desktop/lantern_desktop.py`)
 - **Lantern Browser** — same chat, no install required
 - **Lantern Dashboard** — local Flask service + Anthropic API bridge
+- **Lantern OS Dashboard** — full system view: orchestrator, games, apps, notes, media, art panels
 - **Lantern Kids** — age-gated, parental review, no external bridges
 - **Lantern Media Curator** — CC-licensed audio, audiobooks, podcasts, video (internet archive + Wikimedia + public domain)
+- **Art Panels** — pixel-level CSS art (Lantern Glow, RAG House, Seven Anchors, Convergence Stream)
 
 ## What it does
 
