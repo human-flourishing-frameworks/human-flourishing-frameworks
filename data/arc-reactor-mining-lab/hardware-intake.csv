@@ -1,0 +1,5 @@
+device_id,owner,site,device_type,make_model,algorithm_lane,hashrate_input,hashrate_unit,tdp_watts,measured_wall_watts,hours_per_day,kwh_rate_usd,overhead_pct,cooling_status,breaker_circuit,notes
+cpu-01,operator,local,CPU,Example 8-core CPU,RandomX,0,H/s,65,,4,0.182,0.15,Unknown,Unknown,Replace example row with measured hashrate after a short test
+gpu-01,operator,local,GPU,Example RTX 3070,KAWPOW,0,MH/s,220,,4,0.182,0.15,Unknown,Unknown,Use actual wall power instead of TDP when available
+asic-01,operator,local,ASIC,Example kHeavyHash ASIC,kHeavyHash,0,TH/s,3080,,0,0.182,0.15,Unknown,Unknown,Only run if operator already owns ASIC and power plan is verified
+

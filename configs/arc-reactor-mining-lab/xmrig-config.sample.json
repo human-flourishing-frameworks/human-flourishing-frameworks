@@ -1,0 +1,25 @@
+{
+  "autosave": true,
+  "donate-level": 1,
+  "cpu": {
+    "enabled": true,
+    "huge-pages": true,
+    "max-threads-hint": 75
+  },
+  "opencl": false,
+  "cuda": false,
+  "pools": [
+    {
+      "coin": "monero",
+      "url": "POOL_HOST:PORT",
+      "user": "YOUR_XMR_RECEIVE_ADDRESS_ONLY",
+      "pass": "arc-reactor-worker",
+      "rig-id": "arc-reactor-cpu-01",
+      "keepalive": true,
+      "tls": true
+    }
+  ],
+  "print-time": 60,
+  "health-print-time": 60
+}
+
