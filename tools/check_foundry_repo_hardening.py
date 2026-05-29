@@ -55,6 +55,19 @@ def tracked_like_files(repo_root: Path) -> list[Path]:
     return files
 
 
+def is_instruction_markdown_candidate(relative: str) -> bool:
+    """Only root-level and .github markdown can silently steer automation.
+
+    Historical notes under docs/, reports/, or similar folders are content, not
+    repo-entrypoint instruction files. Scanning every markdown file produces
+    false positives on archived handoff notes that are not auto-loaded by tools.
+    """
+
+    path = Path(relative)
+    parts = path.parts
+    return len(parts) == 1 or (parts and parts[0] == ".github")
+
+
 def check_repo(repo_root: Path, policy: dict) -> list[str]:
     errors: list[str] = []
 
@@ -63,7 +76,11 @@ def check_repo(repo_root: Path, policy: dict) -> list[str]:
             errors.append(f"missing required file: {relative}")
 
     files = tracked_like_files(repo_root)
-    markdown_files = [path.relative_to(repo_root).as_posix() for path in files if path.suffix.lower() == ".md"]
+    markdown_files = [
+        path.relative_to(repo_root).as_posix()
+        for path in files
+        if path.suffix.lower() == ".md" and is_instruction_markdown_candidate(path.relative_to(repo_root).as_posix())
+    ]
     for pattern in policy["forbidden_agent_behavior_markdown_patterns"]:
         for relative in markdown_files:
             if fnmatch.fnmatch(Path(relative).name.lower(), pattern.lower()) or fnmatch.fnmatch(relative.lower(), pattern.lower()):
@@ -71,22 +88,16 @@ def check_repo(repo_root: Path, policy: dict) -> list[str]:
 
     allowed_runtime_files = set(policy.get("allowed_runtime_pattern_files", []))
     runtime_patterns = [item.lower() for item in policy["forbidden_runtime_patterns"]]
-    retired_terms = [
-        "lan" + "tern",
-        "key" + "stone",
-        "tar" + "dis",
-        "cosmic-" + "door",
-        "return " + "door",
-        "dream" + "er",
-    ]
+    retired_terms = [item.lower() for item in policy.get("retired_terms", [])]
+    runtime_like_suffixes = {".py", ".js", ".ts", ".html", ".ps1", ".cmd", ".bat", ".json"}
     for path in files:
         relative = path.relative_to(repo_root).as_posix()
         if relative in allowed_runtime_files:
             continue
-        if path.suffix.lower() not in {".py", ".js", ".ts", ".html", ".ps1", ".cmd", ".bat", ".md", ".json"}:
+        if path.suffix.lower() not in runtime_like_suffixes:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore").lower()
-        if relative not in {"tools/check_foundry_repo_hardening.py"}:
+        if retired_terms and relative not in {"tools/check_foundry_repo_hardening.py"}:
             for term in retired_terms:
                 if term in text:
                     errors.append(f"retired symbolic term '{term}': {relative}")

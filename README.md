@@ -98,6 +98,10 @@ See:
 - [`docs/internationalization-and-accessibility.md`](./docs/internationalization-and-accessibility.md)
 - [`policies/foundry-user-repo-hardening.v1.json`](./policies/foundry-user-repo-hardening.v1.json)
 
+## Ragdollhouse (patient convergences)
+
+- Index: [`docs/ragdollhouse/index.md`](./docs/ragdollhouse/index.md)
+
 Key rules:
 
 - public does not mean uncontrolled;

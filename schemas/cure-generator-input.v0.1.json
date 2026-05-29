@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "!cure-generator input (v0.1)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "created_date": { "type": "string", "description": "ISO date, e.g. 2026-05-29" },
+    "patient_label": { "type": "string", "description": "Short label only (avoid identifiers)" },
+    "source_basis": { "type": "string", "description": "What this is based on (unverified sources OK, but say so)" },
+    "situation_summary": { "type": "string", "description": "Short free-text summary of the situation" },
+    "symptoms": { "type": "array", "items": { "type": "string" } },
+    "recent_procedures": { "type": "array", "items": { "type": "string" } },
+    "meds": { "type": "array", "items": { "type": "string" } },
+    "known_conditions": { "type": "array", "items": { "type": "string" } },
+    "unknowns": { "type": "array", "items": { "type": "string" } },
+    "speculative_buckets": { "type": "array", "items": { "type": "string" } },
+    "red_flags": { "type": "array", "items": { "type": "string" } },
+    "questions_for_team": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["patient_label"]
+}
+
