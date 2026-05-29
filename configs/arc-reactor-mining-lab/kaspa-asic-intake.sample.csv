@@ -1,0 +1,3 @@
+device_id,manufacturer,model,algorithm,nominal_hashrate,hashrate_unit,nominal_watts,wall_watts,voltage_required,noise_db,location,pool_endpoint,receive_address_status,run_decision,notes
+kas-asic-01,Example,Example kHeavyHash ASIC,kHeavyHash,0,TH/s,0,,220V,,Not installed,,Needed,Skip,Fill from nameplate and measured wall power before energizing
+
