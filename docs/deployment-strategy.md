@@ -21,3 +21,12 @@ out of Railway, Render, and Docker production start commands.
 
 Platform deployment references the expected Git commit before promoting any
 release.
+
+## Lantern AWS URL Bridge
+
+Lantern Cloud OS AWS migration is tracked separately from this HFF deployment
+surface. Do not treat HFF Render status as Lantern cloud truth.
+
+Use [`docs/lantern-aws-url-bridge.md`](./lantern-aws-url-bridge.md) for the
+current Lantern AWS links, local validation URLs, retired Render URLs, and the
+held AWS public URL gate.

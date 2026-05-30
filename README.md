@@ -115,7 +115,7 @@ Key rules:
 
 | Component | Status |
 |---|---|
-| Flask app + dashboard | Render primary surface; validate with fresh smoke evidence |
+| Flask app + dashboard | HFF deployment config remains separate from Lantern Cloud OS; Lantern AWS fixes and URLs are linked in [`docs/lantern-aws-url-bridge.md`](./docs/lantern-aws-url-bridge.md) |
 | Docker/gunicorn | Uses `${PORT:-5000}` for cloud/local binding |
 | Sensor framework | Built |
 | Live public API sensors | Implemented, opt-in via `ENABLE_LIVE_SENSORS` |

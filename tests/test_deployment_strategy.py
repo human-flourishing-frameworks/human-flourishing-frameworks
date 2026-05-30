@@ -45,6 +45,21 @@ class DeploymentStrategyTests(unittest.TestCase):
         self.assertIn("not the canonical production target", text)
         self.assertIn("Platform deployment references the expected Git commit", text)
 
+    def test_lantern_aws_url_bridge_links_current_contracts(self):
+        text = (ROOT / "docs" / "lantern-aws-url-bridge.md").read_text(encoding="utf-8")
+        self.assertIn("https://github.com/alex-place/lantern-os/blob/master/docs/LANTERN-RUNTIME-CICD.md", text)
+        self.assertIn("http://127.0.0.1:4177/api/health", text)
+        self.assertIn("AWS service root", text)
+        self.assertIn("pending operator deploy", text)
+        self.assertIn("https://lantern-os.onrender.com", text)
+        self.assertIn("must not be treated as Lantern Cloud OS proof", text)
+
+    def test_hff_deployment_doc_links_lantern_aws_bridge(self):
+        text = (ROOT / "docs" / "deployment-strategy.md").read_text(encoding="utf-8")
+        self.assertIn("Lantern AWS URL Bridge", text)
+        self.assertIn("docs/lantern-aws-url-bridge.md", text)
+        self.assertIn("Do not treat HFF Render status as Lantern cloud truth", text)
+
 
 if __name__ == "__main__":
     unittest.main()

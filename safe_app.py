@@ -46,6 +46,72 @@ _PWA_MANIFEST = {
     ],
 }
 
+_LANTERN_AWS_BRIDGE = {
+    "status": "aws_public_url_pending_operator_deploy",
+    "localPrimary": "http://127.0.0.1:4177/",
+    "localHealth": "http://127.0.0.1:4177/api/health",
+    "localCloudMirrors": "http://127.0.0.1:4177/api/cloud-mirrors",
+    "localMcpCatalog": "http://127.0.0.1:4177/api/mcp-catalog",
+    "awsServiceRoot": "pending operator deploy",
+    "awsHealth": "pending operator deploy plus /api/health",
+    "awsCloudMirrors": "pending operator deploy plus /api/cloud-mirrors",
+    "runtimeContract": "https://github.com/alex-place/lantern-os/blob/master/docs/LANTERN-RUNTIME-CICD.md",
+    "baselineModel": "https://github.com/alex-place/lantern-os/blob/master/manifests/LANTERN-BASELINE-MODEL-v1.md",
+    "cloudMirrorsManifest": "https://github.com/alex-place/lantern-os/blob/master/manifests/cloud-mirrors.json",
+    "awsDockerfile": "https://github.com/alex-place/lantern-os/blob/master/apps/lantern-garage/Dockerfile",
+    "awsCloudServer": "https://github.com/alex-place/lantern-os/blob/master/apps/lantern-garage/cloud-server.js",
+    "retiredLanternMirrors": [
+        "https://lantern-os.onrender.com",
+        "https://human-flourishing-frameworks.onrender.com as a Lantern mirror",
+    ],
+}
+
+_LANTERN_AWS_BRIDGE_HTML = """<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lantern AWS URL Bridge</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; color: #17202a; background: #f8fbf7; }
+        main { max-width: 980px; }
+        h1 { margin-bottom: 0.25rem; }
+        table { border-collapse: collapse; width: 100%; margin: 1rem 0 1.5rem; background: white; }
+        th, td { border: 1px solid #c9d7cd; padding: 0.65rem; text-align: left; vertical-align: top; }
+        th { background: #e8f3ee; }
+        code { background: #edf4f1; padding: 0.12rem 0.28rem; border-radius: 0.25rem; }
+        .held { border-left: 6px solid #9f5a07; background: #fff8e8; padding: 0.8rem 1rem; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Lantern AWS URL Bridge</h1>
+    <p class="held"><strong>Status:</strong> AWS public URL is pending operator deploy. Local Lantern is primary; cloud proof requires root, <code>/api/health</code>, and <code>/api/cloud-mirrors</code> to pass on the AWS URL.</p>
+    <h2>Validation URLs</h2>
+    <table>
+        <tr><th>Kind</th><th>URL</th><th>Status</th></tr>
+        <tr><td>Local dashboard</td><td><a href="http://127.0.0.1:4177/">http://127.0.0.1:4177/</a></td><td>Local primary</td></tr>
+        <tr><td>Local health</td><td><a href="http://127.0.0.1:4177/api/health">http://127.0.0.1:4177/api/health</a></td><td>Must return HTTP 200</td></tr>
+        <tr><td>Local mirror state</td><td><a href="http://127.0.0.1:4177/api/cloud-mirrors">http://127.0.0.1:4177/api/cloud-mirrors</a></td><td>Must show AWS truth before promotion</td></tr>
+        <tr><td>Local MCP catalog</td><td><a href="http://127.0.0.1:4177/api/mcp-catalog">http://127.0.0.1:4177/api/mcp-catalog</a></td><td>Local-only evidence</td></tr>
+        <tr><td>AWS service root</td><td>pending operator deploy</td><td>Not verified</td></tr>
+    </table>
+    <h2>Source Links</h2>
+    <ul>
+        <li><a href="https://github.com/alex-place/lantern-os/blob/master/docs/LANTERN-RUNTIME-CICD.md">Runtime CI/CD contract</a></li>
+        <li><a href="https://github.com/alex-place/lantern-os/blob/master/manifests/LANTERN-BASELINE-MODEL-v1.md">Baseline model v1</a></li>
+        <li><a href="https://github.com/alex-place/lantern-os/blob/master/manifests/cloud-mirrors.json">Cloud mirrors manifest</a></li>
+        <li><a href="https://github.com/alex-place/lantern-os/blob/master/apps/lantern-garage/Dockerfile">AWS Dockerfile</a></li>
+        <li><a href="https://github.com/alex-place/lantern-os/blob/master/apps/lantern-garage/cloud-server.js">AWS cloud server</a></li>
+    </ul>
+    <h2>Retired Lantern Mirrors</h2>
+    <p><code>https://lantern-os.onrender.com</code> and <code>https://human-flourishing-frameworks.onrender.com</code> are not Lantern Cloud OS proof.</p>
+    <p>Machine-readable status: <a href="/api/lantern/aws-bridge">/api/lantern/aws-bridge</a>.</p>
+</main>
+</body>
+</html>
+"""
+
 _BETTERSAFE_ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="BetterSafe Pilot icon">
   <rect width="512" height="512" rx="96" fill="#0f0c29"/>
   <circle cx="256" cy="256" r="170" fill="none" stroke="#00ff88" stroke-width="28"/>
@@ -543,6 +609,18 @@ def background_status():
 def deployment_identity_status():
     """Visible non-secret deployment identity for live freshness smoke."""
     return jsonify({"deployment": deployment_identity()})
+
+
+@app.route("/api/lantern/aws-bridge")
+def lantern_aws_bridge_status():
+    """Machine-readable Lantern AWS URL bridge without claiming deployment."""
+    return jsonify(_LANTERN_AWS_BRIDGE)
+
+
+@app.route("/lantern/aws")
+def lantern_aws_bridge_page():
+    """Human-readable links for Lantern AWS fixes and URL gates."""
+    return Response(_LANTERN_AWS_BRIDGE_HTML, content_type="text/html; charset=utf-8")
 
 
 @app.after_request

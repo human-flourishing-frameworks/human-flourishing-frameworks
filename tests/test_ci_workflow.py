@@ -12,6 +12,8 @@ REQUIRED_TEST_COMMANDS = [
     'python -m unittest discover -s tests -p "test_ci_workflow.py" -t .',
     'python -m unittest discover -s tests -p "test_bettersafe_data_center_anchor.py" -t .',
     'python -m unittest discover -s tests -p "test_foundry_repo_hardening.py" -t .',
+    'python -m unittest discover -s tests -p "test_deployment_strategy.py" -t .',
+    'python -m unittest discover -s tests -p "test_lantern_aws_bridge.py" -t .',
 ]
 
 
