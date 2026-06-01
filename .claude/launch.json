@@ -36,6 +36,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["apps/lantern-local-chat/local_lantern_server.py"],
       "port": 8767
+    },
+    {
+      "name": "lantern-garage",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:\\tmp\\lantern-os\\apps\\lantern-garage\\server.js"],
+      "port": 4177
     }
   ]
 }
