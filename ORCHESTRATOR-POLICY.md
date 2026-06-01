@@ -31,7 +31,8 @@ Local Storage (JSONL + HDD mesh)
 
 **Single master launcher** (all systems):
 ```powershell
-powershell C:\Users\alexp\.lantern\MASTER-START-ALL.ps1
+# CI/CD MANAGED: uses env var so it resolves in pipelines and RAG-indexed clones.
+powershell $env:USERPROFILE\.lantern\MASTER-START-ALL.ps1
 ```
 
 This:

@@ -8,5 +8,5 @@ RUN useradd --create-home --shell /usr/sbin/nologin hff \
     && chown -R hff:hff /app
 USER hff
 EXPOSE 5000
-CMD gunicorn safe_app:app --bind 0.0.0.0:${PORT:-5000} --log-file -
+CMD gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --log-file -
 

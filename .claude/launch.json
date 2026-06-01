@@ -4,25 +4,29 @@
     {
       "name": "lantern-os-unified",
       "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-File", "C:\\Users\\alexp\\.lantern\\lantern-os-startup.ps1"],
+      // CI/CD MANAGED: path uses env var so it resolves in pipelines and RAG-indexed clones.
+      "runtimeArgs": ["-File", "${env:USERPROFILE}\\.lantern\\lantern-os-startup.ps1"],
       "port": 5000
     },
     {
       "name": "lantern-flask-backend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["C:\\Users\\alexp\\.lantern\\lantern-browser-server.py"],
+      // CI/CD MANAGED: path uses env var so it resolves in pipelines and RAG-indexed clones.
+      "runtimeArgs": ["${env:USERPROFILE}\\.lantern\\lantern-browser-server.py"],
       "port": 5000
     },
     {
       "name": "suzie-orchestrator",
       "runtimeExecutable": "powershell",
-      "runtimeArgs": ["-File", "C:\\Users\\alexp\\Documents\\gm-agent-orchestrator\\Start-Dashboard.ps1"],
+      // EXTERNAL REPO REF: orchestrator script referenced via manifests/TMP-REPO-RAG-INDEX.md
+      "runtimeArgs": ["-File", "${env:REPO_ROOT}\\gm-agent-orchestrator\\Start-Dashboard.ps1"],
       "port": 8765
     },
     {
       "name": "lantern-m5-daemon",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["C:\\Users\\alexp\\.lantern\\lantern-os-m5-daemon.py"],
+      // CI/CD MANAGED: path uses env var so it resolves in pipelines and RAG-indexed clones.
+      "runtimeArgs": ["${env:USERPROFILE}\\.lantern\\lantern-os-m5-daemon.py"],
       "port": 8766
     },
     {
@@ -40,7 +44,8 @@
     {
       "name": "lantern-garage",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["C:\\tmp\\lantern-os\\apps\\lantern-garage\\server.js"],
+      // EXTERNAL REPO REF: lantern-os repo path managed by CI/CD; see manifests/TMP-REPO-RAG-INDEX.md
+      "runtimeArgs": ["${env:REPO_ROOT}\\..\\lantern-os\\apps\\lantern-garage\\server.js"],
       "port": 4177
     }
   ]
