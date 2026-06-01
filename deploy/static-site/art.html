@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lantern OS — Art Panels v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a12;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px}
+h1{font-size:1.4em;color:#00d4ff;margin-bottom:6px;letter-spacing:2px}
+.subtitle{color:#555;font-size:.75em;margin-bottom:28px;letter-spacing:1px}
+.gallery{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:760px;width:100%}
+@media(max-width:800px){.gallery{grid-template-columns:1fr}}
+
+.art-frame{background:#0d0d18;border:1px solid #1a1a2e;border-radius:6px;padding:12px;display:flex;flex-direction:column;align-items:center}
+.art-frame .label{font-size:.65em;color:#555;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.art-frame .title{font-size:.85em;color:#00d4ff;margin-top:8px;letter-spacing:1px}
+.art-frame .meta{font-size:.55em;color:#333;margin-top:4px}
+
+/* ---- PANEL 1: Lantern Glow (24x24, 4px cells) ---- */
+.p1{display:grid;grid-template-columns:repeat(24,4px);grid-template-rows:repeat(24,4px);gap:0}
+.p1 div{width:4px;height:4px}
+
+/* ---- PANEL 2: RAG House (32x20, 3px cells) ---- */
+.p2{display:grid;grid-template-columns:repeat(32,3px);grid-template-rows:repeat(20,3px);gap:0}
+.p2 div{width:3px;height:3px}
+
+/* ---- PANEL 3: Seven Anchors (28x16, 3px cells) ---- */
+.p3{display:grid;grid-template-columns:repeat(28,3px);grid-template-rows:repeat(16,3px);gap:0}
+.p3 div{width:3px;height:3px}
+
+/* ---- PANEL 4: Convergence Stream (36x18, 2px cells) ---- */
+.p4{display:grid;grid-template-columns:repeat(36,2px);grid-template-rows:repeat(18,2px);gap:0}
+.p4 div{width:2px;height:2px}
+
+/* ---- PANEL 5: Bayesian Belief Map (32x20, 3px cells) ---- */
+.p5{display:grid;grid-template-columns:repeat(32,3px);grid-template-rows:repeat(20,3px);gap:0}
+.p5 div{width:3px;height:3px}
+
+/* ---- PANEL 6: Flourishing Pulse (40x16, 2px cells) ---- */
+.p6{display:grid;grid-template-columns:repeat(40,2px);grid-template-rows:repeat(16,2px);gap:0}
+.p6 div{width:2px;height:2px}
+
+/* ---- PANEL 7: Mesh Network (28x20, 3px cells) ---- */
+.p7{display:grid;grid-template-columns:repeat(28,3px);grid-template-rows:repeat(20,3px);gap:0}
+.p7 div{width:3px;height:3px}
+
+/* ---- PANEL 8: Sensor Grid (36x20, 2px cells) ---- */
+.p8{display:grid;grid-template-columns:repeat(36,2px);grid-template-rows:repeat(20,2px);gap:0}
+.p8 div{width:2px;height:2px}
+
+.footer{margin-top:28px;color:#222;font-size:.6em;letter-spacing:1px}
+
+/* NAV BAR */
+.topnav{width:100%;max-width:760px;display:flex;align-items:center;gap:0;margin-bottom:20px;border:1px solid #1a1a2e;border-radius:6px;overflow:hidden;background:#0d0d18}
+.topnav a{flex:1;text-align:center;padding:10px 12px;color:#888;font-size:.75em;text-decoration:none;letter-spacing:1px;border-right:1px solid #1a1a2e;transition:all .15s}
+.topnav a:last-child{border-right:none}
+.topnav a:hover{color:#00d4ff;background:rgba(0,212,255,.08)}
+.topnav a.active{color:#00d4ff;background:rgba(0,212,255,.12);font-weight:bold}
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Site navigation">
+<a href="/">Dashboard</a>
+<a href="/os">Lantern OS</a>
+<a href="/art" class="active">Art Panels</a>
+<a href="/api/status">API Status</a>
+<a href="https://github.com/human-flourishing-frameworks/human-flourishing-frameworks" target="_blank" rel="noopener">Source</a>
+</nav>
+<h1>LANTERN OS ART PANELS v2</h1>
+<p class="subtitle">pixel-level rendering &middot; 2-4px cells &middot; RAG dollhouse art stream</p>
+
+<div class="gallery">
+
+<!-- PANEL 1: Lantern Glow — 24x24 grid, 4px cells -->
+<div class="art-frame">
+<span class="label">panel 01</span>
+<div class="p1" id="p1"></div>
+<span class="title">Lantern Glow</span>
+<span class="meta">24&times;24 &middot; 4px cells &middot; 576 pixels</span>
+</div>
+
+<!-- PANEL 2: RAG House — 32x20 grid, 3px cells -->
+<div class="art-frame">
+<span class="label">panel 02</span>
+<div class="p2" id="p2"></div>
+<span class="title">RAG House</span>
+<span class="meta">32&times;20 &middot; 3px cells &middot; 640 pixels</span>
+</div>
+
+<!-- PANEL 3: Seven Anchors — 28x16 grid, 3px cells -->
+<div class="art-frame">
+<span class="label">panel 03</span>
+<div class="p3" id="p3"></div>
+<span class="title">Seven Anchors</span>
+<span class="meta">28&times;16 &middot; 3px cells &middot; 448 pixels</span>
+</div>
+
+<!-- PANEL 4: Convergence Stream — 36x18 grid, 2px cells -->
+<div class="art-frame">
+<span class="label">panel 04</span>
+<div class="p4" id="p4"></div>
+<span class="title">Convergence Stream</span>
+<span class="meta">36&times;18 &middot; 2px cells &middot; 648 pixels</span>
+</div>
+
+<!-- PANEL 5: Bayesian Belief Map — 32x20 grid, 3px cells -->
+<div class="art-frame">
+<span class="label">panel 05</span>
+<div class="p5" id="p5"></div>
+<span class="title">Bayesian Belief Map</span>
+<span class="meta">32&times;20 &middot; 3px cells &middot; 640 pixels</span>
+</div>
+
+<!-- PANEL 6: Flourishing Pulse — 40x16 grid, 2px cells -->
+<div class="art-frame">
+<span class="label">panel 06</span>
+<div class="p6" id="p6"></div>
+<span class="title">Flourishing Pulse</span>
+<span class="meta">40&times;16 &middot; 2px cells &middot; 640 pixels</span>
+</div>
+
+<!-- PANEL 7: Mesh Network — 28x20 grid, 3px cells -->
+<div class="art-frame">
+<span class="label">panel 07</span>
+<div class="p7" id="p7"></div>
+<span class="title">Mesh Network</span>
+<span class="meta">28&times;20 &middot; 3px cells &middot; 560 pixels</span>
+</div>
+
+<!-- PANEL 8: Sensor Grid — 36x20 grid, 2px cells -->
+<div class="art-frame">
+<span class="label">panel 08</span>
+<div class="p8" id="p8"></div>
+<span class="title">Sensor Grid</span>
+<span class="meta">36&times;20 &middot; 2px cells &middot; 720 pixels</span>
+</div>
+
+</div>
+
+<p class="footer">Lantern OS &middot; Art Stream &middot; RAG Dollhouse Evidence Layer &middot; 2026-05-27</p>
+
+<script>
+// Color palettes
+const C = {
+  bg:    '#0a0a12',
+  dark:  '#0d0d18',
+  mid:   '#1a1a2e',
+  blue1: '#0a1628',
+  blue2: '#0f2340',
+  blue3: '#163a5c',
+  blue4: '#1d5a8a',
+  cyan:  '#00d4ff',
+  cyan2: '#00a8cc',
+  cyan3: '#007799',
+  warm1: '#2a1a0a',
+  warm2: '#4a2a0f',
+  warm3: '#7a4a1a',
+  warm4: '#aa6a22',
+  warm5: '#dd9933',
+  warm6: '#ffbb44',
+  white: '#e8e8f0',
+  amber: '#ffaa00',
+  gold:  '#ffd700',
+  red:   '#cc3333',
+  green: '#22aa44',
+  purple:'#6633aa',
+  violet:'#8844cc',
+};
+
+function px(grid, w, h, paintFn) {
+  const el = document.getElementById(grid);
+  const cells = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const d = document.createElement('div');
+      d.style.backgroundColor = paintFn(x, y, w, h);
+      el.appendChild(d);
+      cells.push(d);
+    }
+  }
+  return cells;
+}
+
+// --- PANEL 1: Lantern Glow ---
+// A glowing lantern in a dark field, warm center radiating outward
+px('p1', 24, 24, (x, y) => {
+  const cx = 11.5, cy = 10;
+  const dx = x - cx, dy = y - cy;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+
+  // Lantern body (rectangle 9-14 x 7-15)
+  if (x >= 9 && x <= 14 && y >= 7 && y <= 15) {
+    // Top cap
+    if (y === 7) return (x >= 10 && x <= 13) ? C.warm4 : C.dark;
+    // Bottom base
+    if (y === 15) return (x >= 10 && x <= 13) ? C.warm3 : C.dark;
+    // Glass sides
+    if (x === 9 || x === 14) return C.warm3;
+    // Inner flame
+    if (y >= 9 && y <= 13 && x >= 11 && x <= 12) {
+      if (y === 9) return C.gold;
+      if (y === 10) return C.warm6;
+      if (y === 11) return C.warm5;
+      if (y === 12) return C.warm4;
+      return C.warm3;
+    }
+    // Glass interior
+    return C.warm1;
+  }
+
+  // Handle on top (x=11-12, y=5-6)
+  if ((x === 11 || x === 12) && y === 5) return C.warm3;
+  if (x >= 10 && x <= 13 && y === 6) return C.warm3;
+  if ((x === 10 || x === 13) && y === 5) return C.warm2;
+
+  // Light glow rings
+  if (dist < 4) return C.warm2;
+  if (dist < 6) return C.warm1;
+  if (dist < 8.5) return C.blue1;
+  if (dist < 11) {
+    // Subtle light rays
+    const angle = Math.atan2(dy, dx);
+    const ray = Math.sin(angle * 6) * 0.5 + 0.5;
+    return ray > 0.7 ? C.blue1 : C.bg;
+  }
+
+  // Stars in corners
+  if ((x === 2 && y === 2) || (x === 21 && y === 3) ||
+      (x === 4 && y === 19) || (x === 20 && y === 20) ||
+      (x === 1 && y === 10) || (x === 22 && y === 8)) return C.white;
+
+  return C.bg;
+});
+
+// --- PANEL 2: RAG House ---
+// A small house structure with labeled rooms: sources, chunks, indexes
+px('p2', 32, 20, (x, y) => {
+  // Sky
+  if (y <= 3) {
+    if ((x === 3 && y === 1) || (x === 25 && y === 2) || (x === 15 && y === 0)) return C.white;
+    return C.blue1;
+  }
+
+  // Roof (triangle: peak at x=15-16, y=4, base at x=4-27, y=8)
+  if (y >= 4 && y <= 8) {
+    const roofLeft = 15 - (y - 4) * 3;
+    const roofRight = 16 + (y - 4) * 3;
+    if (x >= roofLeft && x <= roofRight) {
+      // Chimney
+      if (x >= 22 && x <= 23 && y <= 6) return C.warm3;
+      // Roof edge
+      if (x === roofLeft || x === roofRight) return C.warm4;
+      return C.warm3;
+    }
+    return C.blue1;
+  }
+
+  // House body (x=4-27, y=9-17)
+  if (x >= 4 && x <= 27 && y >= 9 && y <= 17) {
+    // Outer walls
+    if (x === 4 || x === 27) return C.cyan3;
+    if (y === 9) return C.cyan3;
+    if (y === 17) return C.cyan3;
+
+    // Interior dividers (3 rooms)
+    // Room 1: sources (x=5-12)
+    // Room 2: chunks (x=14-20)
+    // Room 3: indexes (x=22-26)
+    if (x === 13 || x === 21) return C.mid;
+
+    // Room 1: /sources/ — warm amber
+    if (x >= 5 && x <= 12 && y >= 10 && y <= 16) {
+      // Window
+      if (x >= 7 && x <= 10 && y >= 11 && y <= 13) {
+        if (y === 11 || y === 13 || x === 7 || x === 10) return C.cyan;
+        return C.warm1;
+      }
+      // Floor label dots
+      if (y === 15 && (x === 6 || x === 8 || x === 10)) return C.warm4;
+      return C.dark;
+    }
+
+    // Room 2: /chunks/ — blue tint
+    if (x >= 14 && x <= 20 && y >= 10 && y <= 16) {
+      // Stacked blocks (chunks)
+      if (y >= 13 && y <= 16) {
+        if ((x + y) % 2 === 0) return C.blue3;
+        return C.blue2;
+      }
+      return C.dark;
+    }
+
+    // Room 3: /indexes/ — green tint
+    if (x >= 22 && x <= 26 && y >= 10 && y <= 16) {
+      // Index lines
+      if (y >= 11 && y <= 15 && x >= 23 && x <= 25) {
+        return y % 2 === 0 ? C.green : C.dark;
+      }
+      return C.dark;
+    }
+
+    return C.dark;
+  }
+
+  // Door (center bottom)
+  if (x >= 14 && x <= 17 && y === 18) return C.warm3;
+
+  // Ground
+  if (y >= 18) {
+    return (x + y) % 3 === 0 ? C.blue2 : C.blue1;
+  }
+
+  return C.blue1;
+});
+
+// --- PANEL 3: Seven Anchors ---
+// 7 anchor points arranged in a constellation, connected by lines
+px('p3', 28, 16, (x, y) => {
+  // Define 7 anchor positions
+  const anchors = [
+    {x: 4,  y: 3,  c: C.cyan},    // 1 Safety
+    {x: 10, y: 2,  c: C.green},   // 2 Trust
+    {x: 16, y: 4,  c: C.amber},   // 3 Evidence
+    {x: 22, y: 2,  c: C.violet},  // 4 Autonomy
+    {x: 7,  y: 10, c: C.warm5},   // 5 Care
+    {x: 14, y: 12, c: C.cyan2},   // 6 Growth
+    {x: 21, y: 10, c: C.red},     // 7 Justice
+  ];
+
+  // Connection lines between anchors
+  const connections = [
+    [0,1],[1,2],[2,3],[0,4],[4,5],[5,6],[3,6],[1,5],[2,5]
+  ];
+
+  // Check if pixel is on a connection line
+  for (const [a, b] of connections) {
+    const ax = anchors[a].x, ay = anchors[a].y;
+    const bx = anchors[b].x, by = anchors[b].y;
+    const len = Math.sqrt((bx-ax)**2 + (by-ay)**2);
+    // Distance from point to line segment
+    const t = Math.max(0, Math.min(1, ((x-ax)*(bx-ax)+(y-ay)*(by-ay))/(len*len)));
+    const px2 = ax + t*(bx-ax), py2 = ay + t*(by-ay);
+    const d = Math.sqrt((x-px2)**2 + (y-py2)**2);
+    if (d < 0.6) return C.mid;
+  }
+
+  // Draw anchor points (2x2 bright, 1px halo)
+  for (const a of anchors) {
+    const dx = x - a.x, dy2 = y - a.y;
+    const d = Math.sqrt(dx*dx + dy2*dy2);
+    if (d < 0.8) return a.c;
+    if (d < 1.5) return C.blue2;
+  }
+
+  // Subtle background grid
+  if (x % 7 === 0 && y % 4 === 0) return C.blue1;
+
+  return C.bg;
+});
+
+// --- PANEL 4: Convergence Stream ---
+// Multiple colored streams flowing from left edges and converging to a bright point on the right
+px('p4', 36, 18, (x, y) => {
+  const cx = 32, cy = 9;
+
+  // 5 streams from the left
+  const streams = [
+    {sy: 2,  c1: C.cyan,  c2: C.cyan3},
+    {sy: 5,  c1: C.green,  c2: '#0a3318'},
+    {sy: 9,  c1: C.amber,  c2: C.warm2},
+    {sy: 13, c1: C.violet, c2: '#2a1144'},
+    {sy: 16, c1: C.red,    c2: '#331111'},
+  ];
+
+  // Convergence point glow
+  const dx = x - cx, dy2 = y - cy;
+  const dist = Math.sqrt(dx*dx + dy2*dy2);
+  if (dist < 1.2) return C.white;
+  if (dist < 2.5) return C.cyan;
+  if (dist < 4) return C.cyan3;
+
+  // Draw each stream as a curve from left to convergence point
+  for (const s of streams) {
+    const t = x / 36;
+    const streamY = s.sy + (cy - s.sy) * (t * t);
+    const thickness = 1.2 - t * 0.6;
+    if (Math.abs(y - streamY) < thickness) {
+      // Gradient along stream
+      if (t > 0.7) return s.c1;
+      if (t > 0.4) return s.c2;
+      return s.c2;
+    }
+    // Stream glow
+    if (Math.abs(y - streamY) < thickness + 0.8 && x < 30) {
+      return C.blue1;
+    }
+  }
+
+  // Particle field near convergence
+  if (dist < 8) {
+    const angle = Math.atan2(dy2, dx);
+    const ring = Math.sin(dist * 2 + angle * 3) * 0.5 + 0.5;
+    if (ring > 0.85) return C.blue1;
+  }
+
+  return C.bg;
+});
+
+// --- PANEL 5: Bayesian Belief Map ---
+// Heat map of belief densities with posterior peaks and prior valleys
+px('p5', 32, 20, (x, y) => {
+  // Three belief clusters (posterior peaks)
+  const peaks = [
+    {x: 8,  y: 6,  r: 5, c: [0, 212, 255]},   // cyan — safety belief
+    {x: 20, y: 8,  r: 6, c: [255, 170, 0]},     // amber — evidence belief
+    {x: 14, y: 15, r: 4.5, c: [34, 170, 68]},   // green — trust belief
+  ];
+  let heat = 0;
+  let r = 10, g = 10, b = 18;
+  for (const p of peaks) {
+    const dx = x - p.x, dy2 = y - p.y;
+    const d = Math.sqrt(dx*dx + dy2*dy2);
+    const intensity = Math.max(0, 1 - d / p.r);
+    const w = intensity * intensity;
+    heat += w;
+    r += p.c[0] * w * 0.4;
+    g += p.c[1] * w * 0.4;
+    b += p.c[2] * w * 0.4;
+  }
+  // Prior background gradient
+  const prior = (y / 20) * 0.15;
+  r = Math.min(255, Math.floor(r + prior * 30));
+  g = Math.min(255, Math.floor(g + prior * 15));
+  b = Math.min(255, Math.floor(b + prior * 40));
+  // Contour lines
+  if (heat > 0.01) {
+    const contour = Math.sin(heat * 12) * 0.5 + 0.5;
+    if (contour > 0.92) { r = Math.min(255, r + 40); g = Math.min(255, g + 40); b = Math.min(255, b + 40); }
+  }
+  // Measurement dots
+  const dots = [[5,4],[10,5],[18,6],[22,10],[12,14],[16,16],[26,3],[3,12],[28,15]];
+  for (const d of dots) { if (x === d[0] && y === d[1]) return '#ffffff'; }
+  return `rgb(${r},${g},${b})`;
+});
+
+// --- PANEL 6: Flourishing Pulse ---
+// EKG-style waveforms for 4 flourishing dimensions stacked
+px('p6', 40, 16, (x, y) => {
+  const bands = [
+    {label: 'human',    row: 2,  c: C.cyan,   amp: 2.5, freq: 0.35, phase: 0},
+    {label: 'animal',   row: 6,  c: C.green,  amp: 2,   freq: 0.28, phase: 1.2},
+    {label: 'eco',      row: 10, c: C.amber,  amp: 1.8, freq: 0.4,  phase: 2.5},
+    {label: 'universe', row: 14, c: C.violet,  amp: 1.5, freq: 0.22, phase: 3.8},
+  ];
+  // Grid lines
+  for (const b of bands) {
+    if (y === b.row && x % 5 === 0) return C.blue1;
+  }
+  // Baseline dashes
+  for (const b of bands) {
+    if (y === b.row && x % 3 === 0) return C.mid;
+  }
+  // Waveforms
+  for (const b of bands) {
+    // Pulse spike pattern
+    let waveY;
+    const xn = x % 13;
+    if (xn < 3) {
+      waveY = b.row;
+    } else if (xn === 3) {
+      waveY = b.row - b.amp * 0.3;
+    } else if (xn === 4) {
+      waveY = b.row + b.amp * 0.5;
+    } else if (xn === 5) {
+      waveY = b.row - b.amp;
+    } else if (xn === 6) {
+      waveY = b.row + b.amp * 0.7;
+    } else if (xn === 7) {
+      waveY = b.row - b.amp * 0.2;
+    } else {
+      waveY = b.row + Math.sin(x * b.freq + b.phase) * 0.3;
+    }
+    if (Math.abs(y - Math.round(waveY)) < 0.6) return b.c;
+    // Glow below pulse
+    if (Math.abs(y - Math.round(waveY)) < 1.2 && xn >= 3 && xn <= 7) return C.blue1;
+  }
+  // Score labels on right edge
+  if (x >= 36) {
+    if (y === 2) return C.cyan3;
+    if (y === 6) return '#0a3318';
+    if (y === 10) return C.warm1;
+    if (y === 14) return '#2a1144';
+  }
+  return C.bg;
+});
+
+// --- PANEL 7: Mesh Network ---
+// Nodes connected by lines forming a peer mesh topology
+px('p7', 28, 20, (x, y) => {
+  const nodes = [
+    {x: 4,  y: 3,  c: C.cyan,   s: 1.5},
+    {x: 14, y: 2,  c: C.cyan,   s: 2},
+    {x: 24, y: 4,  c: C.cyan,   s: 1.5},
+    {x: 7,  y: 9,  c: C.green,  s: 1.8},
+    {x: 18, y: 8,  c: C.amber,  s: 1.5},
+    {x: 25, y: 10, c: C.green,  s: 1.3},
+    {x: 3,  y: 15, c: C.violet, s: 1.5},
+    {x: 12, y: 14, c: C.cyan2,  s: 2},
+    {x: 20, y: 16, c: C.warm5,  s: 1.5},
+    {x: 26, y: 17, c: C.red,    s: 1.2},
+    {x: 14, y: 18, c: C.cyan3,  s: 1},
+  ];
+  const edges = [
+    [0,1],[1,2],[0,3],[1,4],[2,5],[3,4],[4,5],[3,6],[3,7],[4,7],[4,8],[5,9],
+    [6,7],[7,8],[8,9],[7,10],[8,10],[6,10]
+  ];
+  // Draw edges
+  for (const [a, b] of edges) {
+    const na = nodes[a], nb = nodes[b];
+    const len = Math.sqrt((nb.x-na.x)**2 + (nb.y-na.y)**2);
+    const t = Math.max(0, Math.min(1, ((x-na.x)*(nb.x-na.x)+(y-na.y)*(nb.y-na.y))/(len*len)));
+    const px2 = na.x + t*(nb.x-na.x), py2 = na.y + t*(nb.y-na.y);
+    const d = Math.sqrt((x-px2)**2 + (y-py2)**2);
+    if (d < 0.45) return C.blue2;
+    if (d < 0.9) return C.blue1;
+  }
+  // Draw nodes
+  for (const n of nodes) {
+    const dx = x - n.x, dy2 = y - n.y;
+    const d = Math.sqrt(dx*dx + dy2*dy2);
+    if (d < 0.8) return n.c;
+    if (d < n.s) return C.blue2;
+    if (d < n.s + 0.6) return C.blue1;
+  }
+  // Data packets (dots moving along edges)
+  const packets = [[0,1,0.3],[1,4,0.6],[3,7,0.5],[4,8,0.4],[7,10,0.7],[2,5,0.5]];
+  for (const [a, b, t] of packets) {
+    const pktX = nodes[a].x + (nodes[b].x - nodes[a].x) * t;
+    const pktY = nodes[a].y + (nodes[b].y - nodes[a].y) * t;
+    if (Math.abs(x - Math.round(pktX)) < 0.6 && Math.abs(y - Math.round(pktY)) < 0.6) return C.white;
+  }
+  return C.bg;
+});
+
+// --- PANEL 8: Sensor Grid ---
+// Grid of sensor cells with varying intensity readings, status indicators
+px('p8', 36, 20, (x, y) => {
+  // Grid border
+  if (x === 0 || x === 35 || y === 0 || y === 19) return C.mid;
+  // Column/row headers
+  if (y === 1 && x >= 3 && x % 4 === 3) return C.cyan3;
+  if (x === 1 && y >= 3 && y % 2 === 1) return C.cyan3;
+  // Sensor cells — 8 columns x 8 rows of 4x2 cells
+  const cellX = Math.floor((x - 2) / 4);
+  const cellY = Math.floor((y - 2) / 2);
+  if (cellX >= 0 && cellX < 8 && cellY >= 0 && cellY < 9 && x >= 2 && y >= 2) {
+    const localX = (x - 2) % 4;
+    const localY = (y - 2) % 2;
+    // Cell border
+    if (localX === 0 || localY === 0) return C.blue1;
+    // Sensor reading — pseudo-random heat
+    const seed = Math.sin(cellX * 127.1 + cellY * 311.7) * 43758.5453;
+    const val = seed - Math.floor(seed);
+    // Color by value: low=blue, mid=green, high=amber, critical=red
+    if (val < 0.25) {
+      const v = Math.floor(val * 4 * 60);
+      return `rgb(${10+v*0.2},${10+v*0.3},${40+v})`;
+    } else if (val < 0.5) {
+      const v = Math.floor((val - 0.25) * 4 * 80);
+      return `rgb(${10},${50+v},${30+v*0.3})`;
+    } else if (val < 0.75) {
+      const v = Math.floor((val - 0.5) * 4 * 100);
+      return `rgb(${80+v},${50+v*0.6},${10})`;
+    } else {
+      const v = Math.floor((val - 0.75) * 4 * 80);
+      return `rgb(${150+v},${30+v*0.2},${20})`;
+    }
+  }
+  return C.bg;
+});
+</script>
+</body>
+</html>

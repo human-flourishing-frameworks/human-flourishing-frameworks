@@ -1,0 +1,5 @@
+item_id,coin_or_network,type,url,status,wallet_required,kyc_required,risk_notes,last_checked,operator_notes
+kaspa-testnet,KAS testnet,Faucet,https://faucet.kaspanet.io/,Unverified,Yes,No,Use only testnet wallet; never enter seed phrase,2026-05-29,Verify live URL before use
+rvn-testnet,RVN testnet,Faucet,https://raven.wiki/wiki/Testnet,Research,Yes,No,Use official docs and testnet only,2026-05-29,Confirm current faucet availability
+monero-stagenet,XMR stagenet,Practice wallet,https://docs.getmonero.org/infrastructure/networks/,Research,Yes,No,Practice network only; no market value,2026-05-29,Confirm wallet network mode before testing
+

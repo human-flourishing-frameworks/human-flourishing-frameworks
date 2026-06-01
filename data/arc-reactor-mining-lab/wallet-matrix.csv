@@ -1,0 +1,7 @@
+coin,ticker,network,algorithm,hardware_lane,wallet_software,address_status,receive_address,pool_or_mode,off_ramp_status,notes
+Monero,XMR,Monero,RandomX,CPU,Official Monero GUI or CLI,Needed,,Pool or P2Pool,Check exchange support,Use receive address only; never store seed phrase here
+Ravencoin,RVN,Ravencoin,KAWPOW,GPU,Official Ravencoin wallet,Needed,,Public pool,Check exchange support,Use GPU lane only if cooling and wall power are acceptable
+Kaspa,KAS,Kaspa,kHeavyHash,ASIC,Official Kaspa wallet,Needed,,ASIC pool only,Check exchange support,Skip unless compatible ASIC and cheap power already exist
+Ethereum Classic,ETC,Ethereum Classic,Etchash,GPU,Official or hardware wallet,Optional,,Public pool,Check exchange support,Optional GPU comparison lane
+Bitcoin,BTC,Bitcoin,SHA-256,ASIC,Hardware wallet,Reference only,,Not recommended for home CPU/GPU,Major exchanges,Do not attempt CPU/GPU Bitcoin mining for profit
+

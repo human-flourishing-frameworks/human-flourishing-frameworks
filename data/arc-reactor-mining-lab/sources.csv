@@ -1,0 +1,13 @@
+source_id,title,url,source_type,used_for,as_of,notes
+monero-randomx,RandomX Moneropedia,https://web.getmonero.org/resources/moneropedia/randomx.html,Official docs,Monero CPU-focused RandomX description,2026-05-29,Source says RandomX is optimized for CPUs and discourages specialized mining hardware
+monero-tail,Monero Tail Emission,https://www.getmonero.org/resources/moneropedia/tail-emission.html,Official docs,Monero tail emission and block reward boundary,2026-05-29,Source says rewards stay fixed at 0.6 XMR or less per block after tail emission
+ravencoin-about,Ravencoin About,https://ravencoin.org/about/,Official project site,Ravencoin KAWPOW and GPU hardware framing,2026-05-29,Source describes KAWPOW as derived from ProgPOW and ethhash
+ravencoin-pools,Ravencoin Pools,https://ravencoin.org/pools/,Official project site,Ravencoin pool workflow and wallet-first setup,2026-05-29,Source says create wallet address then choose mining pool
+kaspa-home,Kaspa Home,https://kaspa.org/,Official project site,Kaspa kHeavyHash consensus algorithm,2026-05-29,Source says Kaspa uses kHeavyHash for proof of work
+kaspa-emission,Kaspa Emission Schedule,https://kaspa.org/wp-content/uploads/2022/09/KASPA-EMISSION-SCHEDULE.pdf,Official project PDF,Kaspa emission schedule,2026-05-29,Use for emission schedule reference; do not infer live profitability
+eia-steo,EIA Short-Term Energy Outlook Electricity,https://www.eia.gov/outlooks/steo/report/elec_coal_renew.php,Government forecast,US residential electricity price context,2026-05-29,Source reports 18.2 cents/kWh average US residential electricity price for 2026
+eia-electricity-data,EIA Electricity Data,https://www.eia.gov/electricity/data.php,Government data portal,State and sector electricity data refresh path,2026-05-29,Use current monthly data before a spend decision
+xmrig-pool,XMRig Pool Configuration,https://xmrig.com/docs/miner/config/pool,Official miner docs,XMRig pool config fields,2026-05-29,Use for config shape; verify release checksums separately
+xmrig-github,XMRig GitHub,https://github.com/xmrig/xmrig,Open-source repository,XMRig releases and source review,2026-05-29,Official binaries and source repository
+kawpowminer-github,kawpowminer GitHub,https://github.com/RavenCommunity/kawpowminer,Open-source repository,Ravencoin open-source miner option,2026-05-29,Use as a sample open-source miner lane; verify maintenance status before use
+

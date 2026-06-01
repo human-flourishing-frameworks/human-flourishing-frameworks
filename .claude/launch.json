@@ -1,0 +1,52 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lantern-os-unified",
+      "runtimeExecutable": "powershell",
+      // CI/CD MANAGED: path uses env var so it resolves in pipelines and RAG-indexed clones.
+      "runtimeArgs": ["-File", "${env:USERPROFILE}\\.lantern\\lantern-os-startup.ps1"],
+      "port": 5000
+    },
+    {
+      "name": "lantern-flask-backend",
+      "runtimeExecutable": "python",
+      // CI/CD MANAGED: path uses env var so it resolves in pipelines and RAG-indexed clones.
+      "runtimeArgs": ["${env:USERPROFILE}\\.lantern\\lantern-browser-server.py"],
+      "port": 5000
+    },
+    {
+      "name": "suzie-orchestrator",
+      "runtimeExecutable": "powershell",
+      // EXTERNAL REPO REF: orchestrator script referenced via manifests/TMP-REPO-RAG-INDEX.md
+      "runtimeArgs": ["-File", "${env:REPO_ROOT}\\gm-agent-orchestrator\\Start-Dashboard.ps1"],
+      "port": 8765
+    },
+    {
+      "name": "lantern-m5-daemon",
+      "runtimeExecutable": "python",
+      // CI/CD MANAGED: path uses env var so it resolves in pipelines and RAG-indexed clones.
+      "runtimeArgs": ["${env:USERPROFILE}\\.lantern\\lantern-os-m5-daemon.py"],
+      "port": 8766
+    },
+    {
+      "name": "art-panels",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8090"],
+      "port": 8090
+    },
+    {
+      "name": "lantern-local-chat",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["apps/lantern-local-chat/local_lantern_server.py"],
+      "port": 8767
+    },
+    {
+      "name": "lantern-garage",
+      "runtimeExecutable": "node",
+      // EXTERNAL REPO REF: lantern-os repo path managed by CI/CD; see manifests/TMP-REPO-RAG-INDEX.md
+      "runtimeArgs": ["${env:REPO_ROOT}\\..\\lantern-os\\apps\\lantern-garage\\server.js"],
+      "port": 4177
+    }
+  ]
+}
