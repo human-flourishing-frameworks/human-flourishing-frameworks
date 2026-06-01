@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lantern-os-unified",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-File", "C:\\Users\\alexp\\.lantern\\lantern-os-startup.ps1"],
+      "port": 5000
+    },
+    {
+      "name": "lantern-flask-backend",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\alexp\\.lantern\\lantern-browser-server.py"],
+      "port": 5000
+    },
+    {
+      "name": "suzie-orchestrator",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-File", "C:\\Users\\alexp\\Documents\\gm-agent-orchestrator\\Start-Dashboard.ps1"],
+      "port": 8765
+    },
+    {
+      "name": "lantern-m5-daemon",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\alexp\\.lantern\\lantern-os-m5-daemon.py"],
+      "port": 8766
+    },
+    {
+      "name": "art-panels",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8090"],
+      "port": 8090
+    },
+    {
+      "name": "lantern-local-chat",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["apps/lantern-local-chat/local_lantern_server.py"],
+      "port": 8767
+    },
+    {
+      "name": "lantern-garage",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:\\tmp\\lantern-os\\apps\\lantern-garage\\server.js"],
+      "port": 4177
+    }
+  ]
+}

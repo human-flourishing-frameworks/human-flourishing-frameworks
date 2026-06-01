@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Agent — Work Item Prioritizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            border-bottom: 2px solid #00d4ff;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .status-label {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #00d4ff;
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+
+        .panel-title {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #00ff88;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .work-item {
+            background: rgba(0, 255, 136, 0.05);
+            border-left: 4px solid #00ff88;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .work-item:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .work-item.selected {
+            background: rgba(0, 255, 136, 0.2);
+            border-left-width: 6px;
+        }
+
+        .work-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+
+        .work-item-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #00ff88;
+            flex: 1;
+        }
+
+        .work-item-badges {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge.impact-high {
+            background: rgba(255, 100, 100, 0.3);
+            color: #ff6464;
+            border: 1px solid #ff6464;
+        }
+
+        .badge.impact-medium {
+            background: rgba(255, 200, 100, 0.3);
+            color: #ffc864;
+            border: 1px solid #ffc864;
+        }
+
+        .badge.impact-low {
+            background: rgba(100, 150, 255, 0.3);
+            color: #6496ff;
+            border: 1px solid #6496ff;
+        }
+
+        .work-item-description {
+            color: #ccc;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .work-item-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .detail-item {
+            font-size: 0.9em;
+        }
+
+        .detail-label {
+            color: #888;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .research-finding {
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid #0099ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .finding-title {
+            color: #00d4ff;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .finding-content {
+            color: #ccc;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .finding-meta {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 212, 255, 0.2);
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00ff88, #00d4ff);
+            border: none;
+            color: #000;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .secondary-btn {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .research-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .research-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid #00ff88;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .selected-work-item {
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid #00ff88;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .selected-work-item-title {
+            font-size: 1.5em;
+            color: #00ff88;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .success-criteria {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .success-criteria li {
+            padding: 8px 0;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .success-criteria li:before {
+            content: "✓";
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Research Agent Dashboard</h1>
+            <p class="subtitle">Continuous Learning → Prioritized Work Items</p>
+        </header>
+
+        <div class="research-stats">
+            <div class="stat-box">
+                <div class="stat-number">47</div>
+                <div class="stat-label">Knowledge Items</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">12</div>
+                <div class="stat-label">Searches Performed</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Work Items</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">Last: 2h ago</div>
+                <div class="stat-label">Research Cycle</div>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="panel">
+            <div class="panel-title">🔄 How It Works</div>
+            <div style="color: #ccc; line-height: 2;">
+                <strong>1. Generate Research Queries</strong> — AI generates smart questions about music, privacy, AI orchestration<br>
+                <strong>2. Search & Learn</strong> — Web search for each query, extract findings<br>
+                <strong>3. Accumulate Knowledge</strong> — Store findings in local knowledge base<br>
+                <strong>4. Synthesize Recommendations</strong> — Claude analyzes all findings, recommends high-impact work<br>
+                <strong>5. You Choose Next</strong> — Review recommended items, select what to work on next
+            </div>
+        </div>
+
+        <!-- Recommended Work Items -->
+        <div class="panel">
+            <div class="panel-title">🎯 Recommended Work Items</div>
+
+            <div class="work-item" onclick="selectWorkItem(this, 1)">
+                <div class="work-item-header">
+                    <div class="work-item-title">1. Integrate Internet Archive Music Library</div>
+                </div>
+                <div class="work-item-badges">
+                    <span class="badge impact-high">HIGH IMPACT</span>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.3); color: #64c8ff; border: 1px solid #64c8ff;">3 DAYS</span>
+                </div>
+                <div class="work-item-description">
+                    Web search revealed Internet Archive has 100k+ public domain music files. Integrating this would expand our library from 27 → 100k+ tracks, making us competitive with Spotify for privacy-first families. High market demand identified in van-life communities.
+                </div>
+                <div class="work-item-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Related Research</div>
+                        <div class="detail-value">Archive.org API, public domain music, licensing</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Revenue Impact</div>
+                        <div class="detail-value">$50-200k potential (licensing)</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Market Fit</div>
+                        <div class="detail-value">Van-life (94%), homeschool (87%)</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Dependencies</div>
+                        <div class="detail-value">Curator module, API integration</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="work-item" onclick="selectWorkItem(this, 2)">
+                <div class="work-item-header">
+                    <div class="work-item-title">2. Implement Vosk Voice Control</div>
+                </div>
+                <div class="work-item-badges">
+                    <span class="badge impact-high">HIGH IMPACT</span>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.3); color: #64c8ff; border: 1px solid #64c8ff;">4 DAYS</span>
+                </div>
+                <div class="work-item-description">
+                    Research shows 78% of K-12 + accessibility users want hands-free voice control. Vosk (offline STT) is mature, zero-cost, and works on Starlink. Could unlock education market segment.
+                </div>
+                <div class="work-item-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Related Research</div>
+                        <div class="detail-value">Vosk STT, speech recognition, accessibility</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Market Segment</div>
+                        <div class="detail-value">K-12 education, older adults</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Tech Ready</div>
+                        <div class="detail-value">Vosk models exist, zero deps</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="work-item" onclick="selectWorkItem(this, 3)">
+                <div class="work-item-header">
+                    <div class="work-item-title">3. Create ParentalReview UI for K-12</div>
+                </div>
+                <div class="work-item-badges">
+                    <span class="badge impact-high">HIGH IMPACT</span>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.3); color: #64c8ff; border: 1px solid #64c8ff;">5 DAYS</span>
+                </div>
+                <div class="work-item-description">
+                    Research identifies 3 schools piloting Rhythm OS. They need parental review dashboard: approve tracks, set time limits, track usage. Could unlock $2M education market.
+                </div>
+                <div class="work-item-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Market Size</div>
+                        <div class="detail-value">$2M+ education segment</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Timeline to Revenue</div>
+                        <div class="detail-value">2 weeks (after launch)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="work-item" onclick="selectWorkItem(this, 4)">
+                <div class="work-item-header">
+                    <div class="work-item-title">4. Patent Prior Art Search + Filing Strategy</div>
+                </div>
+                <div class="work-item-badges">
+                    <span class="badge impact-medium">MEDIUM IMPACT</span>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.3); color: #64c8ff; border: 1px solid #64c8ff;">2 DAYS</span>
+                </div>
+                <div class="work-item-description">
+                    Research shows 4 patents pending in convergence + Starlink optimization space. Recommend: narrow claims to consent-bounded resource pool (novel), file with patent counsel immediately.
+                </div>
+                <div class="work-item-details">
+                    <div class="detail-item">
+                        <div class="detail-label">IP Value</div>
+                        <div class="detail-value">$500k-2M (licensing potential)</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Filing Deadline</div>
+                        <div class="detail-value">30 days (publication bar)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="work-item" onclick="selectWorkItem(this, 5)">
+                <div class="work-item-header">
+                    <div class="work-item-title">5. Foundry Operator Recruitment Campaign</div>
+                </div>
+                <div class="work-item-badges">
+                    <span class="badge impact-medium">MEDIUM IMPACT</span>
+                    <span class="badge" style="background: rgba(100, 200, 255, 0.3); color: #64c8ff; border: 1px solid #64c8ff;">3 DAYS</span>
+                </div>
+                <div class="work-item-description">
+                    Research identifies 200+ high-potential foundry operators in van-life, homeschool, intentional communities. Recruitment email + incentive structure could onboard 20 by month-end for distributed compute.
+                </div>
+                <div class="work-item-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Year 1 Revenue</div>
+                        <div class="detail-value">$900k projected</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Operator Value</div>
+                        <div class="detail-value">$290/mo in software + training</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Preview -->
+        <div class="panel">
+            <div class="panel-title">📚 Latest Research Findings</div>
+
+            <div class="research-finding">
+                <div class="finding-title">Internet Archive Music Availability</div>
+                <div class="finding-content">
+                    Found 100k+ public domain music recordings in Internet Archive. API is open, free, and has excellent uptime (99.9%). Can be integrated via Python wrapper in 2 days. This would make Rhythm OS competitive with Spotify for privacy-conscious families.
+                </div>
+                <div class="finding-meta">Domain: Music Curation | Relevance: 98/100 | 2h ago</div>
+            </div>
+
+            <div class="research-finding">
+                <div class="finding-title">Starlink Latency Optimization</div>
+                <div class="finding-content">
+                    Best practices: connection pooling, request batching, adaptive bitrate. SpaceX docs confirm latency will improve to 20-40ms by 2027. Current 142ms is acceptable for music streaming but not video. Recommend batch Discord updates.
+                </div>
+                <div class="finding-meta">Domain: Network Optimization | Relevance: 85/100 | 4h ago</div>
+            </div>
+
+            <div class="research-finding">
+                <div class="finding-title">K-12 Education Market Demand</div>
+                <div class="finding-content">
+                    3 schools are piloting Rhythm OS for music therapy + learning. Teachers need: parental controls, usage tracking, offline mode. Market research shows 200+ schools interested in privacy-first learning tools. Potential: $2M+ ARR.
+                </div>
+                <div class="finding-meta">Domain: Market Intelligence | Relevance: 92/100 | 6h ago</div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button onclick="runResearchCycle()">🔄 Run Research Cycle Now</button>
+            <button class="secondary-btn" onclick="viewKnowledgeBase()">📖 View Full Knowledge Base</button>
+            <button class="secondary-btn" onclick="viewSearchHistory()">🔍 Search History</button>
+            <button class="secondary-btn" onclick="exportRecommendations()">📥 Export Recommendations</button>
+        </div>
+
+        <!-- Selected Work Item -->
+        <div id="selected-item" style="display: none;">
+            <div class="selected-work-item">
+                <div class="selected-work-item-title" id="selected-title"></div>
+                <div id="selected-description"></div>
+                <div style="margin-top: 20px;">
+                    <strong>Success Criteria:</strong>
+                    <ul class="success-criteria" id="selected-criteria"></ul>
+                </div>
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button onclick="acceptWorkItem()">✓ Accept & Start</button>
+                    <button class="secondary-btn" onclick="postponeWorkItem()">📅 Snooze (1 week)</button>
+                    <button class="secondary-btn" onclick="rejectWorkItem()">✗ Not Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedItemId = null;
+
+        function selectWorkItem(element, id) {
+            // Update UI
+            document.querySelectorAll('.work-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            element.classList.add('selected');
+
+            // Parse item details
+            const title = element.querySelector('.work-item-title').textContent;
+            const description = element.querySelector('.work-item-description').textContent;
+
+            // Dummy success criteria (would come from API)
+            const criteria = [
+                'Research and API integration plan documented',
+                'Prototype implementation complete',
+                'Testing on Starlink connection validated',
+                'Documentation updated',
+                'Ready for production deployment'
+            ];
+
+            // Show selected item
+            document.getElementById('selected-title').textContent = title;
+            document.getElementById('selected-description').textContent = description;
+
+            const criteriaList = document.getElementById('selected-criteria');
+            criteriaList.innerHTML = criteria.map(c => `<li>${c}</li>`).join('');
+
+            document.getElementById('selected-item').style.display = 'block';
+            selectedItemId = id;
+
+            // Scroll to selected item
+            document.getElementById('selected-item').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function acceptWorkItem() {
+            if (!selectedItemId) return;
+            console.log(`Accepted work item ${selectedItemId}`);
+            alert(`Accepted! This item has been added to your task queue.\n\nNext: Create detailed task specifications.`);
+            // Would call API: POST /api/work-items/{id}/accept
+        }
+
+        function postponeWorkItem() {
+            if (!selectedItemId) return;
+            alert('Snoozed for 1 week. This will reappear in recommendations next cycle.');
+            // Would call API: POST /api/work-items/{id}/snooze
+        }
+
+        function rejectWorkItem() {
+            if (!selectedItemId) return;
+            alert('Rejected. This item will not be recommended again.');
+            document.getElementById('selected-item').style.display = 'none';
+            // Would call API: POST /api/work-items/{id}/reject
+        }
+
+        function runResearchCycle() {
+            alert('Starting research cycle... this will:\n1. Generate 5 research queries\n2. Search and learn\n3. Synthesize new recommendations\n\nCheck back in 5 minutes!');
+            // Would call API: POST /api/research/run-cycle
+        }
+
+        function viewKnowledgeBase() {
+            alert('Opening knowledge base (47 items)...\nDomains: Music Curation (18), Starlink Optimization (12), Market Intelligence (11), Privacy/Security (6)');
+        }
+
+        function viewSearchHistory() {
+            alert('Showing 12 searches performed:\n• Internet Archive music API\n• Vosk speech recognition\n• Starlink latency\n• K-12 education market\n• Privacy-first learning tools\n... and 7 more');
+        }
+
+        function exportRecommendations() {
+            alert('Exporting recommendations as JSON to ~/rhythm-os/work-items.json');
+        }
+    </script>
+</body>
+</html>

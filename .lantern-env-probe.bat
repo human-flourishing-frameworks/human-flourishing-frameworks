@@ -1,0 +1,10 @@
+@echo off
+set LANTERN_LLM_PROVIDER=openai
+set LANTERN_OPENAI_BASE_URL=http://127.0.0.1:1234/v1
+set LANTERN_OPENAI_MODEL=google/gemma-4-e4b
+set OPENAI_API_KEY=lm-studio
+echo PROVIDER=%LANTERN_LLM_PROVIDER%
+echo BASE_URL=%LANTERN_OPENAI_BASE_URL%
+echo MODEL=%LANTERN_OPENAI_MODEL%
+echo KEY=%OPENAI_API_KEY%
+python -c "import os; print('PY_PROVIDER=' + os.environ.get('LANTERN_LLM_PROVIDER','UNSET')); print('PY_BASE_URL=' + os.environ.get('LANTERN_OPENAI_BASE_URL','UNSET'))"

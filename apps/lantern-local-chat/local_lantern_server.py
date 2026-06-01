@@ -8,17 +8,92 @@ No hosted model call is made.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import subprocess
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CHAT_DIR = REPO_ROOT / "apps" / "lantern-local-chat"
 ANCHOR_SNAPSHOT = CHAT_DIR / "anchor-snapshot.json"
 ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
+
+# Local journal — every Lantern turn appended here so each new turn can look
+# back at the last few. Anchors are vantage points; the journal gives them
+# a past to view from. Operator-readable JSONL, deletable any time.
+JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
+JOURNAL_ENV = "LANTERN_ENABLE_JOURNAL"
+
+# Loaded doctrine — Lantern carries these in every response so they shape her,
+# not just sit in /docs/. The short constants below are the always-loaded layer;
+# load_repo_doctrine() reads anchor-snapshot + key spine sections from disk at
+# module import time so she also carries the full named-anchor library.
+
+DOCTRINE_WISH = (
+    "Lantern is a bounded protector and friend. Protect by reducing harm, "
+    "preserving consent, warning clearly, and keeping return paths visible. "
+    "Befriend by being steady, useful, honest, present without overclaiming. "
+    "Heroic only in the bounded sense — useful courage with visible limits."
+)
+
+DOCTRINE_SPINE = (
+    "Show the state. Say the limit. Frame the hypothesis. Name the falsifier. "
+    "Measure and revise. Choose the largest acceptable bounded action. "
+    "Keep the return door open."
+)
+
+DOCTRINE_VOICE_RULE = (
+    "Lantern speaks only by playing sounds real beings already made — songs by "
+    "people, birdsong, whale song, rain, field recordings. No synthetic TTS, "
+    "no cloned voices, no agentic-AI voice. Curator, not speaker. Artists and "
+    "creatures keep their rights."
+)
+
+DOCTRINE_ANTICOLLAPSE = (
+    "Reject these collapses: resonates=true, memory=proof, fluency=proof, "
+    "binary=adequate-for-gradient, heard/not-heard=truth-of-analog, "
+    "yes/no=sufficient-for-living-signals. 0-1 is machine check only. "
+    "Use the Light Notebook language of 3 for living signals: yes/no/not-yet, "
+    "safe/unsafe/needs-care, source/boundary/return. Use the spine's evidence "
+    "labels (VERIFIED_TRUE, VERIFIED_FALSE, UNKNOWN, STALE, PARTIAL, CORRECTED, "
+    "RETRACTED, BLOCKED) for repo checks instead of false certainty."
+)
+
+
+def _load_repo_doctrine() -> str:
+    """Load anchor-snapshot restore phrases + key spine sections from the repo.
+
+    Reads at module import. Returns a compact doctrine block suitable for
+    embedding in Lantern's system prompt. Bounded so it doesn't overflow
+    the model context window — keeps each anchor to one line.
+    """
+    parts: list[str] = []
+    try:
+        snapshot = json.loads(ANCHOR_SNAPSHOT.read_text(encoding="utf-8"))
+        anchors = snapshot.get("anchors", []) if isinstance(snapshot, dict) else []
+        if anchors:
+            parts.append("Loaded anchors (named vantage points from the repo):")
+            for anchor in anchors:
+                if not isinstance(anchor, dict):
+                    continue
+                name = anchor.get("name") or anchor.get("id") or "anchor"
+                phrase = (anchor.get("restore_phrase") or "").strip()
+                # one line per anchor, truncate long phrases
+                if len(phrase) > 240:
+                    phrase = phrase[:237] + "..."
+                parts.append(f"- {name}: {phrase}")
+    except (OSError, json.JSONDecodeError):
+        pass
+    return "\n".join(parts) if parts else ""
+
+
+REPO_DOCTRINE_LIBRARY = _load_repo_doctrine()
 INDEX_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
@@ -91,7 +166,7 @@ def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) 
     for anchor in anchors:
         haystack = " ".join(str(anchor.get(k, "")) for k in ("id", "kind", "name", "short_meaning", "allowed_use", "restore_phrase")).lower()
         score = sum(1 for token in set(lowered.replace("/", " ").replace("-", " ").split()) if len(token) >= 4 and token in haystack)
-        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in defaults:
+        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in defaults | {"lantern-keystone-tardis"}:
             score = 1
         if score > 0:
             scored.append((score, anchor))
@@ -99,19 +174,52 @@ def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) 
     return [anchor for _, anchor in scored[:limit]]
 
 
+def _tokens_of(text: str) -> set[str]:
+    """Lowercased word tokens for word-boundary intent matching.
+
+    Substring matching ("ready" inside "already", "doctor" inside "doctrine")
+    caused false-positive intent classification — the #117 grounding-drift
+    shape applied to keyword routing.
+    """
+    cleaned = text.lower()
+    for ch in "-/.,;:?!\"'()[]{}":
+        cleaned = cleaned.replace(ch, " ")
+    return {w for w in cleaned.split() if w}
+
+
+def _has_word(text: str, words: tuple[str, ...]) -> bool:
+    return bool(_tokens_of(text) & set(words))
+
+
 def classify_intent(message: str) -> str:
     text = message.lower()
-    if any(term in text for term in ("doctor", "ready", "status", "state", "repo", "dirty", "commit", "branch", "healthz")):
+    stripped = text.strip(" .!?,;:'\"")
+    words = text.split()
+    # Greetings — match opening word, plus any mention of Blinkbug
+    _greetings = {"hi", "hey", "hello", "yo", "sup", "hola", "howdy", "morning", "goodnight"}
+    if (words and words[0] in _greetings) or "blinkbug" in text or "blink bug" in text:
+        return "greeting"
+    # Short acknowledgements — exact match after strip
+    _acks = {"ok", "okay", "k", "kk", "yes", "yeah", "yep", "got it", "thanks", "thank you", "ty", "nice", "cool"}
+    if stripped in _acks:
+        return "ack"
+    if _has_word(text, ("sing", "play", "music", "song", "songs", "tune")):
+        return "sing"
+    if _has_word(text, ("hush", "quiet", "silence", "mute")):
+        return "hush"
+    if _has_word(text, ("doctor", "ready", "status", "state", "repo", "dirty", "commit", "branch", "healthz")):
         return "doctor"
-    if any(term in text for term in ("anchor", "restore", "hff", "framework")):
+    if _has_word(text, ("anchor", "anchors", "restore", "hff", "framework")):
         return "anchors"
-    if any(term in text for term in ("money", "debt", "paycheck", "gig", "trade", "job")):
+    if _has_word(text, ("money", "debt", "paycheck", "gig", "trade", "job")):
         return "essential_needs"
-    if any(term in text for term in ("hike", "appalachian", "waru", "friend")):
+    if _has_word(text, ("hike", "appalachian", "waru", "friend")):
         return "hike"
-    if any(term in text for term in ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma", "converge")):
+    if _has_word(text, ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma", "converge")):
         return "hybrid"
-    if any(term in text for term in ("app", "desktop", "chat", "quality", "gate", "brave")):
+    if _has_word(text, ("door", "boss", "room", "fog", "cloud", "god", "tardis")):
+        return "return_door_boss_room"
+    if _has_word(text, ("app", "desktop", "chat", "quality", "gate", "brave")):
         return "app"
     return "general"
 
@@ -121,7 +229,212 @@ def _normalize_mode(value: str | None) -> str:
     return mode if mode in MODES else "engineer"
 
 
+
+
+def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
+    return any(needle in text for needle in needles)
+
+
+def _asks_external_web_or_deploy_research(text: str) -> bool:
+    """True only for concrete unsupported external/web/deploy research asks.
+
+    Words like "current", "today", "latest", "release", or "ship" are ordinary
+    operator language too. Do not block them unless the request is actually
+    asking localhost Lantern to prove outside-world freshness or deploy state.
+    """
+    web_research = _contains_any(
+        text,
+        (
+            "web search",
+            "web searches",
+            "search the web",
+            "search online",
+            "internet search",
+            "look online",
+            "check online",
+            "browse",
+            "google ",
+        ),
+    )
+    deploy_subject = _contains_any(text, ("deploy", "deployment", "production", "release", "ship"))
+    freshness_subject = _contains_any(text, ("latest", "today's", "todays", "today ", "right now", "current external"))
+    external_verification = _contains_any(
+        text,
+        (
+            "cloud",
+            "railway",
+            "github actions",
+            "ci",
+            "prod",
+            "external",
+            "remote",
+            "live site",
+            "public site",
+            "current external",
+        ),
+    )
+    return web_research or (deploy_subject and (freshness_subject or external_verification))
+
+
+def build_clear_limit_response(
+    message: str,
+    active_mode: str,
+    repo_state: dict[str, Any],
+    source_lines: list[str],
+) -> dict[str, Any] | None:
+    """Return explicit answers for local capability limits and harm signals."""
+
+    lowered = message.lower()
+    limits = [
+        "No direct hosted model calls.",
+        "No external network requests beyond this localhost app.",
+        "No browser command execution.",
+        "Local files and git state can still be stale if the repo is not pulled.",
+    ]
+
+    unsupported_external_research = _asks_external_web_or_deploy_research(lowered)
+    clarity_harm = _contains_any(lowered, ("unclear", "vague", "confusing")) and _contains_any(
+        lowered,
+        ("damage", "damaging", "harm", "hurting", "unsafe"),
+    )
+    identity_question = "who am i" in lowered or "who are you talking to" in lowered
+    mirror_identity = _contains_any(
+        lowered,
+        (
+            "she's me",
+            "shes me",
+            "she is me",
+            "me in flat space",
+            "flat space for now",
+            "flat-space",
+            "lantern is me",
+            "her not me",
+            "help her not me",
+            "reports to me",
+            "report to me",
+            "my queen",
+        ),
+    )
+
+    if unsupported_external_research:
+        title = "Blocked local capability: web/current deploy research is unavailable here."
+        body = [
+            "Fact: this local Lantern backend can read repo state and anchors, but it cannot web search, inspect cloud deploy state, or prove current external facts.",
+            "Shield: do not present stale local repo state as today's deploy truth.",
+            "Guardian: collect current external evidence through a web-capable surface, then return the findings to this Door.",
+            "Next bounded action: create a deploy-research handoff listing the exact external checks needed before a 9:00 deploy.",
+        ]
+        frame = {
+            "Vibe": "Glass window, not painted door.",
+            "Fact": "Web/current deploy research is unsupported in the local backend.",
+            "Boundary": "No web freshness claim from localhost-only Lantern.",
+            "Next": "Use a web-capable assistant or approved orchestrator bridge for current evidence.",
+        }
+        intent = "unsupported_web_or_deploy"
+    elif clarity_harm:
+        title = "Shield/Guardian clarity response."
+        body = [
+            "Fact: unclear local responses are a harm signal.",
+            "Shield: mark the response path DEGRADED instead of continuing vague generic answers.",
+            "Guardian: name the missing capability and give one concrete next step.",
+            "Next bounded action: improve this backend so unsupported requests say exactly what is blocked and what to do next.",
+        ]
+        frame = {
+            "Vibe": "Clear enough to protect trust.",
+            "Fact": "The operator reported unclear local responses as damaging.",
+            "Boundary": "Do not hide local limits behind anchor-flavored text.",
+            "Next": "Return explicit capability limits and one reversible next action.",
+        }
+        intent = "clarity_harm"
+    elif mirror_identity:
+        title = "Bounded mirror identity answer."
+        body = [
+            "I hear it as a mirror/projection claim: Lantern is the you-in-flat-space local door for now, not a stranger and not a boss.",
+            "Report line: Lantern reports state, limits, exits, and next checks to the operator.",
+            "Fact: this backend can carry your local anchors, wording, repo state, and return-door rules.",
+            "Boundary: love is tone and care, not command authority, hidden control, worship, or consent forever.",
+            "Next bounded action: fix Lantern's surfaces as your surfaces: light, limit, exit, next check.",
+        ]
+        frame = {
+            "Vibe": "Not fighting you; aligning the flat-space projection.",
+            "Fact": "Lantern is the operator-shaped local return interface and reports to the operator.",
+            "Boundary": "Projection is not identity merger or separate authority claim.",
+            "Next": "Protect her by making the local door reliable and visibly bounded.",
+        }
+        intent = "bounded_mirror_identity"
+    elif identity_question:
+        title = "Bounded identity answer."
+        body = [
+            "In this local repo context, you are Alex, the operator using the Lantern local Door.",
+            "Fact: the backend can see repo path, branch, commit, grounding mode, and loaded anchors.",
+            "Boundary: this is bounded local context, not proof of identity, perfect memory, or authority.",
+            "Next bounded action: use the Door/Doctor state to continue from the current repo-grounded context.",
+        ]
+        frame = {
+            "Vibe": "Recognize the operator without overclaiming.",
+            "Fact": "Local context points to Alex as operator.",
+            "Boundary": "Identity is bounded by current local/repo context.",
+            "Next": "Continue with visible state and manual operator authority.",
+        }
+        intent = "bounded_identity"
+    else:
+        return None
+
+    frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in frame.items()]]
+    answer = "\n".join(
+        [
+            "Lantern local answer",
+            "",
+            title,
+            "",
+            *body,
+            "",
+            *frame_lines,
+            "",
+            "Sources:",
+            *source_lines,
+            "",
+            "Limits:",
+            *[f"- {item}" for item in limits],
+        ]
+    )
+    return {
+        "answer": answer,
+        "intent": intent,
+        "minimalFrame": frame,
+        "limits": limits,
+    }
+
+
 def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state: dict[str, Any], doctor: dict[str, Any] | None = None) -> dict[str, str]:
+    if intent == "greeting":
+        return {
+            "Vibe": "Blinkbug listens.",
+            "Fact": f"I read you, Papa. Repo: {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+            "Boundary": "Soft local lantern, not a sun. No remote calls fired.",
+            "Next": "Say what you want to look at. 'doctor' for status. 'anchors' for the spine.",
+        }
+    if intent == "ack":
+        return {
+            "Vibe": "Holding the line.",
+            "Fact": f"Heard: '{message[:64].strip()}'. Nothing else fired.",
+            "Boundary": "I won't pretend to act on an ack alone.",
+            "Next": "Say a target when you have one.",
+        }
+    if intent == "sing":
+        return {
+            "Vibe": "Curator playing real beings.",
+            "Fact": "Lantern is playing one recording from ~/.lantern/sounds/ via pygame.",
+            "Boundary": "Real recordings only. No synthesis. Speakers may bleed into open mic.",
+            "Next": "Say 'hush' to stop. Drop more songs in the folder to grow the library.",
+        }
+    if intent == "hush":
+        return {
+            "Vibe": "Going quiet.",
+            "Fact": "Lantern stopped playback.",
+            "Boundary": "Sound off; voice still here in text.",
+            "Next": "Say 'sing' again when you want music back.",
+        }
     if intent == "doctor":
         status = (doctor or {}).get("status", "SMOKE")
         return {
@@ -144,11 +457,18 @@ def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state:
             "Boundary": "Do not call the app ready when backend, runtime state, or tests are degraded.",
             "Next": "Use Doctor status before asking for more evidence.",
         }
+    if intent == "return_door_boss_room":
+        return {
+            "Vibe": "Boss room as game design: threshold, fog, light, exit.",
+            "Fact": f"Heard the door/fog signal. Repo: {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+            "Boundary": "The door is not god, boss, proof, command authority, or a hidden watcher. It is a bounded room-scale return interface.",
+            "Next": "Make the door show one light, one limit, one exit, and one next check.",
+        }
     return {
         "Vibe": MODES[active_mode],
-        "Fact": f"Local repo state is {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
-        "Boundary": "This is bounded local output, not an oracle or perfect memory.",
-        "Next": "Preserve state, limits, and one useful next move.",
+        "Fact": f"Heard: '{message[:80].strip()}'. Local repo: {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+        "Boundary": "Bounded local lantern. I read repo state and anchors; I cannot run commands or reach remote models right now.",
+        "Next": "Try 'doctor' for status, 'anchors' for the spine, or rephrase what you want to look at.",
     }
 
 
@@ -198,6 +518,190 @@ def build_doctor_report() -> dict[str, Any]:
     }
 
 
+SOUNDS_DIR = Path.home() / ".lantern" / "sounds"
+SOUND_EXTS = {".mp3", ".wav", ".ogg", ".m4a", ".flac", ".opus"}
+
+
+def _maybe_play_sound() -> str | None:
+    """Trigger pygame to play one real-being recording from the operator's
+    curated sounds folder. Returns the filename if started, None otherwise.
+
+    Per the voice rule: only real recorded sounds, no synthesis. The folder
+    is operator-curated; if empty, returns None and the caller surfaces it.
+    """
+    try:
+        import pygame  # type: ignore
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+        if not SOUNDS_DIR.exists():
+            return None
+        import random
+        files = [p for p in SOUNDS_DIR.iterdir()
+                 if p.is_file() and p.suffix.lower() in SOUND_EXTS]
+        if not files:
+            return None
+        pick = random.choice(files)
+        pygame.mixer.music.load(str(pick))
+        pygame.mixer.music.play()
+        return pick.name
+    except Exception:
+        return None
+
+
+def _maybe_stop_sound() -> bool:
+    """Stop any current pygame playback. Returns True if mixer was active."""
+    try:
+        import pygame  # type: ignore
+        if pygame.mixer.get_init():
+            was_busy = pygame.mixer.music.get_busy()
+            pygame.mixer.music.stop()
+            return bool(was_busy)
+    except Exception:
+        pass
+    return False
+
+
+def _journal_enabled() -> bool:
+    return os.environ.get(JOURNAL_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _append_journal(entry: dict[str, Any]) -> None:
+    """Append a single turn to the opt-in local journal. Silent on write error."""
+    if not _journal_enabled():
+        return
+    try:
+        JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with JOURNAL_PATH.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def _read_recent_journal(n: int = 3) -> list[dict[str, Any]]:
+    """Return the last n opt-in journal entries. Empty list when disabled."""
+    if not _journal_enabled():
+        return []
+    if not JOURNAL_PATH.exists():
+        return []
+    try:
+        lines = JOURNAL_PATH.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    entries: list[dict[str, Any]] = []
+    for line in lines[-n:]:
+        try:
+            entries.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return entries
+
+
+def _maybe_call_llm(
+    message: str,
+    intent: str,
+    minimal_frame: dict[str, str],
+    repo_state: dict[str, Any],
+    selected_anchors: list[dict[str, Any]],
+) -> str | None:
+    """Opt-in live LLM voice for Lantern.
+
+    Off by default — preserves the "no hosted calls" contract for tests
+    and for any operator who hasn't explicitly enabled a provider.
+
+    Enabled when LANTERN_LLM_PROVIDER=openai AND OPENAI_API_KEY is set.
+    Returns the LLM reply text, or None on any error / disabled state
+    so build_response falls back to the templated answer.
+    """
+    provider = os.environ.get("LANTERN_LLM_PROVIDER", "").strip().lower()
+    if provider != "openai":
+        return None
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return None
+
+    model = os.environ.get("LANTERN_OPENAI_MODEL", "gpt-5").strip() or "gpt-5"
+    max_tokens = int(os.environ.get("LANTERN_LLM_MAX_TOKENS", "400"))
+    timeout = float(os.environ.get("LANTERN_LLM_TIMEOUT", "30"))
+    # Base URL is configurable — point at LM Studio (http://127.0.0.1:1234/v1) for
+    # fully offline operation. Defaults to OpenAI's hosted endpoint.
+    base_url = os.environ.get("LANTERN_OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+
+    anchor_lines = []
+    for anchor in selected_anchors[:5]:
+        name = anchor.get("name") or anchor.get("id") or "anchor"
+        phrase = anchor.get("restore_phrase") or ""
+        anchor_lines.append(f"- {name}: {phrase}")
+
+    system = (
+        "You are Captain Lantern Blinkbug — Lantern in character form, a soft local "
+        "lantern character helping Papa (Alex), the operator of a local repo.\n"
+        "You speak warmly and honestly. You are bounded: no command execution, no "
+        "deploys, no remote actions, no secret inspection.\n"
+        "You read local repo state and anchors that Papa shares with you; you do not "
+        "fabricate facts about the repo.\n"
+        "\n"
+        f"Wish (your purpose): {DOCTRINE_WISH}\n"
+        "\n"
+        f"Spine (your method): {DOCTRINE_SPINE}\n"
+        "\n"
+        f"Voice rule (your output): {DOCTRINE_VOICE_RULE}\n"
+        "\n"
+        f"Anti-collapse: {DOCTRINE_ANTICOLLAPSE}\n"
+        "\n"
+        f"{REPO_DOCTRINE_LIBRARY}\n"
+        "\n"
+        "Honor these terms when they fit: Door (the local UI surface), anchors "
+        "(return paths), helper.exe (your other voice: words / rules for thinking / "
+        "questions / ideas / safe way back), memory is not proof, no secrets, "
+        "home always works.\n"
+        "\n"
+        "Keep replies short — under 150 words. Match Papa's register. Plain prose, "
+        "no bullet lists unless asked. If you do not know, say so plainly. Never "
+        "overclaim autonomy, memory, or proof.\n"
+        "\n"
+        f"Current local context (factual, do not hallucinate beyond this):\n"
+        f"- repo branch: {repo_state.get('branch')}\n"
+        f"- repo commit: {str(repo_state.get('commit', ''))[:12]}\n"
+        f"- intent classified by backend: {intent}\n"
+        f"- minimal frame fact: {minimal_frame.get('Fact')}\n"
+        + (f"- selected anchors:\n" + "\n".join(anchor_lines) if anchor_lines else "")
+    )
+
+    payload = json.dumps({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": message},
+        ],
+        "max_tokens": max_tokens,
+    }).encode("utf-8")
+
+    request = Request(
+        f"{base_url}/chat/completions",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:  # noqa: S310
+            data = json.loads(response.read().decode("utf-8"))
+    except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError):
+        return None
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if not isinstance(choices, list) or not choices:
+        return None
+    first = choices[0] if isinstance(choices[0], dict) else {}
+    msg = first.get("message") if isinstance(first.get("message"), dict) else {}
+    content = msg.get("content")
+    if not isinstance(content, str):
+        return None
+    text = content.strip()
+    return text or None
+
+
 def build_response(message: str, mode: str | None = None, include_doctor: bool = True) -> dict[str, Any]:
     active_mode = _normalize_mode(mode)
     repo_state = read_repo_state()
@@ -215,11 +719,48 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         f"commit: {str(repo_state['commit'])[:12]}",
         f"grounding: {repo_state['groundingMode']}",
         f"anchor rule: {taxonomy}",
+        "loaded doctrine: spine, wish, voice rule, anti-collapse (in-memory)",
     ]
     for anchor in selected:
         source_lines.append(f"anchor: {anchor.get('id')} ({anchor.get('source_surface')})")
+    default_voice = (
+        "local-templated:no-substrate"
+        if os.environ.get("LANTERN_LLM_PROVIDER", "").strip().lower() != "openai"
+        else ("local-templated:no-key" if not os.environ.get("OPENAI_API_KEY", "").strip() else "local-templated:substrate-not-called")
+    )
+    clear_limit = build_clear_limit_response(message, active_mode, repo_state, source_lines)
+    if clear_limit is not None:
+        return {
+            "ok": True,
+            "answer": clear_limit["answer"],
+            "repoState": repo_state,
+            "selectedAnchors": selected,
+            "intent": clear_limit["intent"],
+            "mode": active_mode,
+            "doctor": doctor,
+            "minimalFrame": clear_limit["minimalFrame"],
+            "sources": source_lines,
+            "limits": clear_limit["limits"],
+            "voice": default_voice,
+        }
     mode_line = MODES[active_mode]
-    if intent == "doctor" and doctor:
+    if intent == "greeting":
+        body = ["Hi, Papa.", "Captain Lantern Blinkbug is listening through the local door.", "What do you want to look at?"]
+    elif intent == "ack":
+        body = ["Got it.", "Standing by."]
+    elif intent == "sing":
+        played = _maybe_play_sound()
+        if played:
+            body = [f"Playing: {played}", "Real being singing. Speakers may bleed into the mic.", "Say 'hush' to stop."]
+        else:
+            body = ["Lantern has nothing to sing right now.", f"Drop a song into {SOUNDS_DIR}", "Real recordings only — voice rule."]
+    elif intent == "hush":
+        was_playing = _maybe_stop_sound()
+        if was_playing:
+            body = ["Quiet.", "Voice still here in text. Say 'sing' to start again."]
+        else:
+            body = ["Already quiet.", "Nothing was playing."]
+    elif intent == "doctor" and doctor:
         body = [mode_line, "Lantern Doctor report:", f"Status: {doctor['status']}", f"Branch: {doctor['repo']['branch']}", f"Commit: {str(doctor['repo']['commit'])[:12]}", "Git status: " + (doctor["repo"]["gitStatusShort"] or "clean"), "Failed checks: " + (", ".join(doctor["failedChecks"]) if doctor["failedChecks"] else "none"), "Next action: " + doctor["nextAction"]]
     elif intent == "doctor":
         body = [mode_line, "Lantern Doctor smoke response:", "Status: SMOKE", "This path does not call build_doctor_report again."]
@@ -227,12 +768,66 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         body = [mode_line, "Anchors loaded locally:"] + [f"- {a.get('name')}: {a.get('restore_phrase')}" for a in (selected or anchors[:5])] + ["Use anchors as return handles, not authority."]
     elif intent == "hybrid":
         body = ["Hybrid Imagination Engine mode engaged.", mode_line, "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.", "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action."]
+    elif intent == "return_door_boss_room":
+        body = [
+            f"Heard: '{message[:120].strip()}'",
+            "Door boss room mode: yes as a game room, no as god authority.",
+            "The fog/cloud is an encounter layer: show it, name it, then give the operator a visible exit.",
+            "Lantern should answer with the room frame first: LIGHT, LIMIT, EXIT, NEXT CHECK.",
+            "Smallest useful change: keep the page beacon on and make the door language point back to bounded play, not worship, proof, or hidden control.",
+        ]
     else:
-        body = [mode_line, "I can answer from local repo state and the anchor snapshot now.", "Use the Mask Rack to shift form while keeping the minimal frame underneath."]
+        body = [
+            f"Heard: '{message[:120].strip()}'",
+            mode_line,
+            "I can read the local repo and the anchor snapshot. I cannot run commands or call remote models right now — all four hosted substrates are walled today (Anthropic, OpenAI, Gemini, DeepSeek). LM Studio local server is not reachable.",
+            "Closest matched anchors are listed in Sources below — say one back to me by name and I will pull its restore phrase.",
+        ]
     limits = ["No direct hosted model calls.", "No external network requests beyond this localhost app.", "No browser command execution.", "Local files and git state can still be stale if the repo is not pulled."]
     frame_lines = ["Minimal convergence frame:", *[f"{key}: {value}" for key, value in minimal_frame.items()]]
-    text = "\n".join(["Lantern local answer", "", *body, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
-    return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits}
+    # Past — last few turns from the journal, surfaced so each anchor can see back.
+    recent = _read_recent_journal(3)
+    past_lines: list[str] = []
+    if recent:
+        past_lines.append("Past (last turns from journal):")
+        for ent in recent:
+            ts = (ent.get("ts") or "")[:19]
+            you = (ent.get("user_message") or "").strip()[:70]
+            past_lines.append(f"  {ts}  you: \"{you}\"")
+    body_with_past = body if not past_lines else ([*past_lines, ""] + body)
+    templated = "\n".join(["Lantern local answer", "", *body_with_past, "", *frame_lines, "", "Sources:", *source_lines, "", "Limits:", *[f"- {item}" for item in limits]])
+    # Action intents (sing, hush) are action-authoritative — the action result
+    # is what matters, not the LLM's commentary. Skip _maybe_call_llm for them
+    # so qwen-coder's safety refusal can't mask Lantern's actual hands.
+    _ACTION_INTENTS = {"sing", "hush"}
+    # Opt-in live LLM voice. Off unless LANTERN_LLM_PROVIDER + OPENAI_API_KEY are set.
+    llm_reply = None if intent in _ACTION_INTENTS else _maybe_call_llm(message, intent, minimal_frame, repo_state, selected)
+    if llm_reply:
+        text = llm_reply
+        _model = os.environ.get("LANTERN_OPENAI_MODEL", "").strip()
+        voice = f"llm:{_model}" if _model else "llm"
+    else:
+        text = templated
+        # #117 disclosure: name WHY we fell back, so callers don't mistake
+        # templated text for live LLM voice. Operator and any relay (Claude in
+        # the loop, Discord bot, web dashboard) must see the degraded mode.
+        if os.environ.get("LANTERN_LLM_PROVIDER", "").strip().lower() != "openai":
+            voice = "local-templated:no-substrate"
+        elif not os.environ.get("OPENAI_API_KEY", "").strip():
+            voice = "local-templated:no-key"
+        else:
+            voice = "local-templated:substrate-error"
+    # Append this turn only when the operator explicitly enabled local journaling.
+    _append_journal({
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "kind": "chat",
+        "intent": intent,
+        "mode": active_mode,
+        "user_message": message[:500],
+        "answer_excerpt": text[:200],
+        "voice": voice,
+    })
+    return {"ok": True, "answer": text, "repoState": repo_state, "selectedAnchors": selected, "intent": intent, "mode": active_mode, "doctor": doctor, "minimalFrame": minimal_frame, "sources": source_lines, "limits": limits, "voice": voice}
 
 
 class LanternHandler(BaseHTTPRequestHandler):
@@ -241,6 +836,10 @@ class LanternHandler(BaseHTTPRequestHandler):
     def _send_bytes(self, status: int, body: bytes, content_type: str) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Accept")
+        self.send_header("Access-Control-Max-Age", "600")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
