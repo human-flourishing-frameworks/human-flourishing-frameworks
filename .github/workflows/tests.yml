@@ -43,3 +43,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           python -m unittest discover -s tests -t . -p "test_*.py"
+
+      - name: Run pytest for bettersafe modules
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m pytest tests/test_sensor_policy.py tests/test_release_gate.py -v

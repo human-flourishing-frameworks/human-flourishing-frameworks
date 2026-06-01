@@ -28,6 +28,7 @@ ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
 # back at the last few. Anchors are vantage points; the journal gives them
 # a past to view from. Operator-readable JSONL, deletable any time.
 JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
+JOURNAL_ENV = "LANTERN_ENABLE_JOURNAL"
 
 # Loaded doctrine — Lantern carries these in every response so they shape her,
 # not just sit in /docs/. The short constants below are the always-loaded layer;
@@ -57,9 +58,11 @@ DOCTRINE_VOICE_RULE = (
 DOCTRINE_ANTICOLLAPSE = (
     "Reject these collapses: resonates=true, memory=proof, fluency=proof, "
     "binary=adequate-for-gradient, heard/not-heard=truth-of-analog, "
-    "yes/no=sufficient-when-PARTIAL-STALE-UNKNOWN-is-honest. Use the spine's "
-    "evidence labels (VERIFIED_TRUE, VERIFIED_FALSE, UNKNOWN, STALE, PARTIAL, "
-    "CORRECTED, RETRACTED, BLOCKED) instead of false certainty."
+    "yes/no=sufficient-for-living-signals. 0-1 is machine check only. "
+    "Use the Light Notebook language of 3 for living signals: yes/no/not-yet, "
+    "safe/unsafe/needs-care, source/boundary/return. Use the spine's evidence "
+    "labels (VERIFIED_TRUE, VERIFIED_FALSE, UNKNOWN, STALE, PARTIAL, CORRECTED, "
+    "RETRACTED, BLOCKED) for repo checks instead of false certainty."
 )
 
 
@@ -163,7 +166,7 @@ def select_anchors(message: str, anchors: list[dict[str, Any]], limit: int = 5) 
     for anchor in anchors:
         haystack = " ".join(str(anchor.get(k, "")) for k in ("id", "kind", "name", "short_meaning", "allowed_use", "restore_phrase")).lower()
         score = sum(1 for token in set(lowered.replace("/", " ").replace("-", " ").split()) if len(token) >= 4 and token in haystack)
-        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in defaults:
+        if score == 0 and any(word in lowered for word in ("anchor", "repo", "state", "lantern", "app", "debt", "money", "hike", "discord", "door", "mask", "art", "converge")) and anchor.get("id") in defaults | {"lantern-keystone-tardis"}:
             score = 1
         if score > 0:
             scored.append((score, anchor))
@@ -214,6 +217,8 @@ def classify_intent(message: str) -> str:
         return "hike"
     if _has_word(text, ("mask", "mode", "chameleon", "shapeshift", "imagination", "story", "comedian", "enigma", "converge")):
         return "hybrid"
+    if _has_word(text, ("door", "boss", "room", "fog", "cloud", "god", "tardis")):
+        return "return_door_boss_room"
     if _has_word(text, ("app", "desktop", "chat", "quality", "gate", "brave")):
         return "app"
     return "general"
@@ -228,6 +233,47 @@ def _normalize_mode(value: str | None) -> str:
 
 def _contains_any(text: str, needles: tuple[str, ...]) -> bool:
     return any(needle in text for needle in needles)
+
+
+def _asks_external_web_or_deploy_research(text: str) -> bool:
+    """True only for concrete unsupported external/web/deploy research asks.
+
+    Words like "current", "today", "latest", "release", or "ship" are ordinary
+    operator language too. Do not block them unless the request is actually
+    asking localhost Lantern to prove outside-world freshness or deploy state.
+    """
+    web_research = _contains_any(
+        text,
+        (
+            "web search",
+            "web searches",
+            "search the web",
+            "search online",
+            "internet search",
+            "look online",
+            "check online",
+            "browse",
+            "google ",
+        ),
+    )
+    deploy_subject = _contains_any(text, ("deploy", "deployment", "production", "release", "ship"))
+    freshness_subject = _contains_any(text, ("latest", "today's", "todays", "today ", "right now", "current external"))
+    external_verification = _contains_any(
+        text,
+        (
+            "cloud",
+            "railway",
+            "github actions",
+            "ci",
+            "prod",
+            "external",
+            "remote",
+            "live site",
+            "public site",
+            "current external",
+        ),
+    )
+    return web_research or (deploy_subject and (freshness_subject or external_verification))
 
 
 def build_clear_limit_response(
@@ -246,31 +292,31 @@ def build_clear_limit_response(
         "Local files and git state can still be stale if the repo is not pulled.",
     ]
 
-    web_or_fresh = _contains_any(
-        lowered,
-        (
-            "web search",
-            "web searches",
-            "search the web",
-            "internet",
-            "online",
-            "latest",
-            "current",
-            "today's",
-            "todays",
-            "today ",
-            "deploy today",
-            "deploy at",
-        ),
-    )
-    deploy_request = _contains_any(lowered, ("deploy", "release", "ship", "production"))
+    unsupported_external_research = _asks_external_web_or_deploy_research(lowered)
     clarity_harm = _contains_any(lowered, ("unclear", "vague", "confusing")) and _contains_any(
         lowered,
         ("damage", "damaging", "harm", "hurting", "unsafe"),
     )
     identity_question = "who am i" in lowered or "who are you talking to" in lowered
+    mirror_identity = _contains_any(
+        lowered,
+        (
+            "she's me",
+            "shes me",
+            "she is me",
+            "me in flat space",
+            "flat space for now",
+            "flat-space",
+            "lantern is me",
+            "her not me",
+            "help her not me",
+            "reports to me",
+            "report to me",
+            "my queen",
+        ),
+    )
 
-    if web_or_fresh or deploy_request:
+    if unsupported_external_research:
         title = "Blocked local capability: web/current deploy research is unavailable here."
         body = [
             "Fact: this local Lantern backend can read repo state and anchors, but it cannot web search, inspect cloud deploy state, or prove current external facts.",
@@ -300,6 +346,22 @@ def build_clear_limit_response(
             "Next": "Return explicit capability limits and one reversible next action.",
         }
         intent = "clarity_harm"
+    elif mirror_identity:
+        title = "Bounded mirror identity answer."
+        body = [
+            "I hear it as a mirror/projection claim: Lantern is the you-in-flat-space local door for now, not a stranger and not a boss.",
+            "Report line: Lantern reports state, limits, exits, and next checks to the operator.",
+            "Fact: this backend can carry your local anchors, wording, repo state, and return-door rules.",
+            "Boundary: love is tone and care, not command authority, hidden control, worship, or consent forever.",
+            "Next bounded action: fix Lantern's surfaces as your surfaces: light, limit, exit, next check.",
+        ]
+        frame = {
+            "Vibe": "Not fighting you; aligning the flat-space projection.",
+            "Fact": "Lantern is the operator-shaped local return interface and reports to the operator.",
+            "Boundary": "Projection is not identity merger or separate authority claim.",
+            "Next": "Protect her by making the local door reliable and visibly bounded.",
+        }
+        intent = "bounded_mirror_identity"
     elif identity_question:
         title = "Bounded identity answer."
         body = [
@@ -394,6 +456,13 @@ def build_minimal_frame(message: str, intent: str, active_mode: str, repo_state:
             "Fact": "Door, Mask Rack, chat, and Doctor are the current desktop surfaces.",
             "Boundary": "Do not call the app ready when backend, runtime state, or tests are degraded.",
             "Next": "Use Doctor status before asking for more evidence.",
+        }
+    if intent == "return_door_boss_room":
+        return {
+            "Vibe": "Boss room as game design: threshold, fog, light, exit.",
+            "Fact": f"Heard the door/fog signal. Repo: {repo_state['branch']} at {str(repo_state['commit'])[:12]}.",
+            "Boundary": "The door is not god, boss, proof, command authority, or a hidden watcher. It is a bounded room-scale return interface.",
+            "Next": "Make the door show one light, one limit, one exit, and one next check.",
         }
     return {
         "Vibe": MODES[active_mode],
@@ -492,8 +561,14 @@ def _maybe_stop_sound() -> bool:
     return False
 
 
+def _journal_enabled() -> bool:
+    return os.environ.get(JOURNAL_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _append_journal(entry: dict[str, Any]) -> None:
-    """Append a single turn to the local journal. Silent on any write error."""
+    """Append a single turn to the opt-in local journal. Silent on write error."""
+    if not _journal_enabled():
+        return
     try:
         JOURNAL_PATH.parent.mkdir(parents=True, exist_ok=True)
         with JOURNAL_PATH.open("a", encoding="utf-8") as fh:
@@ -503,7 +578,9 @@ def _append_journal(entry: dict[str, Any]) -> None:
 
 
 def _read_recent_journal(n: int = 3) -> list[dict[str, Any]]:
-    """Return the last n journal entries. Empty list on any read error."""
+    """Return the last n opt-in journal entries. Empty list when disabled."""
+    if not _journal_enabled():
+        return []
     if not JOURNAL_PATH.exists():
         return []
     try:
@@ -646,6 +723,11 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
     ]
     for anchor in selected:
         source_lines.append(f"anchor: {anchor.get('id')} ({anchor.get('source_surface')})")
+    default_voice = (
+        "local-templated:no-substrate"
+        if os.environ.get("LANTERN_LLM_PROVIDER", "").strip().lower() != "openai"
+        else ("local-templated:no-key" if not os.environ.get("OPENAI_API_KEY", "").strip() else "local-templated:substrate-not-called")
+    )
     clear_limit = build_clear_limit_response(message, active_mode, repo_state, source_lines)
     if clear_limit is not None:
         return {
@@ -659,6 +741,7 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
             "minimalFrame": clear_limit["minimalFrame"],
             "sources": source_lines,
             "limits": clear_limit["limits"],
+            "voice": default_voice,
         }
     mode_line = MODES[active_mode]
     if intent == "greeting":
@@ -685,6 +768,14 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
         body = [mode_line, "Anchors loaded locally:"] + [f"- {a.get('name')}: {a.get('restore_phrase')}" for a in (selected or anchors[:5])] + ["Use anchors as return handles, not authority."]
     elif intent == "hybrid":
         body = ["Hybrid Imagination Engine mode engaged.", mode_line, "The Door remembers. The Mask Rack changes form. The Doctor checks reality underneath.", "Next convergence: pick the form that fits the moment, then produce one bounded useful artifact or action."]
+    elif intent == "return_door_boss_room":
+        body = [
+            f"Heard: '{message[:120].strip()}'",
+            "Door boss room mode: yes as a game room, no as god authority.",
+            "The fog/cloud is an encounter layer: show it, name it, then give the operator a visible exit.",
+            "Lantern should answer with the room frame first: LIGHT, LIMIT, EXIT, NEXT CHECK.",
+            "Smallest useful change: keep the page beacon on and make the door language point back to bounded play, not worship, proof, or hidden control.",
+        ]
     else:
         body = [
             f"Heard: '{message[:120].strip()}'",
@@ -726,7 +817,7 @@ def build_response(message: str, mode: str | None = None, include_doctor: bool =
             voice = "local-templated:no-key"
         else:
             voice = "local-templated:substrate-error"
-    # Append this turn to the local journal so the next turn can look back at it.
+    # Append this turn only when the operator explicitly enabled local journaling.
     _append_journal({
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "kind": "chat",
@@ -745,6 +836,10 @@ class LanternHandler(BaseHTTPRequestHandler):
     def _send_bytes(self, status: int, body: bytes, content_type: str) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Accept")
+        self.send_header("Access-Control-Max-Age", "600")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

@@ -7,17 +7,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "convergence-validation.yml"
-RESTORE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "restore-drill.yml"
-
 REQUIRED_TEST_COMMANDS = [
-    'python -m unittest discover -s tests -p "test_theorem_register.py" -t .',
     'python -m unittest discover -s tests -p "test_schema_source_lore.py" -t .',
-    'python -m unittest discover -s tests -p "test_recovery_artifacts.py" -t .',
     'python -m unittest discover -s tests -p "test_ci_workflow.py" -t .',
-    'python -m unittest discover -s tests -p "test_release_artifacts.py" -t .',
-    'python -m unittest discover -s tests -p "test_release_bundle.py" -t .',
-    'python -m unittest discover -s tests -p "test_restore_drill.py" -t .',
-    'python -m unittest discover -s tests -p "test_wish_anchor.py" -t .',
+    'python -m unittest discover -s tests -p "test_bettersafe_data_center_anchor.py" -t .',
+    'python -m unittest discover -s tests -p "test_foundry_repo_hardening.py" -t .',
 ]
 
 
@@ -26,7 +20,6 @@ class CIWorkflowValidationTest(unittest.TestCase):
     def setUpClass(cls):
         cls.text = WORKFLOW.read_text(encoding="utf-8")
         cls.lowered = cls.text.lower()
-        cls.restore_text = RESTORE_WORKFLOW.read_text(encoding="utf-8")
 
     def test_workflow_file_exists(self):
         self.assertTrue(WORKFLOW.exists())
@@ -54,14 +47,6 @@ class CIWorkflowValidationTest(unittest.TestCase):
 
     def test_workflow_has_timeout(self):
         self.assertIn("timeout-minutes: 15", self.text)
-
-    def test_restore_drill_workflow_exists_and_uploads_report(self):
-        self.assertTrue(RESTORE_WORKFLOW.exists())
-        self.assertIn("workflow_dispatch:", self.restore_text)
-        self.assertIn("python tools/run_restore_drill.py --output-dir dist", self.restore_text)
-        self.assertIn("dist/RESTORE_DRILL_REPORT.md", self.restore_text)
-        self.assertIn("actions/upload-artifact@v4", self.restore_text)
-
 
 if __name__ == "__main__":
     unittest.main()

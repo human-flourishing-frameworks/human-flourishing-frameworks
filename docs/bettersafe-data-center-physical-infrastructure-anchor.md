@@ -148,6 +148,65 @@ Does the feature increase resource use without reducing burden?
 Does the feature preserve convenience with responsibility?
 ```
 
+## Geodata and whitepaper intake
+
+When the operator brings data-center map/geodata/whitepaper searches, treat them
+as source candidates for siting and infrastructure analysis, not as automatic
+truth.
+
+Current public source classes to cross-check:
+
+| Source class | Example | Use | Boundary |
+|---|---|---|---|
+| Public lab / government map | PNNL Data Center Atlas article; NREL data-center infrastructure map references | Energy, water, land, transmission, and infrastructure planning context | Public tools can lag current construction and may simplify local impacts. |
+| Civil-society tracker | FracTracker National Data Centers Tracker | Community-impact, energy-demand, pollution, proposed/permitted facility review | Advocacy framing still needs source labels and local verification. |
+| Commercial directory | DataCenterMap | Facility/operator/colocation/cloud/connectivity discovery | Commercial directories are useful leads, not complete public-interest analysis. |
+| Energy/water technical report | PNNL water-security and AI-data-center reports | Water-for-energy nexus, climate zone, load density, waste-heat, and planning assumptions | Technical findings do not authorize deployment, siting, or policy claims by themselves. |
+| Local planning record | utility IRP, zoning packet, permit, public meeting record | Current local truth for a proposed site | Must be refreshed near decision time. |
+
+Minimum geodata axes:
+
+```text
+facility status: existing / proposed / permitted / under construction / unknown
+power demand and interconnection
+transmission constraints
+fiber/connectivity
+water source and cooling method
+heat, drought, flood, wildfire, seismic, and storm risk
+air/noise/community impact
+land use and zoning
+ratepayer and public-infrastructure burden
+fallback and resilience value
+source date and confidence label
+```
+
+Source links recorded during 2026-05-14 intake:
+
+```text
+PNNL Data Center Atlas article:
+https://www.pnnl.gov/publications/mapping-future-data-centers-new-public-tool-illuminates-whats-next
+
+PNNL high-performance AI data centers project:
+https://www.pnnl.gov/projects/high-performance-ai-data-centers
+
+PNNL water security report:
+https://www.pnnl.gov/publications/synergistic-pathways-water-security-emerging-sectors-data-centers-and-modern-nuclear
+
+FracTracker data centers tracker:
+https://www.fractracker.org/data-centers/
+
+DataCenterMap:
+https://www.datacentermap.com/
+```
+
+Geodata convergence rule:
+
+```text
+Map layers are evidence inputs. They are not permission, proof of safety,
+proof of harm, or a substitute for local records, community review, or current
+operator correction.
+```
+
 ## Convergence rule
 
 ```text

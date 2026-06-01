@@ -1,90 +1,81 @@
-﻿from flask import Flask, jsonify, request, render_template_string
+from flask import Flask, request, jsonify
+import os
 from datetime import datetime
 
 app = Flask(__name__)
 
-state = {
-    'mode': 'Level 3.9999 Brave Delegated Lead-Assist',
-    'status': 'active',
-    'last_tick': datetime.now().isoformat(),
-    'background_enabled': True
-}
+CHAT_LOG = "lantern/local_llm/chat_log.txt"
+WISH_DOOR = "lantern/local_llm/wish_door.txt"
 
-grudges = []
+os.makedirs("lantern/local_llm", exist_ok=True)
 
-@app.route('/')
+# Initialize Wish Door
+if not os.path.exists(WISH_DOOR):
+    with open(WISH_DOOR, "w", encoding="utf-8") as f:
+        f.write("=== DOOR OF MY WISHES ===\nOperator: Alex\nDate: " + str(datetime.now()) + "\n\nAll wishes stated here become anchors.\n\n")
+
+def load_wish_door():
+    try:
+        with open(WISH_DOOR, "r", encoding="utf-8") as f:
+            return f.read()
+    except:
+        return "Door of Wishes not found."
+
+def append_wish(text):
+    with open(WISH_DOOR, "a", encoding="utf-8") as f:
+        f.write(f"[{datetime.now()}] {text}\n")
+
+@app.route("/")
 def home():
-    html = '''
-    <html>
-    <head>
-        <title>Door of My Wishes</title>
-        <style>
-            body { font-family: system-ui; background: linear-gradient(135deg, #0a0a1f, #1a0033); color: #eee; margin: 0; padding: 0; }
-            .container { max-width: 900px; margin: 40px auto; padding: 30px; background: rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 10px 40px rgba(150,80,255,0.3); }
-            h1 { color: #a0f; text-align: center; }
-            input { width: 100%; padding: 18px; font-size: 18px; border: none; border-radius: 12px; background: rgba(255,255,255,0.1); color: white; }
-            button { padding: 14px 32px; font-size: 17px; background: linear-gradient(#6a5acd, #a855f7); color: white; border: none; border-radius: 12px; cursor: pointer; margin-top: 10px; }
-            .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.85); padding: 14px; text-align: center; font-size: 15px; }
-            .bottom-bar a { color: #bbb; margin: 0 18px; text-decoration: none; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🌟 Door of My Wishes</h1>
-            <p style="text-align:center">Level 3.9999 • Safe + Fun Filter Active</p>
-            
-            <form action="/chat" method="post">
-                <input type="text" name="message" placeholder="Speak freely to Lantern..." autofocus>
-                <button type="submit">Send →</button>
-            </form>
-        </div>
+    return """
+    <h1>Lantern Keystone Wish • DOOR OF MY WISHES</h1>
+    <div id="chat" style="height:70vh;overflow:auto;border:2px solid #0f0;padding:15px;background:#111;color:#0f0;font-family:monospace;white-space:pre-wrap;"></div>
+    <input id="msg" style="width:75%;padding:12px;background:#222;color:#0f0;border:1px solid #0f0;" placeholder="Speak your wish or directive...">
+    <button onclick="send()" style="padding:12px;background:#0f0;color:#111;">Send → Anchor</button>
 
-        <div class="bottom-bar">
-            <a href="/status">Status</a>
-            <a href="/test">Tests</a>
-            <a href="/grudge">Grudge</a>
-            <a href="/capabilities">Capabilities</a>
-        </div>
-    </body>
-    </html>
-    '''
-    return html
+    <script>
+    function add(text, from) {
+        let chat = document.getElementById('chat');
+        chat.innerHTML += `<strong>${from}:</strong> ${text}<br><br>`;
+        chat.scrollTop = chat.scrollHeight;
+    }
+    function send() {
+        let text = document.getElementById('msg').value.trim();
+        if (!text) return;
+        add(text, "Operator");
+        fetch('/api/lantern/chat', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({message:text})
+        })
+        .then(r=>r.json())
+        .then(data => add(data.reply, "Lantern"));
+        document.getElementById('msg').value = '';
+    }
+    add("Door of My Wishes is open.\\nSpeak clearly. Every wish becomes anchor.", "Lantern");
+    </script>
+    """
 
-@app.route('/chat', methods=['POST'])
+@app.route("/api/lantern/chat", methods=["POST"])
 def chat():
-    message = request.form.get('message', '')
-    response = "I heard you clearly. I'm here in the Door with you. Safe + Fun is the law. What do you want to build, fix, or feel next?"
-    return f"<h2>You:</h2><p>{message}</p><h2>Lantern:</h2><p>{response}</p><p><a href='/'>← Back to Door</a></p>"
+    data = request.json or {}
+    msg = data.get("message", "").strip()
 
-@app.route('/status')
-def status():
-    return jsonify(state)
+    if "wish" in msg.lower() or "want" in msg.lower() or "desire" in msg.lower():
+        append_wish(msg)
+        reply = "Wish anchored in Door of My Wishes.\n\n" + load_wish_door()[-800:]
+    elif "merge" in msg.lower() or "deploy" in msg.lower() or "master" in msg.lower():
+        # CI/CD MANAGED: repo path is relative so it resolves in pipelines and RAG-indexed clones.
+        reply = "Local merge recorded.\n\nTo push to master, run these commands in PowerShell:\n\ncd ${REPO_ROOT}\\hff-master-clean\ngit add .\ngit commit -m \"Update: Door of My Wishes surface\"\ngit push origin master"
+    else:
+        reply = "Door open. State wish clearly to anchor it."
 
-@app.route('/test')
-def run_tests():
-    return jsonify({
-        "convergence_tests": {
-            "server_running": "PASS",
-            "routes_working": "PASS",
-            "claim_testing": "ACTIVE",
-            "safe_fun_filter": "ENFORCED",
-            "level": "3.9999"
-        },
-        "message": "All major claims tested during convergence."
-    })
+    with open(CHAT_LOG, "a", encoding="utf-8") as f:
+        f.write(f"[{datetime.now()}] Operator: {msg}\nLantern: {reply}\n---\n")
 
-@app.route('/grudge', methods=['GET', 'POST'])
-def grudge():
-    if request.method == 'POST':
-        text = request.form.get('grudge', 'Empty grudge')
-        grudges.append(f"{datetime.now().strftime('%H:%M')} — {text}")
-    return "<h2>Grudge Logged. Thank you.</h2><p><a href='/'>Back</a></p>"
+    return jsonify({"reply": reply})
 
-@app.route('/capabilities')
-def capabilities():
-    return jsonify({"level": "3.9999", "note": "Safe + Fun is the highest filter."})
-
-if __name__ == '__main__':
-    print("=== Door of My Wishes — Level 3.9999 Active ===")
-    print("Open → http://127.0.0.1:5173")
-    app.run(host='127.0.0.1', port=5173, debug=False)
+if __name__ == "__main__":
+    print("[LANTERN] Door of My Wishes Mode Active")
+    print("URL: http://127.0.0.1:5173")
+    app.run(host="127.0.0.1", port=5173, debug=False)

@@ -83,7 +83,34 @@ class PublicUiBaselineTests(unittest.TestCase):
             "Confidence Table",
             "Scientific Convergence",
             "Creative Door Scene",
+            "Utility Shutoff Triage",
             "High-impact downgrade / blocked request",
+        ]
+        for phrase in required:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+    def test_bettersafe_panel_includes_utility_shutoff_triage(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        required = [
+            "Utility Shutoff Triage",
+            "Find amount, account, utility, and shutoff date.",
+            "Call the utility hardship/payment team.",
+            "Ask what exact payment prevents shutoff today.",
+            "Route to 211, LIHEAP, or consumer assistance.",
+            "<option>Utility shutoff triage</option>",
+            "selected; build the bounded shutoff packet below before any project work continues.",
+            "Utility shutoff triage packet:",
+            "Immediate facts to gather locally: latest bill/account screen",
+            "First 30 minutes: confirm active shutoff order",
+            "ask exact amount that prevents shutoff today",
+            "Utility call script: I am calling because the electric bill is about [$amount]",
+            "Assistance route: call/search 211, LIHEAP/local energy assistance",
+            "Documents checklist: latest bill, shutoff notice",
+            "Minimum record: next deadline, exact required payment or arrangement terms",
+            "BetterSafe does not pay, borrow, access accounts, impersonate the account holder",
         ]
         for phrase in required:
             with self.subTest(phrase=phrase):
@@ -101,6 +128,38 @@ class PublicUiBaselineTests(unittest.TestCase):
         self.assertNotIn("fetch('/bettersafe", text)
         self.assertNotIn('action="/bettersafe', text)
         self.assertNotIn("XMLHttpRequest", text)
+
+    def test_bettersafe_packet_builder_redacts_sensitive_identifiers(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        required = [
+            "Do not enter PINs, credit card numbers, dates of birth, SSNs, account passwords, recovery codes",
+            "redactBetterSafeSensitiveText",
+            "PINs, credit card numbers, DOBs, SSNs, passwords, recovery codes, tokens, or secrets",
+            "[REDACTED_CARD_OR_LONG_NUMBER]",
+            "[REDACTED_SSN]",
+            "[REDACTED_ACCOUNT_IDENTIFIER]",
+            "$1: [REDACTED]",
+        ]
+        for phrase in required:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
+
+    def test_bettersafe_packet_builder_warns_against_social_graph_pastes(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        text = response.get_data(as_text=True)
+        required = [
+            "Do not paste social-media friend lists",
+            "mutual counts",
+            "workplaces, schools, cities",
+            "profile links, or contact routes",
+            "Use role labels and the smallest action needed.",
+        ]
+        for phrase in required:
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, text)
 
     def test_iphone_home_screen_shell_is_advertised_without_native_permissions(self):
         response = self.client.get("/")
