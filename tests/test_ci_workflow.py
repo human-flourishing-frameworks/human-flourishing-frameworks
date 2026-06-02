@@ -8,10 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "convergence-validation.yml"
 REQUIRED_TEST_COMMANDS = [
-    'python -m unittest discover -s tests -p "test_schema_source_lore.py" -t .',
-    'python -m unittest discover -s tests -p "test_ci_workflow.py" -t .',
-    'python -m unittest discover -s tests -p "test_bettersafe_data_center_anchor.py" -t .',
-    'python -m unittest discover -s tests -p "test_foundry_repo_hardening.py" -t .',
+    'python -m unittest discover -s tests -t . -p "test_*.py"',
 ]
 
 
