@@ -30,14 +30,8 @@ jobs:
       - name: Show Python version
         run: python --version
 
-      - name: Validate schema, source-class, and lore guardrails
-        run: python -m unittest discover -s tests -p "test_schema_source_lore.py" -t .
-
-      - name: Validate CI workflow guardrails
-        run: python -m unittest discover -s tests -p "test_ci_workflow.py" -t .
-
-      - name: Validate data-center infrastructure guardrails
-        run: python -m unittest discover -s tests -p "test_bettersafe_data_center_anchor.py" -t .
-
-      - name: Validate foundry repo hardening guardrails
-        run: python -m unittest discover -s tests -p "test_foundry_repo_hardening.py" -t .
+      - name: Run full unittest discovery (single source of truth)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m unittest discover -s tests -t . -p "test_*.py"

@@ -1,0 +1,11 @@
+# Placeholder arguments for a Ravencoin KAWPOW test.
+# Replace POOL_HOST, PORT, WALLET_ADDRESS, and WORKER_NAME before use.
+# Keep this as a sample file; do not store private keys or seed phrases here.
+
+-P stratum+tcp://WALLET_ADDRESS.WORKER_NAME@POOL_HOST:PORT
+
+# Safety notes:
+# - Run a short thermal test first.
+# - Log accepted shares, rejected shares, temperature, fan speed, and wall power.
+# - Stop if the GPU exceeds the operator's temperature limit or power plan.
+

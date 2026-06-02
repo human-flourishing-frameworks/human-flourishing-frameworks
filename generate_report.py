@@ -1,3 +1,4 @@
+import os
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor
@@ -6,7 +7,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 doc = SimpleDocTemplate(
-    r"C:\tmp\human-flourishing-frameworks-scan\CONVERGENCE-VALIDATION-REPORT-2026-05-28.pdf",
+    # CI/CD MANAGED: relative path so it resolves in pipelines and RAG-indexed clones.
+    os.path.join(os.path.dirname(__file__), "CONVERGENCE-VALIDATION-REPORT-2026-05-28.pdf"),
     pagesize=letter,
     topMargin=0.6*inch, bottomMargin=0.6*inch,
     leftMargin=0.7*inch, rightMargin=0.7*inch
