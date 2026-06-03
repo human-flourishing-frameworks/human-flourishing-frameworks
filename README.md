@@ -45,6 +45,22 @@ Or run the browser version (if Flask service is running):
 http://localhost:8765
 ```
 
+## Local Services (cross-repo)
+
+Services started from the [`lantern-os`](https://github.com/alex-place/lantern-os) repo:
+
+| Service | Port | Status | URL |
+|---------|------|--------|-----|
+| Lantern Garage | `4177` | Running | http://127.0.0.1:4177 |
+| GPT Web API | `3000` | Running | http://127.0.0.1:3000 |
+| Discord Radio Bot | — | Needs token | `apps/lantern-discord-radio/bot.py` |
+
+Health check:
+```bash
+curl http://127.0.0.1:3000/health   # GPT Web API
+curl http://127.0.0.1:4177/         # Lantern Garage
+```
+
 ## Media Library Attribution
 
 See `~/.lantern/sounds/ATTRIBUTION.md` for full CC-license provenance, source URLs, and recordist credits for all audio files.
