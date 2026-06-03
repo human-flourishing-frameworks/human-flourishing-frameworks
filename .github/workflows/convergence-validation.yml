@@ -30,6 +30,9 @@ jobs:
       - name: Show Python version
         run: python --version
 
+      - name: Install dependencies
+        run: pip install -q -r requirements.txt
+
       - name: Run full unittest discovery (single source of truth)
         env:
           PYTHONPATH: ${{ github.workspace }}

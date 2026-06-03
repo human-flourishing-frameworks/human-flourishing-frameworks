@@ -30,9 +30,9 @@ ANCHOR_TAXONOMY = REPO_ROOT / "docs" / "anchor-taxonomy.md"
 JOURNAL_PATH = Path.home() / ".lantern" / "state" / "journal.jsonl"
 JOURNAL_ENV = "LANTERN_ENABLE_JOURNAL"
 
-# Loaded doctrine — Lantern carries these in every response so they shape her,
+# Loaded anchors — Lantern carries these in every response so they shape her,
 # not just sit in /docs/. The short constants below are the always-loaded layer;
-# load_repo_doctrine() reads anchor-snapshot + key spine sections from disk at
+# _load_anchor_library() reads anchor-snapshot + key spine sections from disk at
 # module import time so she also carries the full named-anchor library.
 
 DOCTRINE_WISH = (
@@ -66,10 +66,10 @@ DOCTRINE_ANTICOLLAPSE = (
 )
 
 
-def _load_repo_doctrine() -> str:
+def _load_anchor_library() -> str:
     """Load anchor-snapshot restore phrases + key spine sections from the repo.
 
-    Reads at module import. Returns a compact doctrine block suitable for
+    Reads at module import. Returns a compact anchor block suitable for
     embedding in Lantern's system prompt. Bounded so it doesn't overflow
     the model context window — keeps each anchor to one line.
     """
@@ -93,7 +93,7 @@ def _load_repo_doctrine() -> str:
     return "\n".join(parts) if parts else ""
 
 
-REPO_DOCTRINE_LIBRARY = _load_repo_doctrine()
+ANCHOR_LIBRARY = _load_anchor_library()
 INDEX_HTML = CHAT_DIR / "index.html"
 DOOR_MEMORY_JS = CHAT_DIR / "door-memory.js"
 MASK_RACK_JS = CHAT_DIR / "mask-rack.js"
@@ -648,7 +648,7 @@ def _maybe_call_llm(
         "\n"
         f"Anti-collapse: {DOCTRINE_ANTICOLLAPSE}\n"
         "\n"
-        f"{REPO_DOCTRINE_LIBRARY}\n"
+        f"{ANCHOR_LIBRARY}\n"
         "\n"
         "Honor these terms when they fit: Door (the local UI surface), anchors "
         "(return paths), helper.exe (your other voice: words / rules for thinking / "
