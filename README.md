@@ -314,6 +314,9 @@ Current safety and public-boundary documents include:
 - [`DEPLOYMENT_AUTONOMY_BOUNDARY.md`](./DEPLOYMENT_AUTONOMY_BOUNDARY.md): deployment and recovery remain operator/governance controlled.
 - [`PUBLIC_DEPLOYMENT_STRATEGY.md`](./PUBLIC_DEPLOYMENT_STRATEGY.md): Railway is a hosting adapter, not the architecture; public surfaces should stay portable and default-closed.
 - [`HUMAN_TRANSPORTATION_BOUNDARY.md`](./HUMAN_TRANSPORTATION_BOUNDARY.md): human-preserving traversal claims require canary, quarantine, continuity, consent, and return evidence.
+- [`docs/CLAIM-PACKET-SCIENTIFIC-RIGOR.md`](./docs/CLAIM-PACKET-SCIENTIFIC-RIGOR.md): claim-packet standard for measurement, causal, intervention, forecast, safety, privacy, adoption, and human-outcome claims.
+- [`docs/CLAIM-PACKET-TEMPLATE.md`](./docs/CLAIM-PACKET-TEMPLATE.md): fillable template for claims, whitepapers, release notes, stakeholder packets, and public copy.
+- [`docs/INNOVATOR-EVIDENCE-METHOD.md`](./docs/INNOVATOR-EVIDENCE-METHOD.md): evidence classification and promotion method for release decisions.
 - [`docs/internationalization-and-accessibility.md`](./docs/internationalization-and-accessibility.md): translation, accessibility, plain-language, and jurisdiction-sensitive public-readiness posture.
 - [`policies/foundry-user-repo-hardening.v1.json`](./policies/foundry-user-repo-hardening.v1.json): baseline anti-drift policy for foundry user repositories.
 - [`docs/foundry-4m-20-operator-master-plan.md`](./docs/foundry-4m-20-operator-master-plan.md): plain-language 20-operator start plan with resource consent gates.
