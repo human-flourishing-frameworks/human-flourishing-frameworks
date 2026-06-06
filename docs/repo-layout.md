@@ -12,7 +12,7 @@ The following Python modules live at the repository root and can be imported dir
 - `live_sensors.py` - Live sensor polling and observation loop
 - `agent_system.py` - Autonomous agent system
 - `byzantine_consensus.py` - Byzantine consensus implementation
-- `claim_safety.py` - Claim safety validation
+- `claim_safety.py` - Claim safety validation, evidence-bundle checks, forecast quarantine, and scientific-rigor claim-packet records
 - `cryptographic_proof.py` - Cryptographic verification
 - `mesh_network.py` - Mesh network synchronization
 - `data_sources.py` - Data source integrations
@@ -38,6 +38,17 @@ The `src/` directory contains namespaced packages:
 - `src/bettersafe/` - Safety policy and release gate modules
   - `sensor_policy.py` - Sensor request evaluation
   - `release_gate.py` - Release candidate evaluation
+
+## Claim and Evidence Documents
+
+The following docs define claim review, release evidence, and scientific-rigor expectations:
+
+- `docs/INNOVATOR-EVIDENCE-METHOD.md` - operator method for claim-to-evidence review, promotion, quarantine, and release decisions.
+- `docs/CLAIM-PACKET-SCIENTIFIC-RIGOR.md` - canonical standard for scientific, measurement, causal, intervention, forecast, safety, privacy, adoption, and human-outcome claims.
+- `docs/CLAIM-PACKET-TEMPLATE.md` - fillable packet template for whitepapers, public copy, release notes, stakeholder packets, and internal claims that may become public.
+- `docs/CONVERGENCE-LOOP.md` - convergence-loop procedure for mapping claims to evidence and promoting, holding, or rejecting artifacts.
+- `docs/V1-READINESS-GATES.md` - readiness gates, including the scientific claim-packet gate.
+- `CONVERGENCE-EVIDENCE-REPORT.md` - evidence report format for repo truth audits and claimed-versus-verified matrices.
 
 ## Import Path Configuration
 
@@ -66,28 +77,30 @@ To run scripts that need packaged modules outside of tests, either:
 ├── app.py                    # Main Flask application
 ├── world_model.py            # World model
 ├── sensors.py                # Sensor registry
+├── claim_safety.py           # Claim safety + scientific-rigor claim packets
 ├── src/
 │   └── bettersafe/           # Namespaced safety package
 │       ├── __init__.py
 │       ├── sensor_policy.py
 │       └── release_gate.py
 ├── tests/                    # Test suite
-│   ├── __init__.py          # Prepends src/ to sys.path
-│   ├── test_*.py            # Test files
+│   ├── __init__.py           # Prepends src/ to sys.path
+│   ├── test_*.py             # Test files
 │   └── test_safe_public_copy.py
-├── docs/                    # Documentation
-├── configs/                 # Configuration files
-├── data/                    # Data directories
-├── apps/                    # Application modules
-├── scripts/                 # Utility scripts
-├── .github/workflows/       # CI/CD workflows
-└── requirements.txt         # Python dependencies
+├── docs/                     # Documentation and claim/evidence standards
+├── configs/                  # Configuration files
+├── data/                     # Data directories
+├── apps/                     # Application modules
+├── scripts/                  # Utility scripts
+├── .github/workflows/        # CI/CD workflows
+└── requirements.txt          # Python dependencies
 ```
 
 ## Test Coverage
 
 - `tests/test_sensor_policy.py` - Tests for `bettersafe.sensor_policy` (pytest-style)
 - `tests/test_release_gate.py` - Tests for `bettersafe.release_gate` (pytest-style)
+- `tests/test_claim_safety.py` - Tests for claim safety, forecast quarantine, belief ledger behavior, and scientific-rigor claim-packet requirements
 - `tests/test_safe_public_copy.py` - Regression tests for public dashboard authority claims
 - Other test files use `unittest.TestCase` classes
 
