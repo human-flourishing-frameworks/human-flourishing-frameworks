@@ -30,12 +30,14 @@ v1.0.0 is not a date. It is a gate.
 - Art model DOCX exists.
 - Money/confidence and truth-only reports exist.
 - Claims are reviewed with the Innovator method before promotion.
+- Claims-related whitepapers include the method box from `docs/CLAIM-PACKET-SCIENTIFIC-RIGOR.md`.
 
 ## Gate 5: Capability Honesty
 
 - Every surface states what it can and cannot do.
 - Local-first and privacy claims are evidence-backed.
 - Runtime claims are verified against actual scripts or services.
+- Scientific, causal, intervention, safety, privacy, forecast, adoption, or human-outcome claims carry scope, uncertainty, limitations, alternatives/counterevidence, replication status, and falsification criteria.
 
 ## Gate 6: Release Approval
 
@@ -63,3 +65,10 @@ v1.0.0 is not a date. It is a gate.
   - inspect dual boot prep;
   - run convergence loop;
   - see next action.
+
+## Gate 10: Scientific Claim Packet
+
+- Any whitepaper, claim packet, release narrative, or public artifact that makes a material measurement, comparative, causal, intervention, safety, privacy, forecast, adoption, or human-outcome claim has a completed claim packet.
+- The packet records evidence class, certainty class, operational definition, unit of analysis, denominator/observation count, uncertainty, bias/confounding notes, limitations, alternatives/counterevidence, replication status, falsification criteria, revision triggers, and safe public wording.
+- Claims that fail the packet are downgraded to hypothesis, roadmap, scenario, or internal-review language.
+- High-impact claims require explicit human review even when the evidence is otherwise complete.
