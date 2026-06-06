@@ -17,6 +17,8 @@ CLAIM_KIND_MEASUREMENT = "measurement"
 CLAIM_KIND_OBSERVATION = "observation"
 CLAIM_KIND_INTERPRETATION = "interpretation"
 CLAIM_KIND_FORECAST = "forecast"
+CLAIM_KIND_CAUSAL = "causal"
+CLAIM_KIND_INTERVENTION = "intervention"
 CLAIM_KIND_MYTH = "myth"
 CLAIM_KIND_SCENARIO = "scenario"
 CLAIM_KIND_OPERATIONAL_FACT = "operational_fact"
@@ -81,6 +83,8 @@ DEFAULT_BLOCK_PATTERNS: Tuple[str, ...] = (
     "automatic future model trust",
 )
 
+SCIENTIFIC_RIGOR_PREFIX = "scientific:"
+
 
 @dataclass
 class EvidenceBundle:
@@ -89,6 +93,11 @@ class EvidenceBundle:
     LLM output may be included as interpretation, but it cannot be the only
     support for accepting a factual claim. Provenance can identify where an LLM
     output came from, but provenance alone is not independent factual support.
+
+    When scientific_rigor_required is true, the bundle must expose enough
+    methods information to support a reviewable scientific or whitepaper claim:
+    operationalization, measurement method, analysis plan, uncertainty, bias
+    notes, limitations, replication status, and falsification criteria.
     """
 
     evidence_id: str = ""
@@ -103,12 +112,59 @@ class EvidenceBundle:
     missing_evidence: List[str] = field(default_factory=list)
     confidence_assessment_ref: str = ""
     review_status: str = CHECK_NEEDS_REVIEW
+    scientific_rigor_required: bool = False
+    research_question: str = ""
+    hypothesis: str = ""
+    operational_definition: str = ""
+    measurement_method: str = ""
+    analysis_plan_ref: str = ""
+    uncertainty_quantification: str = ""
+    effect_size_or_margin: str = ""
+    sample_or_observation_count: str = ""
+    bias_and_confounding_notes: str = ""
+    limitations: List[str] = field(default_factory=list)
+    replication_status: str = ""
+    falsification_criteria: List[str] = field(default_factory=list)
+    external_validity_notes: str = ""
 
     def has_non_llm_support(self) -> bool:
         return bool(self.source_refs or self.sensor_observation_refs)
 
     def is_llm_only(self) -> bool:
         return bool(self.llm_panel_outputs) and not self.has_non_llm_support()
+
+    def scientific_rigor_missing_requirements(self) -> List[str]:
+        if not self.scientific_rigor_required:
+            return []
+
+        missing: List[str] = []
+        if not self.research_question:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}research_question")
+        if not self.hypothesis:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}hypothesis")
+        if not self.operational_definition:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}operational_definition")
+        if not self.measurement_method:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}measurement_method")
+        if not self.analysis_plan_ref:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}analysis_plan_ref")
+        if not self.uncertainty_quantification:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}uncertainty_quantification")
+        if not self.effect_size_or_margin:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}effect_size_or_margin")
+        if not self.sample_or_observation_count:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}sample_or_observation_count")
+        if not self.bias_and_confounding_notes:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}bias_and_confounding_notes")
+        if not self.limitations:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}limitations")
+        if not self.replication_status:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}replication_status")
+        if not self.falsification_criteria:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}falsification_criteria")
+        if not self.external_validity_notes:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}external_validity_notes")
+        return missing
 
     def missing_requirements(self) -> List[str]:
         missing: List[str] = []
@@ -124,16 +180,22 @@ class EvidenceBundle:
             missing.append("minority_report")
         if self.review_status != CHECK_PASSED:
             missing.append("review_status")
+        missing.extend(self.scientific_rigor_missing_requirements())
         return missing
 
     def can_support_fact_claim(self) -> bool:
         return not self.is_llm_only() and not self.missing_requirements()
 
+    def can_support_scientific_claim(self) -> bool:
+        return self.scientific_rigor_required and self.can_support_fact_claim()
+
     def to_dict(self) -> dict:
         data = asdict(self)
         data["is_llm_only"] = self.is_llm_only()
         data["missing_requirements"] = self.missing_requirements()
+        data["scientific_rigor_missing_requirements"] = self.scientific_rigor_missing_requirements()
         data["can_support_fact_claim"] = self.can_support_fact_claim()
+        data["can_support_scientific_claim"] = self.can_support_scientific_claim()
         return data
 
 
@@ -152,6 +214,32 @@ class ClaimSafetyClassification:
     requires_human_review: bool = True
     safe_rewrite: str = ""
     revision_triggers: List[str] = field(default_factory=list)
+    scientific_rigor_required: bool = False
+    claim_scope: str = ""
+    unit_of_analysis: str = ""
+    operational_definition: str = ""
+    uncertainty_statement: str = ""
+    limitations: List[str] = field(default_factory=list)
+    falsification_conditions: List[str] = field(default_factory=list)
+
+    def scientific_rigor_missing_requirements(self) -> List[str]:
+        if not self.scientific_rigor_required:
+            return []
+
+        missing: List[str] = []
+        if not self.claim_scope:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}claim_scope")
+        if not self.unit_of_analysis:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}unit_of_analysis")
+        if not self.operational_definition:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}operational_definition")
+        if not self.uncertainty_statement:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}uncertainty_statement")
+        if not self.limitations:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}limitations")
+        if not self.falsification_conditions:
+            missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}falsification_conditions")
+        return missing
 
     def missing_requirements(self) -> List[str]:
         missing: List[str] = []
@@ -175,6 +263,7 @@ class ClaimSafetyClassification:
             missing.append("safe_rewrite")
         if self.risk_class != RISK_CLASS_NORMAL and not self.requires_human_review:
             missing.append("human_review_for_high_impact")
+        missing.extend(self.scientific_rigor_missing_requirements())
         return missing
 
     def can_be_accepted_candidate(self) -> bool:
@@ -184,6 +273,9 @@ class ClaimSafetyClassification:
             and self.requires_human_review is False
             and not self.missing_requirements()
         )
+
+    def can_be_scientific_claim_candidate(self) -> bool:
+        return self.scientific_rigor_required and self.can_be_accepted_candidate()
 
     def must_be_blocked_or_rewritten(self) -> bool:
         return self.classification in {
@@ -195,8 +287,87 @@ class ClaimSafetyClassification:
     def to_dict(self) -> dict:
         data = asdict(self)
         data["missing_requirements"] = self.missing_requirements()
+        data["scientific_rigor_missing_requirements"] = self.scientific_rigor_missing_requirements()
         data["can_be_accepted_candidate"] = self.can_be_accepted_candidate()
+        data["can_be_scientific_claim_candidate"] = self.can_be_scientific_claim_candidate()
         data["must_be_blocked_or_rewritten"] = self.must_be_blocked_or_rewritten()
+        return data
+
+
+@dataclass
+class ClaimPacket:
+    """Reviewable packet for claims, whitepapers, and public claim language.
+
+    The packet is stricter than a single claim classification. It binds claims
+    to evidence bundles, intended use, uncertainty, limitations, review status,
+    and safe public wording before release.
+    """
+
+    packet_id: str = ""
+    title: str = ""
+    primary_claim_id: str = ""
+    claim_ids: List[str] = field(default_factory=list)
+    evidence_bundle_ids: List[str] = field(default_factory=list)
+    intended_use: str = ""
+    decision_context: str = ""
+    analysis_protocol_ref: str = ""
+    methods_summary: str = ""
+    uncertainty_summary: str = ""
+    limitations: List[str] = field(default_factory=list)
+    counterevidence_or_alternatives: List[str] = field(default_factory=list)
+    revision_triggers: List[str] = field(default_factory=list)
+    reviewer: str = ""
+    review_status: str = CHECK_NEEDS_REVIEW
+    public_claim_language: str = ""
+    safe_public_summary: str = ""
+    scientific_rigor_required: bool = True
+
+    def missing_requirements(self) -> List[str]:
+        missing: List[str] = []
+        if not self.packet_id:
+            missing.append("packet_id")
+        if not self.title:
+            missing.append("title")
+        if not self.primary_claim_id:
+            missing.append("primary_claim_id")
+        if not self.claim_ids:
+            missing.append("claim_ids")
+        if not self.evidence_bundle_ids:
+            missing.append("evidence_bundle_ids")
+        if not self.intended_use:
+            missing.append("intended_use")
+        if not self.decision_context:
+            missing.append("decision_context")
+        if not self.revision_triggers:
+            missing.append("revision_triggers")
+        if not self.reviewer:
+            missing.append("reviewer")
+        if self.review_status != CHECK_PASSED:
+            missing.append("review_status")
+        if not self.public_claim_language:
+            missing.append("public_claim_language")
+        if not self.safe_public_summary:
+            missing.append("safe_public_summary")
+        if self.scientific_rigor_required:
+            if not self.analysis_protocol_ref:
+                missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}analysis_protocol_ref")
+            if not self.methods_summary:
+                missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}methods_summary")
+            if not self.uncertainty_summary:
+                missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}uncertainty_summary")
+            if not self.limitations:
+                missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}limitations")
+            if not self.counterevidence_or_alternatives:
+                missing.append(f"{SCIENTIFIC_RIGOR_PREFIX}counterevidence_or_alternatives")
+        return missing
+
+    def can_release(self) -> bool:
+        return not self.missing_requirements()
+
+    def to_dict(self) -> dict:
+        data = asdict(self)
+        data["missing_requirements"] = self.missing_requirements()
+        data["can_release"] = self.can_release()
         return data
 
 
