@@ -10,12 +10,13 @@ determination.
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
@@ -23,6 +24,22 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PublicKey,
 )
 from cryptography.exceptions import InvalidSignature
+
+logger = logging.getLogger("cryptographic_proof")
+
+# Passphrase for encrypting the private key at rest. An explicit ``passphrase=``
+# argument wins; otherwise this env var is used, so deployments can harden key
+# storage with zero code change. If neither is set, the key is written
+# UNENCRYPTED (with a warning) — kept as the default only for backward compat.
+_KEY_PASSPHRASE_ENV = "VAULT_KEY_PASSPHRASE"
+
+
+def _coerce_passphrase(passphrase: "Optional[Union[str, bytes]]") -> Optional[bytes]:
+    if passphrase is None:
+        passphrase = os.environ.get(_KEY_PASSPHRASE_ENV) or None
+    if passphrase is None:
+        return None
+    return passphrase.encode("utf-8") if isinstance(passphrase, str) else passphrase
 
 # ---------------------------------------------------------------------------
 # Key management
@@ -41,16 +58,28 @@ def save_keypair(
     public_key: Ed25519PublicKey,
     private_path: str,
     public_path: str,
+    passphrase: "Optional[Union[str, bytes]]" = None,
 ) -> None:
     """Persist an Ed25519 key pair to PEM files.
 
-    The private key is written **unencrypted**.  In production you would
-    encrypt it with a passphrase; this is a teaching implementation.
+    The private key is encrypted at rest when a passphrase is supplied — either
+    via the ``passphrase`` argument or the ``VAULT_KEY_PASSPHRASE`` env var. If
+    neither is set the key is written **unencrypted** and a warning is logged
+    (kept only for backward compatibility; encrypt it in any real deployment).
     """
+    pw = _coerce_passphrase(passphrase)
+    if pw:
+        enc: serialization.KeySerializationEncryption = serialization.BestAvailableEncryption(pw)
+    else:
+        logger.warning(
+            "save_keypair: writing private key UNENCRYPTED to %s — set %s or pass "
+            "passphrase= to encrypt the key at rest", private_path, _KEY_PASSPHRASE_ENV,
+        )
+        enc = serialization.NoEncryption()
     priv_bytes = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
+        encryption_algorithm=enc,
     )
     pub_bytes = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
@@ -67,11 +96,17 @@ def save_keypair(
 
 
 def load_keypair(
-    private_path: str, public_path: str
+    private_path: str, public_path: str,
+    passphrase: "Optional[Union[str, bytes]]" = None,
 ) -> Tuple[Ed25519PrivateKey, Ed25519PublicKey]:
-    """Load an Ed25519 key pair from PEM files."""
+    """Load an Ed25519 key pair from PEM files.
+
+    Decrypts the private key with ``passphrase`` (or the ``VAULT_KEY_PASSPHRASE``
+    env var) when it was saved encrypted.
+    """
+    pw = _coerce_passphrase(passphrase)
     with open(private_path, "rb") as f:
-        private_key = serialization.load_pem_private_key(f.read(), password=None)
+        private_key = serialization.load_pem_private_key(f.read(), password=pw)
     with open(public_path, "rb") as f:
         public_key = serialization.load_pem_public_key(f.read())
 
